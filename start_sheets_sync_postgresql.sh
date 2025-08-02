@@ -50,7 +50,7 @@ start_background() {
     echo -e "${BLUE}Starting in background mode...${NC}"
     
     # Start the daemon in background
-    nohup python "$SCRIPT_DIR/sheets_sync_daemon_postgresql.py" >> "$LOG_FILE" 2>&1 &
+    nohup python "$SCRIPT_DIR/sheets_sync_daemon.py" >> "$LOG_FILE" 2>&1 &
     PID=$!
     
     # Save PID
@@ -147,7 +147,7 @@ case "$1" in
         # Default: run in foreground
         echo "Starting in foreground mode (Ctrl+C to stop)..."
         echo -e "${BLUE}💡 Tip: Use '$0 --background' to run in background${NC}"
-        python "$SCRIPT_DIR/sheets_sync_daemon_postgresql.py"
+        python "$SCRIPT_DIR/sheets_sync_daemon.py"
         ;;
     *)
         echo -e "${RED}Unknown option: $1${NC}"
