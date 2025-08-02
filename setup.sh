@@ -350,12 +350,19 @@ step_check_prerequisites() {
     print_info "Running as user: $current_user"
     
     if [ "$current_user" = "root" ]; then
-        print_warning "Running as root user. This may cause permission issues with virtual environments."
-        print_warning "Consider running as a regular user if possible."
-        if ! ask_confirmation "Continue running as root?"; then
-            print_error "Installation cancelled. Please run as a regular user."
+        print_warning "Running as root user."
+        print_info "The installation will proceed with root privileges."
+        print_info "Virtual environment will be created with appropriate permissions."
+        
+        # Set a flag for root installation
+        export RUNNING_AS_ROOT=true
+        
+        if ! ask_confirmation "Continue installation as root?"; then
+            print_info "Installation cancelled."
             return 1
         fi
+    else
+        export RUNNING_AS_ROOT=false
     fi
     
     # Check Python 3
@@ -409,7 +416,16 @@ step_create_venv() {
         fi
     fi
     
-    python3 -m venv "$VENV_PATH"
+    # Create virtual environment with special handling for root
+    if [ "$RUNNING_AS_ROOT" = true ]; then
+        print_info "Creating virtual environment as root with --system-site-packages..."
+        python3 -m venv "$VENV_PATH" --system-site-packages
+        
+        # Set more permissive permissions for root-created venv
+        chmod -R 755 "$VENV_PATH"
+    else
+        python3 -m venv "$VENV_PATH"
+    fi
     
     # Verify venv creation
     if [ ! -f "$VENV_PATH/bin/activate" ]; then
@@ -638,14 +654,23 @@ step_install_system_dependencies() {
         return 0
     fi
     
+    # Function to run commands with appropriate privileges
+    run_privileged() {
+        if [ "$RUNNING_AS_ROOT" = true ]; then
+            "$@"
+        else
+            sudo "$@"
+        fi
+    }
+    
     # Check if PostgreSQL is already installed
     if command -v psql &> /dev/null; then
         print_info "PostgreSQL is already installed"
     else
         if ask_confirmation "Install PostgreSQL for database support?"; then
             print_info "Installing PostgreSQL..."
-            sudo apt-get update
-            sudo apt-get install -y postgresql postgresql-contrib
+            run_privileged apt-get update
+            run_privileged apt-get install -y postgresql postgresql-contrib
             print_success "PostgreSQL installed"
         else
             print_warning "Skipping PostgreSQL installation. You may need to install it manually for full functionality."
@@ -658,8 +683,8 @@ step_install_system_dependencies() {
     else
         if ask_confirmation "Install Node.js for web interface support?"; then
             print_info "Installing Node.js..."
-            curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-            sudo apt-get install -y nodejs
+            curl -fsSL https://deb.nodesource.com/setup_lts.x | run_privileged -E bash -
+            run_privileged apt-get install -y nodejs
             print_success "Node.js installed"
         else
             print_warning "Skipping Node.js installation. Web interface will not be available."
@@ -668,7 +693,7 @@ step_install_system_dependencies() {
     
     # Install other useful system packages
     print_info "Installing additional system packages..."
-    sudo apt-get install -y \
+    run_privileged apt-get install -y \
         build-essential \
         git \
         wget \
@@ -769,9 +794,9 @@ step_install_pytorch() {
     print_debug "Virtual env: $VIRTUAL_ENV"
     print_debug "Current user: $(whoami)"
     
-    # Verify we're not running as root with virtual environment
-    if [ "$(whoami)" = "root" ] && [ -n "$VIRTUAL_ENV" ]; then
-        print_warning "Running as root but with virtual environment. This may cause permission issues."
+    # Handle root installation
+    if [ "$RUNNING_AS_ROOT" = true ]; then
+        print_info "Installing PyTorch as root user."
     fi
     
     # Uninstall any existing PyTorch installations to avoid conflicts
@@ -939,18 +964,27 @@ EOF
 # AutoTrainX Activation Script
 # Source this file to activate the virtual environment and set environment variables
 
+# Get the directory of this script
+SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
+VENV_PATH="\$SCRIPT_DIR/venv"
+
+# Check if running as root
+if [ "\$(whoami)" = "root" ]; then
+    echo "Note: Running as root user"
+fi
+
 # Activate virtual environment
-if [ -f "$VENV_PATH/bin/activate" ]; then
-    source "$VENV_PATH/bin/activate"
+if [ -f "\$VENV_PATH/bin/activate" ]; then
+    source "\$VENV_PATH/bin/activate"
     echo "Virtual environment activated"
 else
-    echo "Virtual environment not found at $VENV_PATH"
+    echo "Virtual environment not found at \$VENV_PATH"
     exit 1
 fi
 
 # Load environment variables
-if [ -f "$SCRIPT_DIR/.env" ]; then
-    export \$(grep -v '^#' "$SCRIPT_DIR/.env" | xargs)
+if [ -f "\$SCRIPT_DIR/.env" ]; then
+    export \$(grep -v '^#' "\$SCRIPT_DIR/.env" | xargs)
     echo "Environment variables loaded"
 else
     echo "Warning: .env file not found"
@@ -959,6 +993,7 @@ fi
 echo "AutoTrainX environment is ready!"
 echo "Python: \$(which python)"
 echo "Python version: \$(python --version)"
+echo "User: \$(whoami)"
 EOF
         chmod +x "$SCRIPT_DIR/activate.sh"
         print_success "Activation script created"
@@ -1054,10 +1089,18 @@ step_verify_installation() {
         print_success "PostgreSQL ($psql_version) is installed"
         
         # Check if AutoTrainX database exists
-        if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw autotrainx; then
-            print_success "AutoTrainX database exists"
+        if [ "$RUNNING_AS_ROOT" = true ]; then
+            if su - postgres -c "psql -lqt" | cut -d \| -f 1 | grep -qw autotrainx; then
+                print_success "AutoTrainX database exists"
+            else
+                print_warning "AutoTrainX database not configured"
+            fi
         else
-            print_warning "AutoTrainX database not configured"
+            if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw autotrainx; then
+                print_success "AutoTrainX database exists"
+            else
+                print_warning "AutoTrainX database not configured"
+            fi
         fi
     else
         print_warning "PostgreSQL is not installed"
