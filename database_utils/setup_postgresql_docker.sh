@@ -1,9 +1,9 @@
 #!/bin/bash
 
 # =====================================================
-# AutoTrainX PostgreSQL Docker Setup Script
+# AutoTrainX PostgreSQL Docker Setup Script V2
 # =====================================================
-# Version optimized for Docker containers
+# Enhanced version with better detection
 # =====================================================
 
 # Colors for better UI
@@ -33,16 +33,6 @@ if [ -f /.dockerenv ] || grep -q docker /proc/1/cgroup 2>/dev/null; then
     IS_DOCKER=true
 fi
 
-# Detect init system
-INIT_SYSTEM="unknown"
-if [ -d /run/systemd/system ]; then
-    INIT_SYSTEM="systemd"
-elif [ -f /var/run/supervisord.pid ]; then
-    INIT_SYSTEM="supervisord"
-elif command -v service &> /dev/null; then
-    INIT_SYSTEM="sysvinit"
-fi
-
 # =====================================================
 # Helper Functions
 # =====================================================
@@ -51,11 +41,10 @@ print_header() {
     clear
     echo -e "${CYAN}${BOLD}"
     echo "╔═══════════════════════════════════════════════════════════════╗"
-    echo "║   AutoTrainX PostgreSQL Setup (Docker Optimized)             ║"
+    echo "║   AutoTrainX PostgreSQL Setup (Docker Optimized V2)          ║"
     echo "╚═══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
     echo -e "${YELLOW}Environment: ${IS_DOCKER:+Docker Container}${IS_DOCKER:-Host System}${NC}"
-    echo -e "${YELLOW}Init System: $INIT_SYSTEM${NC}"
     echo -e "${YELLOW}User: $(whoami)${NC}"
     echo
 }
@@ -86,130 +75,188 @@ print_step() {
     echo -e "${CYAN}▶️  $1${NC}"
 }
 
-# Function to check if PostgreSQL is installed
+# Enhanced PostgreSQL detection
 check_postgresql_installed() {
-    if command -v psql &> /dev/null && command -v postgres &> /dev/null; then
-        return 0
-    else
+    # Check for psql command
+    if ! command -v psql &> /dev/null; then
         return 1
     fi
-}
-
-# Function to check if PostgreSQL is running (Docker-aware)
-check_postgresql_running() {
-    # Try different methods based on environment
-    if [ "$IS_DOCKER" = true ]; then
-        # In Docker, check if postgres process is running
-        if pgrep -x postgres > /dev/null 2>&1; then
+    
+    # Check for PostgreSQL binaries in common locations
+    local pg_versions=(14 13 12 11 10 9.6 9.5)
+    for version in "${pg_versions[@]}"; do
+        if [ -f "/usr/lib/postgresql/$version/bin/postgres" ]; then
+            export PG_VERSION=$version
+            export PG_BIN="/usr/lib/postgresql/$version/bin"
             return 0
         fi
-        
-        # Check if we can connect to postgres
-        if pg_isready -h localhost -p 5432 > /dev/null 2>&1; then
-            return 0
-        fi
-    else
-        # On host system, use systemctl
-        if systemctl is-active --quiet postgresql 2>/dev/null; then
-            return 0
-        fi
+    done
+    
+    # Check if postgresql package is installed
+    if dpkg -l | grep -q "^ii.*postgresql-[0-9]"; then
+        # Extract version from package
+        PG_VERSION=$(dpkg -l | grep "^ii.*postgresql-[0-9]" | awk '{print $2}' | grep -oE '[0-9]+' | head -1)
+        export PG_BIN="/usr/lib/postgresql/$PG_VERSION/bin"
+        return 0
     fi
     
     return 1
 }
 
-# Function to start PostgreSQL (Docker-aware)
-start_postgresql() {
-    print_step "Starting PostgreSQL..."
+# Function to find PostgreSQL data directory
+find_pg_data_dir() {
+    local pg_version=${PG_VERSION:-$(ls /usr/lib/postgresql/ 2>/dev/null | grep -E '^[0-9]+' | sort -V | tail -1)}
+    echo "/var/lib/postgresql/${pg_version}/main"
+}
+
+# Function to check if PostgreSQL is running
+check_postgresql_running() {
+    # Method 1: Check with pg_isready
+    if command -v pg_isready &> /dev/null && pg_isready -q 2>/dev/null; then
+        return 0
+    fi
     
-    if [ "$IS_DOCKER" = true ]; then
-        # Find PostgreSQL data directory
-        local PG_VERSION=$(ls /usr/lib/postgresql/ 2>/dev/null | grep -E '^[0-9]+' | sort -V | tail -1)
-        local PG_DATA="/var/lib/postgresql/${PG_VERSION}/main"
-        local PG_CONFIG="/etc/postgresql/${PG_VERSION}/main/postgresql.conf"
+    # Method 2: Check for postgres process
+    if pgrep -f "postgres.*-D" > /dev/null 2>&1; then
+        return 0
+    fi
+    
+    # Method 3: Try to connect
+    if su - postgres -c "psql -c 'SELECT 1;'" &>/dev/null 2>&1; then
+        return 0
+    fi
+    
+    return 1
+}
+
+# Function to initialize PostgreSQL cluster
+init_postgresql_cluster() {
+    local pg_data=$(find_pg_data_dir)
+    
+    print_step "Checking PostgreSQL cluster..."
+    
+    if [ -f "$pg_data/PG_VERSION" ]; then
+        print_info "PostgreSQL cluster already initialized"
+        return 0
+    fi
+    
+    print_step "Initializing new PostgreSQL cluster..."
+    
+    # Create data directory
+    mkdir -p "$pg_data"
+    chown -R postgres:postgres /var/lib/postgresql
+    chmod 700 "$pg_data"
+    
+    # Initialize cluster
+    su - postgres -c "$PG_BIN/initdb -D $pg_data --encoding=UTF8 --locale=en_US.UTF-8"
+    
+    if [ $? -eq 0 ]; then
+        print_success "PostgreSQL cluster initialized"
         
-        # Check if PostgreSQL is initialized
-        if [ ! -f "$PG_DATA/PG_VERSION" ]; then
-            print_step "Initializing PostgreSQL cluster..."
-            
-            # Create directories
-            mkdir -p "$PG_DATA"
-            chown postgres:postgres "$PG_DATA"
-            
-            # Initialize cluster
-            su - postgres -c "/usr/lib/postgresql/${PG_VERSION}/bin/initdb -D $PG_DATA"
-            
-            if [ $? -ne 0 ]; then
-                print_error "Failed to initialize PostgreSQL cluster"
-                return 1
-            fi
+        # Copy default configuration files if they don't exist
+        local pg_config_dir="/etc/postgresql/$PG_VERSION/main"
+        if [ ! -d "$pg_config_dir" ]; then
+            mkdir -p "$pg_config_dir"
+            cp "$pg_data"/*.conf "$pg_config_dir/" 2>/dev/null || true
         fi
         
-        # Start PostgreSQL in background
-        su - postgres -c "/usr/lib/postgresql/${PG_VERSION}/bin/postgres -D $PG_DATA -c config_file=$PG_CONFIG" &
-        
-        # Wait for PostgreSQL to start
-        local count=0
-        while [ $count -lt 30 ]; do
-            if pg_isready -h localhost -p 5432 > /dev/null 2>&1; then
-                print_success "PostgreSQL started successfully"
-                return 0
-            fi
-            sleep 1
-            count=$((count + 1))
-        done
-        
-        print_error "Failed to start PostgreSQL"
-        return 1
+        return 0
     else
-        # Use systemctl on host system
-        systemctl start postgresql
-        systemctl enable postgresql
+        print_error "Failed to initialize PostgreSQL cluster"
+        return 1
     fi
 }
 
-# Function to run psql as postgres user
-run_psql_as_postgres() {
-    su - postgres -c "psql -tAc \"$1\""
-}
-
-# Function to run psql commands
-run_psql_commands() {
-    su - postgres -c "psql" << EOF
-$1
-EOF
+# Function to start PostgreSQL
+start_postgresql() {
+    print_step "Starting PostgreSQL..."
+    
+    if check_postgresql_running; then
+        print_info "PostgreSQL is already running"
+        return 0
+    fi
+    
+    # Initialize cluster if needed
+    init_postgresql_cluster
+    
+    local pg_data=$(find_pg_data_dir)
+    local pg_config="/etc/postgresql/$PG_VERSION/main/postgresql.conf"
+    
+    # Use config from data dir if etc config doesn't exist
+    if [ ! -f "$pg_config" ]; then
+        pg_config="$pg_data/postgresql.conf"
+    fi
+    
+    # Start PostgreSQL
+    print_step "Starting PostgreSQL service..."
+    
+    # Try using service command first
+    if command -v service &> /dev/null; then
+        service postgresql start 2>/dev/null
+        if check_postgresql_running; then
+            print_success "PostgreSQL started with service command"
+            return 0
+        fi
+    fi
+    
+    # Fallback to manual start
+    su - postgres -c "$PG_BIN/postgres -D $pg_data -c config_file=$pg_config" >> /var/log/postgresql/postgresql.log 2>&1 &
+    
+    # Wait for PostgreSQL to start
+    local count=0
+    while [ $count -lt 30 ]; do
+        if check_postgresql_running; then
+            print_success "PostgreSQL started successfully"
+            return 0
+        fi
+        sleep 1
+        count=$((count + 1))
+        echo -n "."
+    done
+    echo
+    
+    print_error "Failed to start PostgreSQL"
+    return 1
 }
 
 # =====================================================
 # Installation Functions
 # =====================================================
 
-install_postgresql() {
-    print_section "PostgreSQL Installation"
+install_or_verify_postgresql() {
+    print_section "PostgreSQL Installation Check"
     
+    # First check if PostgreSQL is already installed
     if check_postgresql_installed; then
-        print_success "PostgreSQL is already installed"
-        local pg_version=$(psql --version | awk '{print $3}')
-        print_info "PostgreSQL version: $pg_version"
+        print_success "PostgreSQL is installed"
+        print_info "Version: PostgreSQL $PG_VERSION"
+        print_info "Binary path: $PG_BIN"
+        
+        # Verify psql works
+        if command -v psql &> /dev/null; then
+            local psql_version=$(psql --version 2>/dev/null | awk '{print $3}')
+            print_info "psql version: $psql_version"
+        fi
+        
         return 0
     fi
     
-    print_info "PostgreSQL is not installed"
+    # PostgreSQL not detected, try to install
+    print_warning "PostgreSQL not detected"
     echo
-    read -p "Do you want to install PostgreSQL now? [Y/n]: " response
+    read -p "Do you want to install PostgreSQL? [Y/n]: " response
     response=${response:-Y}
     
     if [[ ! "$response" =~ ^[Yy]$ ]]; then
-        print_error "PostgreSQL installation is required to continue"
+        print_error "PostgreSQL is required to continue"
         return 1
     fi
     
-    print_step "Updating package list..."
+    print_step "Installing PostgreSQL..."
     apt-get update
+    apt-get install -y postgresql postgresql-contrib postgresql-client
     
-    print_step "Installing PostgreSQL and contrib package..."
-    apt-get install -y postgresql postgresql-contrib
-    
+    # Re-check after installation
     if check_postgresql_installed; then
         print_success "PostgreSQL installed successfully"
         return 0
@@ -229,13 +276,13 @@ configure_postgresql() {
     # Ensure PostgreSQL is running
     if ! check_postgresql_running; then
         if ! start_postgresql; then
-            print_error "Failed to start PostgreSQL"
+            print_error "Cannot start PostgreSQL"
             return 1
         fi
     fi
     
-    # Get database configuration
-    echo -e "${BOLD}Enter database configuration:${NC}"
+    # Get configuration
+    echo -e "${BOLD}Database Configuration:${NC}"
     echo
     
     read -p "Database name [$DEFAULT_DB_NAME]: " db_name
@@ -248,32 +295,12 @@ configure_postgresql() {
     db_password=${db_password:-$DEFAULT_DB_PASSWORD}
     echo
     
-    read -p "Database host [$DEFAULT_DB_HOST]: " db_host
-    db_host=${db_host:-$DEFAULT_DB_HOST}
-    
-    read -p "Database port [$DEFAULT_DB_PORT]: " db_port
-    db_port=${db_port:-$DEFAULT_DB_PORT}
-    
-    echo
-    print_info "Configuration summary:"
-    echo "  Database: $db_name"
-    echo "  User: $db_user"
-    echo "  Host: $db_host"
-    echo "  Port: $db_port"
-    echo
-    
-    read -p "Proceed with this configuration? [Y/n]: " response
-    response=${response:-Y}
-    
-    if [[ ! "$response" =~ ^[Yy]$ ]]; then
-        print_warning "Configuration cancelled"
-        return 1
-    fi
-    
     # Create user and database
     print_step "Creating database and user..."
     
-    run_psql_commands "-- Create user if not exists
+    su - postgres << EOF
+psql << SQL
+-- Create user
 DO \$\$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_user WHERE usename = '$db_user') THEN
@@ -284,7 +311,7 @@ BEGIN
 END
 \$\$;
 
--- Create database if not exists
+-- Create database
 DO \$\$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_database WHERE datname = '$db_name') THEN
@@ -293,172 +320,198 @@ BEGIN
 END
 \$\$;
 
--- Grant all privileges
-GRANT ALL PRIVILEGES ON DATABASE $db_name TO $db_user;"
+-- Grant privileges
+GRANT ALL PRIVILEGES ON DATABASE $db_name TO $db_user;
+SQL
+EOF
     
     if [ $? -eq 0 ]; then
-        print_success "Database and user created successfully"
+        print_success "Database configured successfully"
     else
-        print_error "Failed to create database and user"
+        print_error "Failed to configure database"
         return 1
     fi
     
-    # Update pg_hba.conf for password authentication
-    print_step "Configuring authentication..."
-    update_pg_hba_conf_docker
+    # Update authentication
+    update_pg_auth
     
     # Test connection
-    print_step "Testing database connection..."
-    if PGPASSWORD="$db_password" psql -h "$db_host" -p "$db_port" -U "$db_user" -d "$db_name" -c "SELECT 1;" &>/dev/null; then
-        print_success "Database connection successful"
+    print_step "Testing connection..."
+    export PGPASSWORD="$db_password"
+    if psql -h localhost -p 5432 -U "$db_user" -d "$db_name" -c "SELECT 1;" &>/dev/null; then
+        print_success "Connection test passed"
     else
-        print_error "Failed to connect to database"
-        return 1
+        print_warning "Connection test failed - checking authentication..."
+        fix_authentication
     fi
     
     # Save configuration
-    save_configuration "$db_name" "$db_user" "$db_password" "$db_host" "$db_port"
-    
-    return 0
+    save_config "$db_name" "$db_user" "$db_password"
 }
 
-update_pg_hba_conf_docker() {
-    # Find PostgreSQL version
-    local PG_VERSION=$(ls /usr/lib/postgresql/ 2>/dev/null | grep -E '^[0-9]+' | sort -V | tail -1)
-    local pg_hba_conf="/etc/postgresql/${PG_VERSION}/main/pg_hba.conf"
+update_pg_auth() {
+    local pg_hba="/etc/postgresql/$PG_VERSION/main/pg_hba.conf"
     
-    if [ ! -f "$pg_hba_conf" ]; then
-        # Try to find it from running postgres
-        pg_hba_conf=$(su - postgres -c "psql -tAc 'SHOW hba_file;'" 2>/dev/null | xargs)
+    # Find pg_hba.conf
+    if [ ! -f "$pg_hba" ]; then
+        pg_hba=$(find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1)
     fi
     
-    if [ -f "$pg_hba_conf" ]; then
-        print_info "Found pg_hba.conf at: $pg_hba_conf"
+    if [ ! -f "$pg_hba" ]; then
+        local pg_data=$(find_pg_data_dir)
+        pg_hba="$pg_data/pg_hba.conf"
+    fi
+    
+    if [ -f "$pg_hba" ]; then
+        print_step "Updating authentication in $pg_hba"
         
-        # Backup original
-        cp "$pg_hba_conf" "$pg_hba_conf.backup.$(date +%Y%m%d_%H%M%S)"
+        # Backup
+        cp "$pg_hba" "$pg_hba.backup.$(date +%Y%m%d_%H%M%S)"
         
-        # Update authentication methods
-        sed -i 's/local   all             all                                     peer/local   all             all                                     md5/g' "$pg_hba_conf"
-        sed -i 's/local   all             all                                     ident/local   all             all                                     md5/g' "$pg_hba_conf"
+        # Update authentication
+        sed -i 's/local   all             all                                     peer/local   all             all                                     md5/g' "$pg_hba"
+        sed -i 's/local   all             all                                     ident/local   all             all                                     md5/g' "$pg_hba"
         
-        # Reload PostgreSQL configuration
-        if [ "$IS_DOCKER" = true ]; then
-            # In Docker, send SIGHUP to postgres process
-            pkill -HUP postgres
-        else
-            systemctl reload postgresql
+        # Add host entries if not present
+        if ! grep -q "host.*all.*all.*127.0.0.1/32.*md5" "$pg_hba"; then
+            echo "host    all             all             127.0.0.1/32            md5" >> "$pg_hba"
         fi
         
-        print_success "Authentication configuration updated"
-    else
-        print_warning "Could not find pg_hba.conf, skipping authentication update"
+        if ! grep -q "host.*all.*all.*::1/128.*md5" "$pg_hba"; then
+            echo "host    all             all             ::1/128                 md5" >> "$pg_hba"
+        fi
+        
+        # Reload configuration
+        su - postgres -c "$PG_BIN/pg_ctl reload -D $(find_pg_data_dir)" 2>/dev/null || \
+        pkill -HUP postgres 2>/dev/null || true
+        
+        sleep 2
     fi
 }
 
-save_configuration() {
+fix_authentication() {
+    print_step "Attempting to fix authentication..."
+    
+    # Temporarily allow trust authentication
+    local pg_hba="/etc/postgresql/$PG_VERSION/main/pg_hba.conf"
+    if [ ! -f "$pg_hba" ]; then
+        pg_hba="$(find_pg_data_dir)/pg_hba.conf"
+    fi
+    
+    if [ -f "$pg_hba" ]; then
+        cp "$pg_hba" "$pg_hba.temp"
+        
+        # Temporarily set to trust
+        sed -i 's/local   all             all                                     md5/local   all             all                                     trust/g' "$pg_hba"
+        sed -i 's/host    all             all             127.0.0.1\/32            md5/host    all             all             127.0.0.1\/32            trust/g' "$pg_hba"
+        
+        # Reload
+        pkill -HUP postgres 2>/dev/null || true
+        sleep 2
+        
+        # Reset password
+        psql -U postgres -c "ALTER USER $db_user WITH PASSWORD '$db_password';" 2>/dev/null
+        
+        # Restore md5 auth
+        mv "$pg_hba.temp" "$pg_hba"
+        pkill -HUP postgres 2>/dev/null || true
+        sleep 2
+    fi
+}
+
+save_config() {
     local db_name=$1
     local db_user=$2
     local db_password=$3
-    local db_host=$4
-    local db_port=$5
     
-    print_section "Save Configuration"
-    
-    # Create .env file
-    print_step "Creating .env file..."
+    print_step "Saving configuration..."
     
     cat > "$SCRIPT_DIR/.env" << EOF
 # AutoTrainX PostgreSQL Configuration
 AUTOTRAINX_DB_TYPE=postgresql
-AUTOTRAINX_DB_HOST=$db_host
-AUTOTRAINX_DB_PORT=$db_port
+AUTOTRAINX_DB_HOST=localhost
+AUTOTRAINX_DB_PORT=5432
 AUTOTRAINX_DB_NAME=$db_name
 AUTOTRAINX_DB_USER=$db_user
 AUTOTRAINX_DB_PASSWORD=$db_password
 EOF
     
     chmod 600 "$SCRIPT_DIR/.env"
-    print_success "Configuration saved to .env file"
-    
-    # Also export for current session
-    export AUTOTRAINX_DB_TYPE=postgresql
-    export AUTOTRAINX_DB_HOST=$db_host
-    export AUTOTRAINX_DB_PORT=$db_port
-    export AUTOTRAINX_DB_NAME=$db_name
-    export AUTOTRAINX_DB_USER=$db_user
-    export AUTOTRAINX_DB_PASSWORD=$db_password
-    
-    print_info "Environment variables set for current session"
+    print_success "Configuration saved to .env"
 }
 
 # =====================================================
-# Docker-specific startup script
+# Create helper scripts
 # =====================================================
 
-create_docker_startup_script() {
-    print_step "Creating Docker startup script..."
+create_helper_scripts() {
+    print_step "Creating helper scripts..."
     
-    cat > "$SCRIPT_DIR/start_postgresql_docker.sh" << 'EOF'
+    # PostgreSQL start script
+    cat > "$SCRIPT_DIR/start_postgresql_docker.sh" << EOF
 #!/bin/bash
+# Start PostgreSQL in Docker
 
-# Colors
-GREEN='\033[0;32m'
-RED='\033[0;31m'
-NC='\033[0m'
+PG_VERSION=$PG_VERSION
+PG_BIN=$PG_BIN
+PG_DATA=$(find_pg_data_dir)
 
-echo -e "${GREEN}Starting PostgreSQL in Docker container...${NC}"
-
-# Find PostgreSQL version
-PG_VERSION=$(ls /usr/lib/postgresql/ 2>/dev/null | grep -E '^[0-9]+' | sort -V | tail -1)
-PG_DATA="/var/lib/postgresql/${PG_VERSION}/main"
-PG_CONFIG="/etc/postgresql/${PG_VERSION}/main/postgresql.conf"
-
-# Check if PostgreSQL is already running
-if pgrep -x postgres > /dev/null; then
-    echo -e "${GREEN}PostgreSQL is already running${NC}"
+if pgrep -f "postgres.*-D" > /dev/null; then
+    echo "PostgreSQL is already running"
     exit 0
 fi
 
-# Start PostgreSQL
-su - postgres -c "/usr/lib/postgresql/${PG_VERSION}/bin/postgres -D $PG_DATA -c config_file=$PG_CONFIG" &
+echo "Starting PostgreSQL..."
+su - postgres -c "\$PG_BIN/postgres -D \$PG_DATA" >> /var/log/postgresql/postgresql.log 2>&1 &
 
-# Wait for PostgreSQL to be ready
+# Wait for startup
 count=0
-while [ $count -lt 30 ]; do
-    if pg_isready -h localhost -p 5432 > /dev/null 2>&1; then
-        echo -e "${GREEN}PostgreSQL started successfully${NC}"
+while [ \$count -lt 30 ]; do
+    if pg_isready -q 2>/dev/null; then
+        echo "PostgreSQL started successfully"
         exit 0
     fi
     sleep 1
-    count=$((count + 1))
+    count=\$((count + 1))
 done
 
-echo -e "${RED}Failed to start PostgreSQL${NC}"
+echo "Failed to start PostgreSQL"
 exit 1
 EOF
     
     chmod +x "$SCRIPT_DIR/start_postgresql_docker.sh"
-    print_success "Docker startup script created"
+    
+    # Connection script
+    cat > "$SCRIPT_DIR/connect_db.sh" << EOF
+#!/bin/bash
+# Connect to AutoTrainX database
+
+source $SCRIPT_DIR/.env 2>/dev/null
+
+psql -h \${AUTOTRAINX_DB_HOST:-localhost} \\
+     -p \${AUTOTRAINX_DB_PORT:-5432} \\
+     -U \${AUTOTRAINX_DB_USER:-autotrainx} \\
+     -d \${AUTOTRAINX_DB_NAME:-autotrainx}
+EOF
+    
+    chmod +x "$SCRIPT_DIR/connect_db.sh"
+    
+    print_success "Helper scripts created"
 }
 
 # =====================================================
-# Main setup function
+# Main function
 # =====================================================
 
 main() {
     print_header
     
     if [ "$IS_DOCKER" = true ]; then
-        print_info "Detected Docker container environment"
-        print_info "Using Docker-optimized configuration"
-    else
-        print_warning "This script is optimized for Docker containers"
-        print_info "Running on host system - some features may work differently"
+        print_info "Running in Docker container"
     fi
     
     echo
-    read -p "Do you want to continue? [Y/n]: " response
+    read -p "Continue with setup? [Y/n]: " response
     response=${response:-Y}
     
     if [[ ! "$response" =~ ^[Yy]$ ]]; then
@@ -466,39 +519,36 @@ main() {
         exit 0
     fi
     
-    # Step 1: Install PostgreSQL
-    if ! install_postgresql; then
-        print_error "Setup failed: PostgreSQL installation error"
+    # Step 1: Install/Verify PostgreSQL
+    if ! install_or_verify_postgresql; then
+        print_error "Setup failed"
         exit 1
     fi
     
-    # Step 2: Configure PostgreSQL
+    # Step 2: Configure
     if ! configure_postgresql; then
-        print_error "Setup failed: PostgreSQL configuration error"
+        print_error "Configuration failed"
         exit 1
     fi
     
     # Step 3: Create helper scripts
-    create_docker_startup_script
+    create_helper_scripts
     
-    # Final summary
+    # Complete
     print_section "Setup Complete!"
     
-    print_success "PostgreSQL has been configured for AutoTrainX in Docker"
+    print_success "PostgreSQL configured for AutoTrainX"
     echo
-    print_info "Important notes for Docker:"
-    echo "1. PostgreSQL needs to be started manually in containers"
-    echo "2. Use: ./database_utils/start_postgresql_docker.sh"
-    echo "3. Configuration saved in: ./database_utils/.env"
-    echo "4. To connect: psql -h localhost -U $DEFAULT_DB_USER -d $DEFAULT_DB_NAME"
+    print_info "Next steps:"
+    echo "1. Start PostgreSQL: ./database_utils/start_postgresql_docker.sh"
+    echo "2. Connect to DB: ./database_utils/connect_db.sh"
+    echo "3. Configuration: ./database_utils/.env"
     echo
     
     if [ "$IS_DOCKER" = true ]; then
-        print_warning "Remember to start PostgreSQL before running AutoTrainX!"
-        echo "Add this to your container startup:"
-        echo "  /path/to/database_utils/start_postgresql_docker.sh"
+        print_warning "Remember: In Docker, PostgreSQL must be started manually!"
     fi
 }
 
-# Run main function
+# Run main
 main
