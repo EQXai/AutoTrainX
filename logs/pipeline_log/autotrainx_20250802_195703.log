@@ -1,0 +1,27 @@
+2025-08-02 19:57:04,000 - __main__ - ERROR - async_main:338 - Unexpected error occurred
+Traceback (most recent call last):
+  File "/home/eqx/AutoTrainX/main.py", line 287, in async_main
+    result = handler.execute(args)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/src/cli/unified_handlers.py", line 56, in execute
+    return handler(args)
+           ^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/src/cli/unified_handlers.py", line 61, in _handle_train
+    prepare_result = self._prepare_dataset(args)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/src/cli/unified_handlers.py", line 108, in _prepare_dataset
+    return self.pipeline.execute(
+           ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/src/pipeline/pipeline.py", line 92, in execute
+    return self._pipelines[mode].execute(**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/src/pipeline/modes/batch_pipeline.py", line 74, in execute
+    results = self._execute_sequential(normalized_datasets, context, continue_on_error, preset)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/src/pipeline/modes/batch_pipeline.py", line 191, in _execute_sequential
+    response = get_clean_confirmation(mode="batch")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/src/pipeline/utils/shared_pipeline_utils.py", line 86, in get_clean_confirmation
+    return input(prompt).strip().lower()
+           ^^^^^^^^^^^^^
+EOFError: EOF when reading a line

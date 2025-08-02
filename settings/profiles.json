@@ -1,0 +1,13 @@
+{
+  "default": {
+    "name": "default",
+    "description": "Standard workspace structure",
+    "custom_output_path": null
+  },
+  "CUSTOM": {
+    "name": "CUSTOM",
+    "description": "Custom output path: /home/eqx/custom/",
+    "custom_output_path": "/home/eqx/custom/",
+    "created": "2025-07-30T23:31:31.171996"
+  }
+}

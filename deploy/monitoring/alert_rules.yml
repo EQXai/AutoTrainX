@@ -1,0 +1,232 @@
+# Prometheus alert rules for AutoTrainX
+groups:
+  - name: autotrainx.api
+    rules:
+      # API Health alerts
+      - alert: AutoTrainXAPIDown
+        expr: up{job="autotrainx-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: autotrainx-api
+        annotations:
+          summary: "AutoTrainX API is down"
+          description: "AutoTrainX API has been down for more than 1 minute. Instance: {{ $labels.instance }}"
+          runbook_url: "https://docs.autotrainx.com/runbooks/api-down"
+
+      - alert: AutoTrainXAPIHealthCheckFailing
+        expr: probe_success{job="health-checks"} == 0
+        for: 2m
+        labels:
+          severity: warning
+          service: autotrainx-api
+        annotations:
+          summary: "AutoTrainX API health check failing"
+          description: "Health check for AutoTrainX API has been failing for 2 minutes"
+
+      # Performance alerts
+      - alert: AutoTrainXAPIHighResponseTime
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket{job="autotrainx-api"}[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: autotrainx-api
+        annotations:
+          summary: "AutoTrainX API high response time"
+          description: "95th percentile response time is {{ $value }}s for the last 5 minutes"
+
+      - alert: AutoTrainXAPIHighErrorRate
+        expr: rate(http_requests_total{job="autotrainx-api",status=~"5.."}[5m]) / rate(http_requests_total{job="autotrainx-api"}[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: warning
+          service: autotrainx-api
+        annotations:
+          summary: "AutoTrainX API high error rate"
+          description: "Error rate is {{ $value | humanizePercentage }} for the last 5 minutes"
+
+      # Training job alerts
+      - alert: TrainingJobsFailing
+        expr: increase(autotrainx_training_jobs_failed_total[10m]) > 3
+        for: 0s
+        labels:
+          severity: warning
+          service: autotrainx-training
+        annotations:
+          summary: "High number of training job failures"
+          description: "{{ $value }} training jobs have failed in the last 10 minutes"
+
+      - alert: TrainingJobsStuck
+        expr: autotrainx_training_jobs_running > 0 and increase(autotrainx_training_job_progress[30m]) == 0
+        for: 30m
+        labels:
+          severity: warning
+          service: autotrainx-training
+        annotations:
+          summary: "Training jobs appear to be stuck"
+          description: "{{ $value }} training jobs have made no progress in 30 minutes"
+
+      - alert: TrainingQueueBacklog
+        expr: autotrainx_training_jobs_queued > 10
+        for: 15m
+        labels:
+          severity: warning
+          service: autotrainx-training
+        annotations:
+          summary: "Large training job queue backlog"
+          description: "{{ $value }} jobs are queued for training"
+
+  - name: autotrainx.infrastructure
+    rules:
+      # Resource utilization alerts
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is above 90% for 5 minutes. Current: {{ $value | humanizePercentage }}"
+
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 90
+        for: 10m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is above 90% for 10 minutes. Current: {{ $value }}%"
+
+      - alert: DiskSpaceRunningLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+          service: infrastructure
+        annotations:
+          summary: "Disk space running low"
+          description: "Less than 10% disk space remaining. Available: {{ $value | humanizePercentage }}"
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.2
+        for: 5m
+        labels:
+          severity: warning
+          service: infrastructure
+        annotations:
+          summary: "Disk space low"
+          description: "Less than 20% disk space remaining. Available: {{ $value | humanizePercentage }}"
+
+  - name: autotrainx.redis
+    rules:
+      # Redis alerts
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis is down"
+          description: "Redis has been down for more than 1 minute"
+
+      - alert: RedisHighMemoryUsage
+        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis high memory usage"
+          description: "Redis memory usage is above 90%. Current: {{ $value | humanizePercentage }}"
+
+      - alert: RedisHighConnections
+        expr: redis_connected_clients > 100
+        for: 5m
+        labels:
+          severity: warning
+          service: redis
+        annotations:
+          summary: "Redis high number of connections"
+          description: "Redis has {{ $value }} connected clients"
+
+  - name: autotrainx.database
+    rules:
+      # Database alerts
+      - alert: DatabaseConnectionsHigh
+        expr: autotrainx_database_connections_active > 50
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "High number of database connections"
+          description: "{{ $value }} active database connections"
+
+      - alert: DatabaseSlowQueries
+        expr: rate(autotrainx_database_query_duration_seconds{quantile="0.95"}[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          service: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "95th percentile query time is {{ $value }}s"
+
+  - name: autotrainx.containers
+    rules:
+      # Container alerts
+      - alert: ContainerKilled
+        expr: time() - container_last_seen > 60
+        for: 0s
+        labels:
+          severity: warning
+          service: containers
+        annotations:
+          summary: "Container killed"
+          description: "Container {{ $labels.name }} has disappeared"
+
+      - alert: ContainerCPUThrottling
+        expr: rate(container_cpu_cfs_throttled_seconds_total[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: containers
+        annotations:
+          summary: "Container CPU throttling"
+          description: "Container {{ $labels.name }} is being CPU throttled"
+
+      - alert: ContainerMemoryUsageHigh
+        expr: (container_memory_usage_bytes / container_spec_memory_limit_bytes) > 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: containers
+        annotations:
+          summary: "Container memory usage high"
+          description: "Container {{ $labels.name }} memory usage is {{ $value | humanizePercentage }}"
+
+  - name: autotrainx.ssl
+    rules:
+      # SSL certificate alerts
+      - alert: SSLCertificateExpiringSoon
+        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 7
+        for: 0s
+        labels:
+          severity: warning
+          service: ssl
+        annotations:
+          summary: "SSL certificate expiring soon"
+          description: "SSL certificate for {{ $labels.instance }} expires in {{ $value | humanizeDuration }}"
+
+      - alert: SSLCertificateExpired
+        expr: probe_ssl_earliest_cert_expiry - time() <= 0
+        for: 0s
+        labels:
+          severity: critical
+          service: ssl
+        annotations:
+          summary: "SSL certificate expired"
+          description: "SSL certificate for {{ $labels.instance }} has expired"

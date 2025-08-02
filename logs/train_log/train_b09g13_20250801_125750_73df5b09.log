@@ -1,0 +1,185 @@
+# AutoTrainX Training Log
+# Dataset: b09g13
+# Preset: SX1
+# Job ID: 73df5b09
+# Start Time: 2025-08-01T12:57:50.763469
+# Mode: single
+# Command: /home/eqx/AutoTrainX/venv/bin/python /home/eqx/AutoTrainX/sd-scripts/sdxl_train.py --config_file /home/eqx/AutoTrainX/workspace/Presets/b09g13_SX1_73df5b09.toml --max_grad_norm=0.0 --no_half_vae --train_text_encoder --learning_rate_te2=0
+================================================================================
+
+2025-08-01 12:57:53 INFO     Loading settings from                                        train_util.py:4651
+                             /home/eqx/AutoTrainX/workspace/Presets/b09g13_SX1_73df5b09.t                   
+                             oml...                                                                         
+                    WARNING  clip_skip will be unexpected /                           sdxl_train_util.py:349
+                             SDXL学習ではclip_skipは動作しません                                            
+2025-08-01 12:57:54 INFO     Using DreamBooth method.                                      sdxl_train.py:153
+                    INFO     prepare images.                                              train_util.py:2072
+                    INFO     get image size from name of cache files                      train_util.py:1965
+
+  0%|          | 0/1 [00:00<?, ?it/s]
+100%|██████████| 1/1 [00:00<00:00, 45590.26it/s]
+                    INFO     set image size from cache files: 0/1                         train_util.py:1995
+                    INFO     found directory                                              train_util.py:2019
+                             /home/eqx/AutoTrainX/workspace/output/b09g13/img/30_b09g13                     
+                             person contains 1 image files                                                  
+
+read caption:   0%|          | 0/1 [00:00<?, ?it/s]
+read caption: 100%|██████████| 1/1 [00:00<00:00, 18477.11it/s]
+                    INFO     30 train images with repeats.                                train_util.py:2116
+                    INFO     0 reg images with repeats.                                   train_util.py:2120
+                    WARNING  no regularization images / 正則化画像が見つかりませんでした  train_util.py:2125
+                    INFO     [Dataset 0]                                                  config_util.py:580
+                               batch_size: 2                                                                
+                               resolution: (1024, 1280)                                                     
+                               resize_interpolation: None                                                   
+                               enable_bucket: False                                                         
+                                                                                                            
+                               [Subset 0 of Dataset 0]                                                      
+                                 image_dir:                                                                 
+                             "/home/eqx/AutoTrainX/workspace/output/b09g13/img/30_b09g13                    
+                             person"                                                                        
+                                 image_count: 1                                                             
+                                 num_repeats: 30                                                            
+                                 shuffle_caption: False                                                     
+                                 keep_tokens: 0                                                             
+                                 caption_dropout_rate: 0                                                    
+                                 caption_dropout_every_n_epochs: 0                                          
+                                 caption_tag_dropout_rate: 0.0                                              
+                                 caption_prefix: None                                                       
+                                 caption_suffix: None                                                       
+                                 color_aug: False                                                           
+                                 flip_aug: False                                                            
+                                 face_crop_aug_range: None                                                  
+                                 random_crop: False                                                         
+                                 token_warmup_min: 1,                                                       
+                                 token_warmup_step: 0,                                                      
+                                 alpha_mask: False                                                          
+                                 resize_interpolation: None                                                 
+                                 custom_attributes: {}                                                      
+                                 is_reg: False                                                              
+                                 class_tokens: b09g13 person                                                
+                                 caption_extension: .txt                                                    
+                                                                                                            
+                                                                                                            
+                    INFO     [Prepare dataset 0]                                          config_util.py:592
+                    INFO     loading image sizes.                                          train_util.py:987
+
+  0%|          | 0/1 [00:00<?, ?it/s]
+100%|██████████| 1/1 [00:00<00:00, 22550.02it/s]
+                    INFO     prepare dataset                                              train_util.py:1012
+                    INFO     prepare accelerator                                           sdxl_train.py:211
+                    INFO     loading model for process 0/1                             sdxl_train_util.py:32
+                    INFO     load StableDiffusion checkpoint:                          sdxl_train_util.py:73
+                             /home/eqx/AutoTrainX/models/SDXLModel.safetensors                              
+                    INFO     building U-Net                                           sdxl_model_util.py:198
+                    INFO     loading U-Net from checkpoint                            sdxl_model_util.py:202
+2025-08-01 12:57:55 INFO     U-Net: <All keys matched successfully>                   sdxl_model_util.py:208
+                    INFO     building text encoders                                   sdxl_model_util.py:211
+                    INFO     loading text encoders from checkpoint                    sdxl_model_util.py:264
+                    INFO     text encoder 1: <All keys matched successfully>          sdxl_model_util.py:278
+2025-08-01 12:57:56 INFO     text encoder 2: <All keys matched successfully>          sdxl_model_util.py:282
+                    INFO     building VAE                                             sdxl_model_util.py:285
+                    INFO     loading VAE from checkpoint                              sdxl_model_util.py:290
+                    INFO     VAE: <All keys matched successfully>                     sdxl_model_util.py:293
+                    INFO     load VAE: stabilityai/sdxl-vae                               model_util.py:1267
+                    INFO     additional VAE loaded                                    sdxl_train_util.py:131
+2025-08-01 12:57:57 INFO     [Dataset 0]                                                  train_util.py:2613
+                    INFO     caching latents with caching strategy.                       train_util.py:1115
+                    INFO     caching latents...                                           train_util.py:1164
+accelerator device: cuda
+Disable Diffusers' xformers
+
+  0%|          | 0/1 [00:00<?, ?it/s]
+100%|██████████| 1/1 [00:00<00:00, 1133.60it/s]
+                    INFO     use Adafactor optimizer | {'scale_parameter': False,         train_util.py:4963
+                             'relative_step': False, 'warmup_init': False,                                  
+                             'weight_decay': 0.01}                                                          
+                    WARNING  constant_with_warmup will be good /                          train_util.py:4995
+                             スケジューラはconstant_with_warmupが良いかもしれません                         
+enable text encoder training
+train unet: True, text_encoder1: True, text_encoder2: False
+number of models: 2
+number of trainable parameters: 2690524164
+prepare optimizer, data loader etc.
+override steps. steps for 2 epochs is / 指定エポックまでのステップ数: 30
+enable full bf16 training.
+running training / 学習開始
+  num examples / サンプル数: 30
+  num batches per epoch / 1epochのバッチ数: 15
+  num epochs / epoch数: 2
+  batch size per device / バッチサイズ: 2
+  gradient accumulation steps / 勾配を合計するステップ数 = 1
+  total optimization steps / 学習ステップ数: 30
+
+steps:   0%|          | 0/30 [00:00<?, ?it/s]2025-08-01 12:57:58 INFO     epoch is incremented. current_epoch: 0, epoch: 1              train_util.py:779
+
+steps:   3%|▎         | 1/30 [00:02<01:10,  2.43s/it]
+steps:   3%|▎         | 1/30 [00:02<01:10,  2.44s/it, avr_loss=0.0838]
+steps:   7%|▋         | 2/30 [00:04<00:57,  2.06s/it, avr_loss=0.0838]
+steps:   7%|▋         | 2/30 [00:04<00:57,  2.06s/it, avr_loss=0.212] 
+steps:  10%|█         | 3/30 [00:05<00:51,  1.90s/it, avr_loss=0.212]
+steps:  10%|█         | 3/30 [00:05<00:51,  1.90s/it, avr_loss=0.184]
+steps:  13%|█▎        | 4/30 [00:07<00:48,  1.86s/it, avr_loss=0.184]
+steps:  13%|█▎        | 4/30 [00:07<00:48,  1.86s/it, avr_loss=0.177]
+steps:  17%|█▋        | 5/30 [00:09<00:45,  1.83s/it, avr_loss=0.177]
+steps:  17%|█▋        | 5/30 [00:09<00:45,  1.83s/it, avr_loss=0.17] 
+steps:  20%|██        | 6/30 [00:10<00:43,  1.82s/it, avr_loss=0.17]
+steps:  20%|██        | 6/30 [00:10<00:43,  1.82s/it, avr_loss=0.163]
+steps:  23%|██▎       | 7/30 [00:12<00:41,  1.81s/it, avr_loss=0.163]
+steps:  23%|██▎       | 7/30 [00:12<00:41,  1.81s/it, avr_loss=0.143]
+steps:  27%|██▋       | 8/30 [00:15<00:43,  2.00s/it, avr_loss=0.143]
+steps:  27%|██▋       | 8/30 [00:15<00:43,  2.00s/it, avr_loss=0.136]
+steps:  30%|███       | 9/30 [00:17<00:41,  1.98s/it, avr_loss=0.136]
+steps:  30%|███       | 9/30 [00:17<00:41,  1.98s/it, avr_loss=0.129]
+steps:  33%|███▎      | 10/30 [00:19<00:39,  1.96s/it, avr_loss=0.129]
+steps:  33%|███▎      | 10/30 [00:19<00:39,  1.96s/it, avr_loss=0.124]
+steps:  37%|███▋      | 11/30 [00:21<00:37,  1.96s/it, avr_loss=0.124]
+steps:  37%|███▋      | 11/30 [00:21<00:37,  1.96s/it, avr_loss=0.121]
+steps:  40%|████      | 12/30 [00:23<00:35,  1.97s/it, avr_loss=0.121]
+steps:  40%|████      | 12/30 [00:23<00:35,  1.97s/it, avr_loss=0.119]
+steps:  43%|████▎     | 13/30 [00:25<00:33,  1.95s/it, avr_loss=0.119]
+steps:  43%|████▎     | 13/30 [00:25<00:33,  1.95s/it, avr_loss=0.137]
+steps:  47%|████▋     | 14/30 [00:26<00:30,  1.92s/it, avr_loss=0.137]
+steps:  47%|████▋     | 14/30 [00:26<00:30,  1.93s/it, avr_loss=0.15] 
+steps:  50%|█████     | 15/30 [00:28<00:28,  1.91s/it, avr_loss=0.15]
+steps:  50%|█████     | 15/30 [00:28<00:28,  1.91s/it, avr_loss=0.153]2025-08-01 12:58:27 INFO     epoch is incremented. current_epoch: 1, epoch: 2              train_util.py:779
+
+steps:  53%|█████▎    | 16/30 [00:30<00:26,  1.89s/it, avr_loss=0.153]
+steps:  53%|█████▎    | 16/30 [00:30<00:26,  1.89s/it, avr_loss=0.157]
+steps:  57%|█████▋    | 17/30 [00:31<00:24,  1.88s/it, avr_loss=0.157]
+steps:  57%|█████▋    | 17/30 [00:31<00:24,  1.88s/it, avr_loss=0.147]
+steps:  60%|██████    | 18/30 [00:33<00:22,  1.87s/it, avr_loss=0.147]
+steps:  60%|██████    | 18/30 [00:33<00:22,  1.87s/it, avr_loss=0.146]
+steps:  63%|██████▎   | 19/30 [00:35<00:20,  1.88s/it, avr_loss=0.146]
+steps:  63%|██████▎   | 19/30 [00:35<00:20,  1.88s/it, avr_loss=0.155]
+steps:  67%|██████▋   | 20/30 [00:37<00:18,  1.88s/it, avr_loss=0.155]
+steps:  67%|██████▋   | 20/30 [00:37<00:18,  1.88s/it, avr_loss=0.148]
+steps:  70%|███████   | 21/30 [00:39<00:17,  1.90s/it, avr_loss=0.148]
+steps:  70%|███████   | 21/30 [00:39<00:17,  1.90s/it, avr_loss=0.158]
+steps:  73%|███████▎  | 22/30 [00:41<00:15,  1.90s/it, avr_loss=0.158]
+steps:  73%|███████▎  | 22/30 [00:41<00:15,  1.90s/it, avr_loss=0.169]
+steps:  77%|███████▋  | 23/30 [00:43<00:13,  1.91s/it, avr_loss=0.169]
+steps:  77%|███████▋  | 23/30 [00:43<00:13,  1.91s/it, avr_loss=0.182]
+steps:  80%|████████  | 24/30 [00:45<00:11,  1.90s/it, avr_loss=0.182]
+steps:  80%|████████  | 24/30 [00:45<00:11,  1.90s/it, avr_loss=0.191]
+steps:  83%|████████▎ | 25/30 [00:47<00:09,  1.89s/it, avr_loss=0.191]
+steps:  83%|████████▎ | 25/30 [00:47<00:09,  1.89s/it, avr_loss=0.195]
+steps:  87%|████████▋ | 26/30 [00:50<00:07,  1.93s/it, avr_loss=0.195]
+steps:  87%|████████▋ | 26/30 [00:50<00:07,  1.93s/it, avr_loss=0.193]
+steps:  90%|█████████ | 27/30 [00:51<00:05,  1.93s/it, avr_loss=0.193]
+steps:  90%|█████████ | 27/30 [00:51<00:05,  1.93s/it, avr_loss=0.189]
+steps:  93%|█████████▎| 28/30 [00:53<00:03,  1.92s/it, avr_loss=0.189]
+steps:  93%|█████████▎| 28/30 [00:53<00:03,  1.92s/it, avr_loss=0.177]
+steps:  97%|█████████▋| 29/30 [00:55<00:01,  1.92s/it, avr_loss=0.177]
+steps:  97%|█████████▋| 29/30 [00:55<00:01,  1.92s/it, avr_loss=0.162]
+steps: 100%|██████████| 30/30 [00:57<00:00,  1.91s/it, avr_loss=0.162]
+steps: 100%|██████████| 30/30 [00:57<00:00,  1.91s/it, avr_loss=0.151]2025-08-01 12:58:56 INFO     save trained model as StableDiffusion checkpoint to          train_util.py:5952
+                             /home/eqx/AutoTrainX/workspace/output/b09g13/model/b09g13_SX                   
+                             1_73df5b09.safetensors                                                         
+2025-08-01 12:59:06 INFO     model saved.                                                  sdxl_train.py:888
+
+steps: 100%|██████████| 30/30 [01:07<00:00,  2.26s/it, avr_loss=0.151]
+
+epoch 1/2
+
+epoch 2/2

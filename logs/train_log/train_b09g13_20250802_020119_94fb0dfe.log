@@ -1,0 +1,233 @@
+# AutoTrainX Training Log
+# Dataset: b09g13
+# Preset: SX1
+# Job ID: 94fb0dfe
+# Start Time: 2025-08-02T02:01:19.701543
+# Mode: single
+# Command: /home/eqx/AutoTrainX/venv/bin/python /home/eqx/AutoTrainX/sd-scripts/sdxl_train.py --config_file /home/eqx/AutoTrainX/workspace/Presets/b09g13_SX1_94fb0dfe.toml --max_grad_norm=0.0 --no_half_vae --train_text_encoder --learning_rate_te2=0
+================================================================================
+
+2025-08-02 02:01:22 INFO     Loading settings from                                        train_util.py:4651
+                             /home/eqx/AutoTrainX/workspace/Presets/b09g13_SX1_94fb0dfe.t                   
+                             oml...                                                                         
+                    WARNING  clip_skip will be unexpected /                           sdxl_train_util.py:349
+                             SDXL学習ではclip_skipは動作しません                                            
+2025-08-02 02:01:23 INFO     Using DreamBooth method.                                      sdxl_train.py:153
+                    INFO     prepare images.                                              train_util.py:2072
+                    INFO     get image size from name of cache files                      train_util.py:1965
+
+  0%|          | 0/1 [00:00<?, ?it/s]
+100%|██████████| 1/1 [00:00<00:00, 41120.63it/s]
+                    INFO     set image size from cache files: 0/1                         train_util.py:1995
+                    INFO     found directory                                              train_util.py:2019
+                             /home/eqx/AutoTrainX/workspace/output/b09g13/img/30_b09g13                     
+                             person contains 1 image files                                                  
+
+read caption:   0%|          | 0/1 [00:00<?, ?it/s]
+read caption: 100%|██████████| 1/1 [00:00<00:00, 18808.54it/s]
+                    INFO     30 train images with repeats.                                train_util.py:2116
+                    INFO     0 reg images with repeats.                                   train_util.py:2120
+                    WARNING  no regularization images / 正則化画像が見つかりませんでした  train_util.py:2125
+                    INFO     [Dataset 0]                                                  config_util.py:580
+                               batch_size: 2                                                                
+                               resolution: (1024, 1280)                                                     
+                               resize_interpolation: None                                                   
+                               enable_bucket: False                                                         
+                                                                                                            
+                               [Subset 0 of Dataset 0]                                                      
+                                 image_dir:                                                                 
+                             "/home/eqx/AutoTrainX/workspace/output/b09g13/img/30_b09g13                    
+                             person"                                                                        
+                                 image_count: 1                                                             
+                                 num_repeats: 30                                                            
+                                 shuffle_caption: False                                                     
+                                 keep_tokens: 0                                                             
+                                 caption_dropout_rate: 0                                                    
+                                 caption_dropout_every_n_epochs: 0                                          
+                                 caption_tag_dropout_rate: 0.0                                              
+                                 caption_prefix: None                                                       
+                                 caption_suffix: None                                                       
+                                 color_aug: False                                                           
+                                 flip_aug: False                                                            
+                                 face_crop_aug_range: None                                                  
+                                 random_crop: False                                                         
+                                 token_warmup_min: 1,                                                       
+                                 token_warmup_step: 0,                                                      
+                                 alpha_mask: False                                                          
+                                 resize_interpolation: None                                                 
+                                 custom_attributes: {}                                                      
+                                 is_reg: False                                                              
+                                 class_tokens: b09g13 person                                                
+                                 caption_extension: .txt                                                    
+                                                                                                            
+                                                                                                            
+                    INFO     [Prepare dataset 0]                                          config_util.py:592
+                    INFO     loading image sizes.                                          train_util.py:987
+
+  0%|          | 0/1 [00:00<?, ?it/s]
+100%|██████████| 1/1 [00:00<00:00, 22192.08it/s]
+                    INFO     prepare dataset                                              train_util.py:1012
+                    INFO     prepare accelerator                                           sdxl_train.py:211
+                    INFO     loading model for process 0/1                             sdxl_train_util.py:32
+                    INFO     load StableDiffusion checkpoint:                          sdxl_train_util.py:73
+                             /home/eqx/AutoTrainX/models/SDXLModel.safetensors                              
+                    INFO     building U-Net                                           sdxl_model_util.py:198
+                    INFO     loading U-Net from checkpoint                            sdxl_model_util.py:202
+2025-08-02 02:01:24 INFO     U-Net: <All keys matched successfully>                   sdxl_model_util.py:208
+                    INFO     building text encoders                                   sdxl_model_util.py:211
+                    INFO     loading text encoders from checkpoint                    sdxl_model_util.py:264
+                    INFO     text encoder 1: <All keys matched successfully>          sdxl_model_util.py:278
+2025-08-02 02:01:25 INFO     text encoder 2: <All keys matched successfully>          sdxl_model_util.py:282
+                    INFO     building VAE                                             sdxl_model_util.py:285
+                    INFO     loading VAE from checkpoint                              sdxl_model_util.py:290
+                    INFO     VAE: <All keys matched successfully>                     sdxl_model_util.py:293
+                    INFO     load VAE: stabilityai/sdxl-vae                               model_util.py:1267
+                    INFO     additional VAE loaded                                    sdxl_train_util.py:131
+                    INFO     [Dataset 0]                                                  train_util.py:2613
+                    INFO     caching latents with caching strategy.                       train_util.py:1115
+                    INFO     caching latents...                                           train_util.py:1164
+accelerator device: cuda
+Disable Diffusers' xformers
+
+  0%|          | 0/1 [00:00<?, ?it/s]
+100%|██████████| 1/1 [00:00<00:00, 914.59it/s]
+2025-08-02 02:01:26 INFO     use Adafactor optimizer | {'scale_parameter': False,         train_util.py:4963
+                             'relative_step': False, 'warmup_init': False,                                  
+                             'weight_decay': 0.01}                                                          
+                    WARNING  constant_with_warmup will be good /                          train_util.py:4995
+                             スケジューラはconstant_with_warmupが良いかもしれません                         
+enable text encoder training
+train unet: True, text_encoder1: True, text_encoder2: False
+number of models: 2
+number of trainable parameters: 2690524164
+prepare optimizer, data loader etc.
+override steps. steps for 2 epochs is / 指定エポックまでのステップ数: 30
+enable full bf16 training.
+running training / 学習開始
+  num examples / サンプル数: 30
+  num batches per epoch / 1epochのバッチ数: 15
+  num epochs / epoch数: 2
+  batch size per device / バッチサイズ: 2
+  gradient accumulation steps / 勾配を合計するステップ数 = 1
+  total optimization steps / 学習ステップ数: 30
+
+steps:   0%|          | 0/30 [00:00<?, ?it/s]2025-08-02 02:01:27 INFO     epoch is incremented. current_epoch: 0, epoch: 1              train_util.py:779
+
+steps:   3%|▎         | 1/30 [00:02<01:00,  2.10s/it]
+steps:   3%|▎         | 1/30 [00:02<01:00,  2.10s/it, avr_loss=0.0237]
+steps:   7%|▋         | 2/30 [00:03<00:51,  1.82s/it, avr_loss=0.0237]
+steps:   7%|▋         | 2/30 [00:03<00:51,  1.82s/it, avr_loss=0.0967]
+steps:  10%|█         | 3/30 [00:05<00:47,  1.75s/it, avr_loss=0.0967]
+steps:  10%|█         | 3/30 [00:05<00:47,  1.75s/it, avr_loss=0.0904]
+steps:  13%|█▎        | 4/30 [00:06<00:44,  1.72s/it, avr_loss=0.0904]
+steps:  13%|█▎        | 4/30 [00:06<00:44,  1.72s/it, avr_loss=0.0823]
+steps:  17%|█▋        | 5/30 [00:08<00:42,  1.69s/it, avr_loss=0.0823]
+steps:  17%|█▋        | 5/30 [00:08<00:42,  1.69s/it, avr_loss=0.0692]
+steps:  20%|██        | 6/30 [00:10<00:40,  1.70s/it, avr_loss=0.0692]
+steps:  20%|██        | 6/30 [00:10<00:40,  1.70s/it, avr_loss=0.11]  
+steps:  23%|██▎       | 7/30 [00:11<00:38,  1.68s/it, avr_loss=0.11]
+steps:  23%|██▎       | 7/30 [00:11<00:38,  1.68s/it, avr_loss=0.1] 
+steps:  27%|██▋       | 8/30 [00:13<00:37,  1.69s/it, avr_loss=0.1]
+steps:  27%|██▋       | 8/30 [00:13<00:37,  1.69s/it, avr_loss=0.1]
+steps:  30%|███       | 9/30 [00:15<00:35,  1.71s/it, avr_loss=0.1]
+steps:  30%|███       | 9/30 [00:15<00:35,  1.71s/it, avr_loss=0.109]
+steps:  33%|███▎      | 10/30 [00:16<00:33,  1.69s/it, avr_loss=0.109]
+steps:  33%|███▎      | 10/30 [00:16<00:33,  1.69s/it, avr_loss=0.111]
+steps:  37%|███▋      | 11/30 [00:18<00:32,  1.70s/it, avr_loss=0.111]
+steps:  37%|███▋      | 11/30 [00:18<00:32,  1.70s/it, avr_loss=0.104]
+steps:  40%|████      | 12/30 [00:21<00:32,  1.82s/it, avr_loss=0.104]
+steps:  40%|████      | 12/30 [00:21<00:32,  1.82s/it, avr_loss=0.101]
+steps:  43%|████▎     | 13/30 [00:24<00:32,  1.90s/it, avr_loss=0.101]
+steps:  43%|████▎     | 13/30 [00:24<00:32,  1.90s/it, avr_loss=0.101]
+steps:  47%|████▋     | 14/30 [00:26<00:30,  1.89s/it, avr_loss=0.101]
+steps:  47%|████▋     | 14/30 [00:26<00:30,  1.89s/it, avr_loss=0.104]
+steps:  50%|█████     | 15/30 [00:28<00:28,  1.90s/it, avr_loss=0.104]
+steps:  50%|█████     | 15/30 [00:28<00:28,  1.90s/it, avr_loss=0.109]2025-08-02 02:01:56 INFO     epoch is incremented. current_epoch: 1, epoch: 2              train_util.py:779
+
+steps:  53%|█████▎    | 16/30 [00:31<00:27,  1.98s/it, avr_loss=0.109]Exception in thread Thread-2:
+Traceback (most recent call last):
+  File "/home/eqx/AutoTrainX/sd-scripts/sdxl_train.py", line 808, in train
+    accelerator.log(logs, step=global_step)
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/accelerate/accelerator.py", line 696, in _inner
+    return PartialState().on_main_process(function)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/accelerate/accelerator.py", line 2673, in log
+
+epoch 1/2
+
+epoch 2/2
+Traceback (most recent call last):
+  File "/home/eqx/AutoTrainX/sd-scripts/sdxl_train.py", line 951, in <module>
+    train(args)
+    tracker.log(values, step=step, **log_kwargs.get(tracker.name, {}))
+  File "/home/eqx/AutoTrainX/sd-scripts/sdxl_train.py", line 808, in train
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/accelerate/tracking.py", line 79, in execute_on_main_process
+    return PartialState().on_main_process(function)(self, *args, **kwargs)
+    accelerator.log(logs, step=global_step)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/accelerate/tracking.py", line 247, in log
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/accelerate/accelerator.py", line 696, in _inner
+    return PartialState().on_main_process(function)(*args, **kwargs)
+    self.writer.flush()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/accelerate/accelerator.py", line 2673, in log
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/torch/utils/tensorboard/writer.py", line 1194, in flush
+    tracker.log(values, step=step, **log_kwargs.get(tracker.name, {}))
+    writer.flush()
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/accelerate/tracking.py", line 79, in execute_on_main_process
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/torch/utils/tensorboard/writer.py", line 153, in flush
+    return PartialState().on_main_process(function)(self, *args, **kwargs)
+    self.event_writer.flush()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/accelerate/tracking.py", line 247, in log
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/summary/writer/event_file_writer.py", line 125, in flush
+    self.writer.flush()
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/torch/utils/tensorboard/writer.py", line 1194, in flush
+    self._async_writer.flush()
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/summary/writer/event_file_writer.py", line 194, in flush
+    writer.flush()
+    self._check_worker_status()
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/torch/utils/tensorboard/writer.py", line 153, in flush
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/summary/writer/event_file_writer.py", line 212, in _check_worker_status
+    self.event_writer.flush()
+    raise exception
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/summary/writer/event_file_writer.py", line 125, in flush
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+    self._async_writer.flush()
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/summary/writer/event_file_writer.py", line 194, in flush
+    self._check_worker_status()
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/summary/writer/event_file_writer.py", line 212, in _check_worker_status
+    raise exception
+  File "/usr/lib/python3.12/threading.py", line 1073, in _bootstrap_inner
+    self.run()
+    self.run()
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/summary/writer/event_file_writer.py", line 244, in run
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/summary/writer/event_file_writer.py", line 244, in run
+    self._run()
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/summary/writer/event_file_writer.py", line 275, in _run
+    self._run()
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/summary/writer/event_file_writer.py", line 275, in _run
+    self._record_writer.write(data)
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/summary/writer/record_writer.py", line 40, in write
+    self._record_writer.write(data)
+    self._writer.write(header + header_crc + data + footer_crc)
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/summary/writer/record_writer.py", line 40, in write
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/compat/tensorflow_stub/io/gfile.py", line 775, in write
+    self._writer.write(header + header_crc + data + footer_crc)
+    self.fs.append(self.filename, file_content, self.binary_mode)
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/compat/tensorflow_stub/io/gfile.py", line 775, in write
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/compat/tensorflow_stub/io/gfile.py", line 167, in append
+    self._write(filename, file_content, "ab" if binary_mode else "a")
+    self.fs.append(self.filename, file_content, self.binary_mode)
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/compat/tensorflow_stub/io/gfile.py", line 171, in _write
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/compat/tensorflow_stub/io/gfile.py", line 167, in append
+    with io.open(filename, mode, encoding=encoding) as f:
+    self._write(filename, file_content, "ab" if binary_mode else "a")
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/venv/lib/python3.12/site-packages/tensorboard/compat/tensorflow_stub/io/gfile.py", line 171, in _write
+FileNotFoundError: [Errno 2] No such file or directory: b'/home/eqx/AutoTrainX/workspace/output/b09g13/log/20250802020123/finetuning/events.out.tfevents.1754092887.DESKTOP-AEAFJ4L.1337906.0'
+    with io.open(filename, mode, encoding=encoding) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: b'/home/eqx/AutoTrainX/workspace/output/b09g13/log/20250802020123/finetuning/events.out.tfevents.1754092887.DESKTOP-AEAFJ4L.1337906.0'
+
+steps:  53%|█████▎    | 16/30 [00:31<00:27,  2.00s/it, avr_loss=0.109]

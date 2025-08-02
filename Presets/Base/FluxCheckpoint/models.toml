@@ -1,0 +1,10 @@
+# Models configuration for F1 profile (Flux Full Training)
+# This file defines the model paths used by this profile
+# If this file is missing, the system will use trainX defaults
+
+[models]
+base_path = "./models"
+ae = "ae.safetensors"
+clip_l = "clip_l.safetensors"
+pretrained_model = "flux1-dev-fp8.safetensors"
+t5xxl = "t5xxl_fp8_e4m3fn.safetensors" 

@@ -1,0 +1,119 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: autotrainx-config
+  namespace: autotrainx
+  labels:
+    app.kubernetes.io/name: autotrainx
+    app.kubernetes.io/component: config
+data:
+  # Application settings
+  ENVIRONMENT: "production"
+  LOG_LEVEL: "info"
+  API_WORKERS: "2"
+  
+  # Paths
+  WORKSPACE_PATH: "/app/workspace"
+  MODELS_PATH: "/app/models"
+  PRESETS_PATH: "/app/Presets"
+  
+  # Training settings
+  MAX_CONCURRENT_JOBS: "2"
+  
+  # Redis settings
+  REDIS_URL: "redis://redis-service:6379"
+  
+  # Monitoring
+  PROMETHEUS_ENABLED: "true"
+  METRICS_PORT: "9090"
+  
+  # Security
+  ALLOWED_HOSTS: "*"
+  CORS_ORIGINS: "*"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: autotrainx
+  labels:
+    app.kubernetes.io/name: autotrainx
+    app.kubernetes.io/component: proxy
+data:
+  nginx.conf: |
+    user nginx;
+    worker_processes auto;
+    pid /var/run/nginx.pid;
+    error_log /var/log/nginx/error.log warn;
+
+    events {
+        worker_connections 1024;
+        use epoll;
+        multi_accept on;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        
+        log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                        '$status $body_bytes_sent "$http_referer" '
+                        '"$http_user_agent" "$http_x_forwarded_for"';
+        
+        access_log /var/log/nginx/access.log main;
+        
+        sendfile on;
+        tcp_nopush on;
+        tcp_nodelay on;
+        keepalive_timeout 65;
+        client_max_body_size 100M;
+        
+        gzip on;
+        gzip_vary on;
+        gzip_min_length 1024;
+        gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
+        
+        upstream api {
+            server autotrainx-api-service:8000;
+            keepalive 32;
+        }
+        
+        server {
+            listen 80;
+            server_name _;
+            
+            location /health-nginx {
+                access_log off;
+                return 200 "healthy\n";
+                add_header Content-Type text/plain;
+            }
+            
+            location / {
+                proxy_pass http://api;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection 'upgrade';
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+                proxy_cache_bypass $http_upgrade;
+                
+                proxy_connect_timeout 60s;
+                proxy_send_timeout 60s;
+                proxy_read_timeout 300s;
+            }
+            
+            location /ws {
+                proxy_pass http://api;
+                proxy_http_version 1.1;
+                proxy_set_header Upgrade $http_upgrade;
+                proxy_set_header Connection "upgrade";
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+        }
+    }

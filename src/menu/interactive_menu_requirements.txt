@@ -1,0 +1,4 @@
+# Interactive Menu Dependencies
+# Install with: pip install -r interactive_menu_requirements.txt
+
+questionary>=2.0.0

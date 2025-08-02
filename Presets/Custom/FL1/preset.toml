@@ -1,0 +1,5 @@
+[preset]
+base = "FluxLORA"
+name = "FL1"
+description = "Custom FLUX LoRA optimized for portrait training"
+created = "2025-01-29 12:00:00"

@@ -1,0 +1,29 @@
+{
+  "sqlite": {
+    "type": "sqlite",
+    "path": "DB/executions.db",
+    "dataset_paths_db": "DB/dataset_paths.db",
+    "echo": false,
+    "pool": {
+      "size": 5,
+      "max_overflow": 10,
+      "timeout": 30,
+      "recycle": 3600
+    }
+  },
+  "postgresql": {
+    "type": "postgresql",
+    "host": "localhost",
+    "port": 5432,
+    "database": "autotrainx",
+    "username": "autotrainx",
+    "password": "your_secure_password",
+    "echo": false,
+    "pool": {
+      "size": 10,
+      "max_overflow": 20,
+      "timeout": 30,
+      "recycle": 3600
+    }
+  }
+}

@@ -1,0 +1,88 @@
+# AutoTrainX Training Log
+# Dataset: dl4r0s4
+# Preset: SX1
+# Job ID: 3cab847f
+# Start Time: 2025-08-02T17:47:19.130765
+# Mode: single
+# Command: /home/eqx/AutoTrainX/venv/bin/python /home/eqx/AutoTrainX/sd-scripts/sdxl_train.py --config_file /home/eqx/AutoTrainX/workspace/Presets/dl4r0s4_SX1_3cab847f.toml --max_grad_norm=0.0 --no_half_vae --train_text_encoder --learning_rate_te2=0
+================================================================================
+
+2025-08-02 17:47:22 INFO     Loading settings from                                                           train_util.py:4651
+                             /home/eqx/AutoTrainX/workspace/Presets/dl4r0s4_SX1_3cab847f.toml...                               
+                    WARNING  clip_skip will be unexpected / SDXL学習ではclip_skipは動作しません          sdxl_train_util.py:349
+2025-08-02 17:47:23 INFO     Using DreamBooth method.                                                         sdxl_train.py:153
+                    INFO     prepare images.                                                                 train_util.py:2072
+                    INFO     get image size from name of cache files                                         train_util.py:1965
+
+  0%|          | 0/34 [00:00<?, ?it/s]
+100%|██████████| 34/34 [00:00<00:00, 810263.27it/s]
+                    INFO     set image size from cache files: 0/34                                           train_util.py:1995
+                    INFO     found directory /home/eqx/AutoTrainX/workspace/output/dl4r0s4/img/30_dl4r0s4    train_util.py:2019
+                             person contains 34 image files                                                                    
+
+read caption:   0%|          | 0/34 [00:00<?, ?it/s]
+read caption: 100%|██████████| 34/34 [00:00<00:00, 61204.44it/s]
+                    INFO     1020 train images with repeats.                                                 train_util.py:2116
+                    INFO     0 reg images with repeats.                                                      train_util.py:2120
+                    WARNING  no regularization images / 正則化画像が見つかりませんでした                     train_util.py:2125
+                    INFO     [Dataset 0]                                                                     config_util.py:580
+                               batch_size: 2                                                                                   
+                               resolution: (1024, 1280)                                                                        
+                               resize_interpolation: None                                                                      
+                               enable_bucket: False                                                                            
+                                                                                                                               
+                               [Subset 0 of Dataset 0]                                                                         
+                                 image_dir: "/home/eqx/AutoTrainX/workspace/output/dl4r0s4/img/30_dl4r0s4                      
+                             person"                                                                                           
+                                 image_count: 34                                                                               
+                                 num_repeats: 30                                                                               
+                                 shuffle_caption: False                                                                        
+                                 keep_tokens: 0                                                                                
+                                 caption_dropout_rate: 0                                                                       
+                                 caption_dropout_every_n_epochs: 0                                                             
+                                 caption_tag_dropout_rate: 0.0                                                                 
+                                 caption_prefix: None                                                                          
+                                 caption_suffix: None                                                                          
+                                 color_aug: False                                                                              
+                                 flip_aug: False                                                                               
+                                 face_crop_aug_range: None                                                                     
+                                 random_crop: False                                                                            
+                                 token_warmup_min: 1,                                                                          
+                                 token_warmup_step: 0,                                                                         
+                                 alpha_mask: False                                                                             
+                                 resize_interpolation: None                                                                    
+                                 custom_attributes: {}                                                                         
+                                 is_reg: False                                                                                 
+                                 class_tokens: dl4r0s4 person                                                                  
+                                 caption_extension: .txt                                                                       
+                                                                                                                               
+                                                                                                                               
+                    INFO     [Prepare dataset 0]                                                             config_util.py:592
+                    INFO     loading image sizes.                                                             train_util.py:987
+
+  0%|          | 0/34 [00:00<?, ?it/s]
+100%|██████████| 34/34 [00:00<00:00, 91885.53it/s]
+                    INFO     prepare dataset                                                                 train_util.py:1012
+                    INFO     prepare accelerator                                                              sdxl_train.py:211
+                    INFO     loading model for process 0/1                                                sdxl_train_util.py:32
+                    INFO     load StableDiffusion checkpoint:                                             sdxl_train_util.py:73
+                             /home/eqx/AutoTrainX/models/SDXLModel.safetensors                                                 
+                    INFO     building U-Net                                                              sdxl_model_util.py:198
+                    INFO     loading U-Net from checkpoint                                               sdxl_model_util.py:202
+2025-08-02 17:47:25 INFO     U-Net: <All keys matched successfully>                                      sdxl_model_util.py:208
+                    INFO     building text encoders                                                      sdxl_model_util.py:211
+                    INFO     loading text encoders from checkpoint                                       sdxl_model_util.py:264
+                    INFO     text encoder 1: <All keys matched successfully>                             sdxl_model_util.py:278
+2025-08-02 17:47:26 INFO     text encoder 2: <All keys matched successfully>                             sdxl_model_util.py:282
+                    INFO     building VAE                                                                sdxl_model_util.py:285
+                    INFO     loading VAE from checkpoint                                                 sdxl_model_util.py:290
+                    INFO     VAE: <All keys matched successfully>                                        sdxl_model_util.py:293
+                    INFO     load VAE: stabilityai/sdxl-vae                                                  model_util.py:1267
+                    INFO     additional VAE loaded                                                       sdxl_train_util.py:131
+2025-08-02 17:47:27 INFO     [Dataset 0]                                                                     train_util.py:2613
+                    INFO     caching latents with caching strategy.                                          train_util.py:1115
+                    INFO     caching latents...                                                              train_util.py:1164
+accelerator device: cuda
+Disable Diffusers' xformers
+
+  0%|          | 0/34 [00:00<?, ?it/s]

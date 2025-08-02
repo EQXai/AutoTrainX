@@ -1,0 +1,303 @@
+Using Python 3.12.3 environment at: venv
+[START] Security scan
+[DONE] Security scan
+## ComfyUI-Manager: installing dependencies done.
+** ComfyUI startup time: 2025-08-02 12:21:55.120
+** Platform: Linux
+** Python version: 3.12.3 (main, Jun 18 2025, 17:59:45) [GCC 13.3.0]
+** Python executable: /home/eqx/ComfyUI/venv/bin/python
+** ComfyUI Path: /home/eqx/ComfyUI
+** ComfyUI Base Folder Path: /home/eqx/ComfyUI
+** User directory: /home/eqx/ComfyUI/user
+** ComfyUI-Manager config path: /home/eqx/ComfyUI/user/default/ComfyUI-Manager/config.ini
+** Log path: /home/eqx/ComfyUI/user/comfyui.log
+Using Python 3.12.3 environment at: venv
+Using Python 3.12.3 environment at: venv
+
+Prestartup times for custom nodes:
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/rgthree-comfy
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Easy-Use
+   0.2 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Manager
+
+Checkpoint files will always be loaded safely.
+Total VRAM 32607 MB, total RAM 88494 MB
+pytorch version: 2.7.1+cu128
+Set vram state to: NORMAL_VRAM
+Device: cuda:0 NVIDIA GeForce RTX 5090 : cudaMallocAsync
+Using pytorch attention
+Python version: 3.12.3 (main, Jun 18 2025, 17:59:45) [GCC 13.3.0]
+ComfyUI version: 0.3.44
+ComfyUI frontend version: 1.23.4
+[Prompt Server] web root: /home/eqx/ComfyUI/venv/lib/python3.12/site-packages/comfyui_frontend_package/static
+[34mWAS Node Suite: [0mOpenCV Python FFMPEG support is enabled[0m
+[34mWAS Node Suite [93mWarning: [0m`ffmpeg_bin_path` is not set in `/home/eqx/ComfyUI/custom_nodes/was-node-suite-comfyui/was_suite_config.json` config file. Will attempt to use system ffmpeg binaries if available.[0m
+[34mWAS Node Suite: [0mFinished.[0m [32mLoaded[0m [0m220[0m [32mnodes successfully.[0m
+
+	[3m[93m"Art is the only way to run away without leaving home."[0m[3m - Twyla Tharp[0m
+
+[34m[ComfyUI-Easy-Use] server: [0mv1.3.2 [92mLoaded[0m
+[34m[ComfyUI-Easy-Use] web root: [0m/home/eqx/ComfyUI/custom_nodes/ComfyUI-Easy-Use/web_version/v2 [92mLoaded[0m
+### Loading: ComfyUI-Inspire-Pack (V1.21)
+------------------------------------------
+[34mComfyroll Studio v1.76 : [92m 175 Nodes Loaded[0m
+------------------------------------------
+** For changes, please see patch notes at https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes/blob/main/Patch_Notes.md
+** For help, please see the wiki at https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes/wiki
+------------------------------------------
+═══════════════════════════════════════
+═══════════════════════════════════════
+═══════════════════════════════════════
+
+███████╗ ██████╗ ██╗  ██╗
+██╔════╝██╔═══██╗╚██╗██╔╝
+█████╗  ██║   ██║ ╚███╔╝ 
+██╔══╝  ██║ ╚╗██║ ██╔██╗ 
+███████╗╚██████╔╝██╔╝ ██╗
+╚══════╝     ╚═╝╚═╝  ╚═╝ 
+
+[ComfyUI_EQX] Loaded 7 nodes (v0.1.0)
+═══════════════════════════════════════
+═══════════════════════════════════════
+═══════════════════════════════════════
+
+[92m[rgthree-comfy] Loaded 47 extraordinary nodes. 🎉[0m
+
+[34mIb Custom Nodes: [92mLoaded[0m
+[93mEfficiency Nodes Warning:[0m Failed to import python package 'simpleeval'; related nodes disabled.
+
+[36;20m[/home/eqx/ComfyUI/custom_nodes/comfy-mtb] | INFO -> loaded [96m103[0m nodes successfuly[0m
+[36;20m[/home/eqx/ComfyUI/custom_nodes/comfy-mtb] | INFO -> Some nodes (5) could not be loaded. This can be ignored, but go to http://127.0.0.1:8188/mtb if you want more information.[0m
+[94mtheUpsiders Logic Nodes: [92mLoaded[0m
+[93mEfficiency Nodes Warning:[0m Failed to import python package 'simpleeval'; related nodes disabled.
+
+Loaded Efficiency nodes from /home/eqx/ComfyUI/custom_nodes/efficiency-nodes-comfyui
+Could not find ControlNetPreprocessors nodes
+Could not find AdvancedControlNet nodes
+Could not find AnimateDiff nodes
+Could not find IPAdapter nodes
+Could not find VideoHelperSuite nodes
+Could not load ImpactPack nodes Could not find ImpactPack nodes
+### Loading: ComfyUI-Impact-Pack (V8.20)
+[Impact Pack] Wildcards loading done.
+torch version---------------------- 2.7.1+cu128
+### Loading: ComfyUI-Manager (V3.34)
+[ComfyUI-Manager] network_mode: public
+### ComfyUI Version: v0.3.44-22-g6b8062f4 | Released on '2025-07-15'
+[92m[tinyterraNodes] [32mLoaded[0m
+[ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/model-list.json
+[ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/alter-list.json
+[ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/github-stats.json
+[ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/extension-node-map.json
+[ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/custom-node-list.json
+
+Import times for custom nodes:
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/websocket_image_save.py
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Logic
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI_Ib_CustomNodes
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/masquerade-nodes-comfyui
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/cg-use-everywhere
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Inpaint-CropAndStitch
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI_EQX
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI_JPS-Nodes
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-various
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-florence2
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Custom-Scripts
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui_essentials
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/efficiency-nodes-comfyui
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-kjnodes
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-art-venture
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI_tinyterraNodes
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/Comfy_KepListStuff
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-inspire-pack
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfy-mtb
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Manager
+   0.1 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-impact-pack
+   0.1 seconds: /home/eqx/ComfyUI/custom_nodes/rgthree-comfy
+   0.1 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI_Comfyroll_CustomNodes
+   0.1 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-videohelpersuite
+   0.2 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-fastblend
+   0.8 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Easy-Use
+   0.9 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui_layerstyle
+   1.0 seconds: /home/eqx/ComfyUI/custom_nodes/was-node-suite-comfyui
+
+Context impl SQLiteImpl.
+Will assume non-transactional DDL.
+No target revision found.
+Starting server
+
+To see the GUI go to: http://127.0.0.1:8188
+got prompt
+Using pytorch attention in VAE
+Using pytorch attention in VAE
+VAE load device: cuda:0, offload device: cpu, dtype: torch.bfloat16
+FETCH ComfyRegistry Data: 5/93
+Requested to load AutoencodingEngine
+loaded completely 19727.111328125 159.87335777282715 True
+CLIP/text encoder model load device: cuda:0, offload device: cpu, current: cpu, dtype: torch.float16
+clip missing: ['text_projection.weight']
+model weight dtype torch.float8_e4m3fn, manual cast: torch.bfloat16
+model_type FLUX
+FETCH ComfyRegistry Data: 10/93
+FETCH ComfyRegistry Data: 15/93
+FETCH ComfyRegistry Data: 20/93
+FETCH ComfyRegistry Data: 25/93
+FETCH ComfyRegistry Data: 30/93
+FETCH ComfyRegistry Data: 35/93
+FETCH ComfyRegistry Data: 40/93
+FETCH ComfyRegistry Data: 45/93
+FETCH ComfyRegistry Data: 50/93
+FETCH ComfyRegistry Data: 55/93
+Florence2 using sdpa for attention
+FETCH ComfyRegistry Data: 60/93
+FETCH ComfyRegistry Data: 65/93
+FETCH ComfyRegistry Data: 70/93
+</s><s>A close-up portrait of a young woman with long, dark hair. She wears a white strapless top and gold hoop earrings. Her makeup is subtle, featuring winged eyeliner and pink lipstick. She is looking directly at the camera with a neutral expression. The background is a white wall with vertical blinds. The image style is candid and natural, emphasizing the subject's features and expressions.</s>
+Offloading model...
+FETCH ComfyRegistry Data: 75/93
+FETCH ComfyRegistry Data: 80/93
+FETCH ComfyRegistry Data: 85/93
+Token indices sequence length is longer than the specified maximum sequence length for this model (86 > 77). Running this sequence through the model will result in indexing errors
+Requested to load FluxClipModel_
+FETCH ComfyRegistry Data: 90/93
+FETCH ComfyRegistry Data [DONE]
+[ComfyUI-Manager] default cache updated: https://api.comfy.org/nodes
+FETCH DATA from: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/custom-node-list.json [DONE]
+[ComfyUI-Manager] All startup tasks have been completed.
+loaded completely 29331.801642227172 4777.53759765625 True
+Requested to load Flux
+loaded completely 22591.384036941527 11350.067443847656 True
+
+  0%|          | 0/60 [00:00<?, ?it/s]
+  2%|▏         | 1/60 [00:01<01:15,  1.29s/it]
+  3%|▎         | 2/60 [00:02<01:26,  1.49s/it]
+  5%|▌         | 3/60 [00:04<01:30,  1.59s/it]
+  7%|▋         | 4/60 [00:06<01:30,  1.61s/it]
+  8%|▊         | 5/60 [00:07<01:29,  1.63s/it]
+ 10%|█         | 6/60 [00:09<01:27,  1.63s/it]
+ 12%|█▏        | 7/60 [00:11<01:26,  1.63s/it]
+ 13%|█▎        | 8/60 [00:12<01:24,  1.63s/it]
+ 15%|█▌        | 9/60 [00:14<01:23,  1.63s/it]
+ 17%|█▋        | 10/60 [00:16<01:21,  1.64s/it]
+ 18%|█▊        | 11/60 [00:17<01:20,  1.64s/it]
+ 20%|██        | 12/60 [00:19<01:18,  1.64s/it]
+ 22%|██▏       | 13/60 [00:21<01:16,  1.64s/it]
+ 23%|██▎       | 14/60 [00:22<01:15,  1.64s/it]
+ 25%|██▌       | 15/60 [00:24<01:13,  1.64s/it]
+ 27%|██▋       | 16/60 [00:25<01:12,  1.65s/it]
+ 28%|██▊       | 17/60 [00:27<01:10,  1.64s/it]
+ 30%|███       | 18/60 [00:29<01:08,  1.64s/it]
+ 32%|███▏      | 19/60 [00:30<01:07,  1.64s/it]
+ 33%|███▎      | 20/60 [00:32<01:05,  1.64s/it]
+ 35%|███▌      | 21/60 [00:34<01:04,  1.64s/it]
+ 37%|███▋      | 22/60 [00:35<01:02,  1.64s/it]
+ 38%|███▊      | 23/60 [00:37<01:00,  1.64s/it]
+ 40%|████      | 24/60 [00:39<00:59,  1.64s/it]
+ 42%|████▏     | 25/60 [00:40<00:57,  1.64s/it]
+ 43%|████▎     | 26/60 [00:42<00:55,  1.64s/it]
+ 45%|████▌     | 27/60 [00:44<00:54,  1.64s/it]
+ 47%|████▋     | 28/60 [00:45<00:52,  1.64s/it]
+ 48%|████▊     | 29/60 [00:47<00:50,  1.64s/it]
+ 50%|█████     | 30/60 [00:48<00:49,  1.64s/it]
+ 52%|█████▏    | 31/60 [00:50<00:47,  1.64s/it]
+ 53%|█████▎    | 32/60 [00:52<00:46,  1.64s/it]
+ 55%|█████▌    | 33/60 [00:53<00:44,  1.65s/it]
+ 57%|█████▋    | 34/60 [00:55<00:42,  1.64s/it]
+ 58%|█████▊    | 35/60 [00:57<00:41,  1.64s/it]
+ 60%|██████    | 36/60 [00:58<00:39,  1.65s/it]
+ 62%|██████▏   | 37/60 [01:00<00:37,  1.65s/it]
+ 63%|██████▎   | 38/60 [01:02<00:36,  1.65s/it]
+ 65%|██████▌   | 39/60 [01:03<00:34,  1.65s/it]
+ 67%|██████▋   | 40/60 [01:05<00:33,  1.67s/it]
+ 68%|██████▊   | 41/60 [01:07<00:31,  1.67s/it]
+ 70%|███████   | 42/60 [01:08<00:30,  1.68s/it]
+ 72%|███████▏  | 43/60 [01:10<00:28,  1.69s/it]
+ 73%|███████▎  | 44/60 [01:12<00:27,  1.70s/it]
+ 75%|███████▌  | 45/60 [01:13<00:25,  1.70s/it]
+ 77%|███████▋  | 46/60 [01:15<00:23,  1.70s/it]
+ 78%|███████▊  | 47/60 [01:17<00:22,  1.70s/it]
+ 80%|████████  | 48/60 [01:19<00:20,  1.69s/it]
+ 82%|████████▏ | 49/60 [01:20<00:18,  1.68s/it]
+ 83%|████████▎ | 50/60 [01:22<00:16,  1.67s/it]
+ 85%|████████▌ | 51/60 [01:24<00:14,  1.66s/it]
+ 87%|████████▋ | 52/60 [01:25<00:13,  1.66s/it]
+ 88%|████████▊ | 53/60 [01:27<00:11,  1.66s/it]
+ 90%|█████████ | 54/60 [01:29<00:10,  1.68s/it]
+ 92%|█████████▏| 55/60 [01:30<00:08,  1.68s/it]
+ 93%|█████████▎| 56/60 [01:32<00:06,  1.67s/it]
+ 95%|█████████▌| 57/60 [01:34<00:04,  1.67s/it]
+ 97%|█████████▋| 58/60 [01:35<00:03,  1.66s/it]
+ 98%|█████████▊| 59/60 [01:37<00:01,  1.67s/it]
+100%|██████████| 60/60 [01:39<00:00,  1.67s/it]
+100%|██████████| 60/60 [01:39<00:00,  1.65s/it]
+# 😺dzNodes: LayerStyle -> [1;32mAddGrain Processed 1 image(s).[m
+[34mEQX Node Suite: [0mImage file saved to: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/Preview/m14w00dh4ll_FL1_01_0001.png[0m
+Prompt executed in 229.94 seconds
+got prompt
+</s><s>A portrait of a woman sitting on a bed in a bedroom. She wears a blue lingerie set with pink and white floral patterns. Her long, dark hair falls down her shoulders. She is looking directly at the camera with a neutral expression. The bed has white sheets and pillows, and a window with white blinds is visible in the background. The room has a minimalist design with a white wall and a small kitchen visible through the window. The image is captioned "OnlyFans. com/itsn".</s>
+Offloading model...
+
+  0%|          | 0/60 [00:00<?, ?it/s]
+  2%|▏         | 1/60 [00:00<00:50,  1.16it/s]
+  3%|▎         | 2/60 [00:02<01:07,  1.16s/it]
+  5%|▌         | 3/60 [00:03<01:11,  1.26s/it]
+  7%|▋         | 4/60 [00:04<01:13,  1.30s/it]
+  8%|▊         | 5/60 [00:06<01:13,  1.33s/it]
+ 10%|█         | 6/60 [00:07<01:12,  1.35s/it]
+ 12%|█▏        | 7/60 [00:09<01:11,  1.36s/it]
+ 13%|█▎        | 8/60 [00:10<01:10,  1.36s/it]
+ 15%|█▌        | 9/60 [00:11<01:09,  1.37s/it]
+ 17%|█▋        | 10/60 [00:13<01:08,  1.37s/it]
+ 18%|█▊        | 11/60 [00:14<01:07,  1.37s/it]
+ 20%|██        | 12/60 [00:15<01:05,  1.37s/it]
+ 22%|██▏       | 13/60 [00:17<01:04,  1.37s/it]
+ 23%|██▎       | 14/60 [00:18<01:03,  1.38s/it]
+ 25%|██▌       | 15/60 [00:20<01:01,  1.38s/it]
+ 27%|██▋       | 16/60 [00:21<01:00,  1.38s/it]
+ 28%|██▊       | 17/60 [00:22<00:59,  1.38s/it]
+ 30%|███       | 18/60 [00:24<00:57,  1.38s/it]
+ 32%|███▏      | 19/60 [00:25<00:56,  1.38s/it]
+ 33%|███▎      | 20/60 [00:27<00:55,  1.38s/it]
+ 35%|███▌      | 21/60 [00:28<00:53,  1.38s/it]
+ 37%|███▋      | 22/60 [00:29<00:52,  1.38s/it]
+ 38%|███▊      | 23/60 [00:31<00:50,  1.38s/it]
+ 40%|████      | 24/60 [00:32<00:49,  1.38s/it]
+ 42%|████▏     | 25/60 [00:33<00:48,  1.38s/it]
+ 43%|████▎     | 26/60 [00:35<00:46,  1.38s/it]
+ 45%|████▌     | 27/60 [00:36<00:45,  1.38s/it]
+ 47%|████▋     | 28/60 [00:38<00:44,  1.38s/it]
+ 48%|████▊     | 29/60 [00:39<00:42,  1.38s/it]
+ 50%|█████     | 30/60 [00:40<00:41,  1.38s/it]
+ 52%|█████▏    | 31/60 [00:42<00:39,  1.38s/it]
+ 53%|█████▎    | 32/60 [00:43<00:38,  1.38s/it]
+ 55%|█████▌    | 33/60 [00:44<00:37,  1.38s/it]
+ 57%|█████▋    | 34/60 [00:46<00:35,  1.38s/it]
+ 58%|█████▊    | 35/60 [00:47<00:34,  1.38s/it]
+ 60%|██████    | 36/60 [00:49<00:33,  1.38s/it]
+ 62%|██████▏   | 37/60 [00:50<00:31,  1.38s/it]
+ 63%|██████▎   | 38/60 [00:51<00:30,  1.38s/it]
+ 65%|██████▌   | 39/60 [00:53<00:28,  1.38s/it]
+ 67%|██████▋   | 40/60 [00:54<00:27,  1.38s/it]
+ 68%|██████▊   | 41/60 [00:55<00:26,  1.38s/it]
+ 70%|███████   | 42/60 [00:57<00:24,  1.38s/it]
+ 72%|███████▏  | 43/60 [00:58<00:23,  1.38s/it]
+ 73%|███████▎  | 44/60 [01:00<00:21,  1.37s/it]
+ 75%|███████▌  | 45/60 [01:01<00:20,  1.37s/it]
+ 77%|███████▋  | 46/60 [01:02<00:19,  1.37s/it]
+ 78%|███████▊  | 47/60 [01:04<00:17,  1.37s/it]
+ 80%|████████  | 48/60 [01:05<00:16,  1.37s/it]
+ 82%|████████▏ | 49/60 [01:06<00:15,  1.38s/it]
+ 83%|████████▎ | 50/60 [01:08<00:13,  1.38s/it]
+ 85%|████████▌ | 51/60 [01:09<00:12,  1.38s/it]
+ 87%|████████▋ | 52/60 [01:11<00:10,  1.37s/it]
+ 88%|████████▊ | 53/60 [01:12<00:09,  1.37s/it]
+ 90%|█████████ | 54/60 [01:13<00:08,  1.37s/it]
+ 92%|█████████▏| 55/60 [01:15<00:06,  1.37s/it]
+ 93%|█████████▎| 56/60 [01:16<00:05,  1.37s/it]
+ 95%|█████████▌| 57/60 [01:17<00:04,  1.37s/it]
+ 97%|█████████▋| 58/60 [01:19<00:02,  1.37s/it]
+ 98%|█████████▊| 59/60 [01:20<00:01,  1.38s/it]
+100%|██████████| 60/60 [01:22<00:00,  1.37s/it]
+100%|██████████| 60/60 [01:22<00:00,  1.37s/it]
+# 😺dzNodes: LayerStyle -> [1;32mAddGrain Processed 1 image(s).[m
+[34mEQX Node Suite: [0mImage file saved to: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/Preview/m14w00dh4ll_FL1_02_0001.png[0m
+Prompt executed in 95.38 seconds

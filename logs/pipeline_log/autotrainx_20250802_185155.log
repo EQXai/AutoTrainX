@@ -1,0 +1,5 @@
+2025-08-02 18:51:55,248 - src.database.factory - INFO - create_engine:128 - ✅ POSTGRESQL database ready
+2025-08-02 18:51:55,253 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql
+2025-08-02 18:52:39,924 - src.database.factory - INFO - create_engine:128 - ✅ POSTGRESQL database ready
+2025-08-02 18:52:39,935 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql
+2025-08-02 18:53:00,587 - src.training.enhanced_trainer - ERROR - _execute_with_progress:252 - Training error: [Errno 32] Broken pipe

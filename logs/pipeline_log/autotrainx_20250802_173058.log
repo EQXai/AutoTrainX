@@ -1,0 +1,2 @@
+2025-08-02 17:30:58,329 - src.database.factory - INFO - create_engine:128 - Created postgresql engine: postgresql://autotrainx:1234@localhost:5432/autotrainx
+2025-08-02 17:30:58,333 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql

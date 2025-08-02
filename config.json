@@ -1,0 +1,41 @@
+{
+  "COMFYPATH": "/home/eqx/ComfyUI",
+  "active_profile": "CUSTOM",
+  "show_training_progress": false,
+  "custom_output_path": null,
+  "google_sheets_sync": {
+    "enabled": true,
+    "spreadsheet_id": "1GqBg_ZCzBKI200vfKMUNavxpytLYUjXMWg8YWHa17VM",
+    "credentials_path": "settings/google_credentials.json",
+    "sync_settings": {
+      "batch_size": 50,
+      "batch_interval_seconds": 30,
+      "max_retry_attempts": 3,
+      "retry_backoff_factor": 2.0,
+      "realtime_events": [
+        "training_failed",
+        "training_completed",
+        "training_started"
+      ],
+      "worker_settings": {
+        "background_worker_enabled": true,
+        "realtime_worker_enabled": true,
+        "check_interval_seconds": 15,
+        "max_concurrent_operations": 3
+      },
+      "rate_limiting": {
+        "requests_per_minute": 60,
+        "burst_limit": 10
+      }
+    },
+    "sheet_structure": {
+      "executions_sheet": "Executions",
+      "variations_sheet": "Variations"
+    },
+    "data_mapping": {
+      "datetime_format": "%Y-%m-%d %H:%M:%S",
+      "json_fields_as_text": true,
+      "null_value_replacement": ""
+    }
+  }
+}

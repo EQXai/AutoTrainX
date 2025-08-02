@@ -1,0 +1,260 @@
+# Docker Compose configuration for AutoTrainX API
+# Supports both development and production environments
+
+version: '3.8'
+
+services:
+  # Main AutoTrainX API service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        BUILD_DATE: ${BUILD_DATE:-}
+        VERSION: ${VERSION:-1.0.0}
+        VCS_REF: ${VCS_REF:-}
+    image: autotrainx-api:${VERSION:-latest}
+    container_name: autotrainx-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    environment:
+      # Application settings
+      - ENVIRONMENT=${ENVIRONMENT:-production}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - API_WORKERS=${API_WORKERS:-1}
+      
+      # Database settings
+      - DATABASE_URL=sqlite:///app/DB/executions.db
+      
+      # Security settings
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-*}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      
+      # Training settings
+      - MAX_CONCURRENT_JOBS=${MAX_CONCURRENT_JOBS:-1}
+      - WORKSPACE_PATH=/app/workspace
+      - MODELS_PATH=/app/models
+      - PRESETS_PATH=/app/Presets
+      
+      # ComfyUI integration
+      - COMFYUI_URL=${COMFYUI_URL:-http://comfyui:8188}
+      
+      # Google Sheets (optional)
+      - GOOGLE_CREDENTIALS_PATH=${GOOGLE_CREDENTIALS_PATH:-}
+      - SHEETS_SYNC_ENABLED=${SHEETS_SYNC_ENABLED:-false}
+      
+      # Monitoring
+      - PROMETHEUS_ENABLED=${PROMETHEUS_ENABLED:-true}
+      - METRICS_PORT=9090
+    volumes:
+      # Persistent data volumes
+      - workspace_data:/app/workspace
+      - models_data:/app/models
+      - database_data:/app/DB
+      - logs_data:/app/logs
+      
+      # Configuration volumes
+      - ./Presets:/app/Presets:ro
+      - ./ComfyUI_workflow_utils:/app/ComfyUI_workflow_utils:ro
+      
+      # Optional: Mount sd-scripts for training
+      - ./sd-scripts:/app/sd-scripts:ro
+      
+      # Optional: Google credentials (if using Sheets sync)
+      - ${GOOGLE_CREDENTIALS_HOST_PATH:-/dev/null}:/app/settings/google_credentials.json:ro
+    networks:
+      - autotrainx-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
+          cpus: '0.5'
+
+  # Redis for caching and job queues
+  redis:
+    image: redis:7-alpine
+    container_name: autotrainx-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - autotrainx-network
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Nginx reverse proxy (production)
+  nginx:
+    image: nginx:alpine
+    container_name: autotrainx-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/sites-available:/etc/nginx/sites-available:ro
+      - ./deploy/nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - autotrainx-network
+    depends_on:
+      - api
+    profiles:
+      - production
+
+  # ComfyUI service (optional)
+  comfyui:
+    image: comfyui/comfyui:latest
+    container_name: autotrainx-comfyui
+    restart: unless-stopped
+    ports:
+      - "${COMFYUI_PORT:-8188}:8188"
+    volumes:
+      - comfyui_models:/app/models
+      - comfyui_output:/app/output
+      - ./ComfyUI_workflow_utils:/app/workflows:ro
+    networks:
+      - autotrainx-network
+    environment:
+      - COMFYUI_LISTEN=0.0.0.0
+      - COMFYUI_PORT=8188
+    profiles:
+      - comfyui
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+          cpus: '4.0'
+        reservations:
+          memory: 2G
+          cpus: '1.0'
+
+  # Prometheus monitoring (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: autotrainx-prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    volumes:
+      - ./deploy/monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - autotrainx-network
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    profiles:
+      - monitoring
+
+  # Grafana dashboard (optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: autotrainx-grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./deploy/monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./deploy/monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    networks:
+      - autotrainx-network
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
+  # Log aggregation with Loki (optional)
+  loki:
+    image: grafana/loki:latest
+    container_name: autotrainx-loki
+    restart: unless-stopped
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    volumes:
+      - ./deploy/monitoring/loki.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - autotrainx-network
+    command: -config.file=/etc/loki/local-config.yaml
+    profiles:
+      - monitoring
+
+  # Promtail log collector (optional)
+  promtail:
+    image: grafana/promtail:latest
+    container_name: autotrainx-promtail
+    restart: unless-stopped
+    volumes:
+      - ./deploy/monitoring/promtail.yml:/etc/promtail/config.yml:ro
+      - logs_data:/var/log/autotrainx:ro
+      - /var/log:/var/log/host:ro
+    networks:
+      - autotrainx-network
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    profiles:
+      - monitoring
+
+# Named volumes for persistent data
+volumes:
+  workspace_data:
+    driver: local
+  models_data:
+    driver: local
+  database_data:
+    driver: local
+  logs_data:
+    driver: local
+  redis_data:
+    driver: local
+  nginx_logs:
+    driver: local
+  comfyui_models:
+    driver: local
+  comfyui_output:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  loki_data:
+    driver: local
+
+# Networks
+networks:
+  autotrainx-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

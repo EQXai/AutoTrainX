@@ -1,0 +1,16 @@
+2025-08-02 18:13:45,388 - __main__ - ERROR - async_main:338 - Unexpected error occurred
+Traceback (most recent call last):
+  File "/home/eqx/AutoTrainX/main.py", line 287, in async_main
+    result = handler.execute(args)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/src/cli/unified_handlers.py", line 56, in execute
+    return handler(args)
+           ^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/src/cli/unified_handlers.py", line 64, in _handle_train
+    self.formatter.print_result_summary(prepare_result)
+  File "/home/eqx/AutoTrainX/src/cli/formatter.py", line 41, in print_result_summary
+    self._print_modular_result(result)
+  File "/home/eqx/AutoTrainX/src/cli/formatter.py", line 61, in _print_modular_result
+    if result.configs_generated and result.preset_configs:
+       ^^^^^^^^^^^^^^^^^^^^^^^^
+AttributeError: 'ErrorResult' object has no attribute 'configs_generated'

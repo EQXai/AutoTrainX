@@ -1,0 +1,5 @@
+[models]
+base_path = "./models"
+pretrained_model = "SDXLModel.safetensors"
+# SDXL profiles don't use ae, clip_l, t5xxl (Flux-specific models)
+# VAE is handled via the "vae" parameter in base.toml 

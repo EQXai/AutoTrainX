@@ -1,0 +1,32 @@
+
+> autotrainx-web@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.4.5
+   - Local:        http://localhost:3000
+   - Network:      http://10.255.255.254:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1669ms
+ ○ Compiling /dashboard/jobs ...
+ ✓ Compiled /dashboard/jobs in 2.2s (1238 modules)
+ GET /dashboard/jobs 200 in 2784ms
+ ✓ Compiled in 618ms (504 modules)
+ ○ Compiling /dashboard/settings ...
+ ✓ Compiled /dashboard/settings in 693ms (1267 modules)
+ GET /dashboard/settings 200 in 783ms
+ GET /dashboard/settings 200 in 216ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 1043ms (2078 modules)
+ GET /dashboard 200 in 1139ms
+ ○ Compiling / ...
+ ✓ Compiled / in 676ms (2091 modules)
+ GET / 200 in 873ms
+ ○ Compiling /docs ...
+ ✓ Compiled /docs in 642ms (2118 modules)
+ GET /docs 200 in 708ms
+ GET /dashboard 200 in 22ms
+ GET /dashboard/settings 200 in 18ms
+ GET /dashboard/settings 200 in 230ms
+ GET /dashboard/settings 200 in 55ms

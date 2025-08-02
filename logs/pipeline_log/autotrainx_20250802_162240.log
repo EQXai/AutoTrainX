@@ -1,0 +1,14 @@
+2025-08-02 16:22:40,757 - src.database.factory - INFO - create_engine:128 - Created postgresql engine: postgresql://autotrainx:1234@localhost:5432/autotrainx
+2025-08-02 16:22:40,762 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql
+2025-08-02 16:22:40,833 - src.database.factory - INFO - create_engine:128 - Created postgresql engine: postgresql://autotrainx:1234@localhost:5432/autotrainx
+2025-08-02 16:22:40,836 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql
+2025-08-02 16:23:45,051 - src.database.factory - INFO - create_engine:128 - Created postgresql engine: postgresql://autotrainx:1234@localhost:5432/autotrainx
+2025-08-02 16:23:45,054 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql
+2025-08-02 16:23:46,792 - src.database.factory - INFO - create_engine:128 - Created postgresql engine: postgresql://autotrainx:1234@localhost:5432/autotrainx
+2025-08-02 16:23:46,795 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql
+2025-08-02 16:23:46,830 - src.database.factory - INFO - create_engine:128 - Created postgresql engine: postgresql://autotrainx:1234@localhost:5432/autotrainx
+2025-08-02 16:23:46,833 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql
+2025-08-02 16:23:46,876 - src.database.factory - INFO - create_engine:128 - Created postgresql engine: postgresql://autotrainx:1234@localhost:5432/autotrainx
+2025-08-02 16:23:46,879 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql
+2025-08-02 16:23:46,912 - src.database.factory - INFO - create_engine:128 - Created postgresql engine: postgresql://autotrainx:1234@localhost:5432/autotrainx
+2025-08-02 16:23:46,915 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql

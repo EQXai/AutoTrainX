@@ -1,0 +1,237 @@
+# AutoTrainX Training Log
+# Dataset: m14w00dh4ll
+# Preset: FL1
+# Job ID: ddd8b6bf
+# Start Time: 2025-08-02T16:22:40.842325
+# Mode: single
+# Command: /home/eqx/AutoTrainX/venv/bin/python /home/eqx/AutoTrainX/sd-scripts/flux_train_network.py --config_file /home/eqx/AutoTrainX/workspace/Presets/m14w00dh4ll_FL1_ddd8b6bf.toml
+================================================================================
+
+2025-08-02 16:22:46 INFO     Loading settings from                                        train_util.py:4651
+                             /home/eqx/AutoTrainX/workspace/Presets/m14w00dh4ll_FL1_ddd8b                   
+                             6bf.toml...                                                                    
+                    INFO     highvram is enabled / highvramが有効です                     train_util.py:4316
+2025-08-02 16:22:46 INFO     Checking the state dict: Diffusers or BFL, dev or schnell      flux_utils.py:43
+                    INFO     t5xxl_max_token_length: 512                           flux_train_network.py:157
+You are using the default legacy behaviour of the <class 'transformers.models.t5.tokenization_t5.T5Tokenizer'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565
+                    INFO     Using DreamBooth method.                                   train_network.py:517
+                    INFO     prepare images.                                              train_util.py:2072
+                    INFO     get image size from name of cache files                      train_util.py:1965
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 114390.11it/s]
+                    INFO     set image size from cache files: 0/3                         train_util.py:1995
+                    INFO     found directory                                              train_util.py:2019
+                             /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/img/30_m14                   
+                             w00dh4ll person contains 3 image files                                         
+
+read caption:   0%|          | 0/3 [00:00<?, ?it/s]
+read caption: 100%|██████████| 3/3 [00:00<00:00, 29330.80it/s]
+                    INFO     90 train images with repeats.                                train_util.py:2116
+                    INFO     0 reg images with repeats.                                   train_util.py:2120
+                    WARNING  no regularization images / 正則化画像が見つかりませんでした  train_util.py:2125
+                    INFO     [Dataset 0]                                                  config_util.py:580
+                               batch_size: 1                                                                
+                               resolution: (1024, 1280)                                                     
+                               resize_interpolation: None                                                   
+                               enable_bucket: False                                                         
+                                                                                                            
+                               [Subset 0 of Dataset 0]                                                      
+                                 image_dir:                                                                 
+                             "/home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/img/30_m1                   
+                             4w00dh4ll person"                                                              
+                                 image_count: 3                                                             
+                                 num_repeats: 30                                                            
+                                 shuffle_caption: False                                                     
+                                 keep_tokens: 0                                                             
+                                 caption_dropout_rate: 0.0                                                  
+                                 caption_dropout_every_n_epochs: 0                                          
+                                 caption_tag_dropout_rate: 0.0                                              
+                                 caption_prefix: None                                                       
+                                 caption_suffix: None                                                       
+                                 color_aug: False                                                           
+                                 flip_aug: False                                                            
+                                 face_crop_aug_range: None                                                  
+                                 random_crop: False                                                         
+                                 token_warmup_min: 1,                                                       
+                                 token_warmup_step: 0,                                                      
+                                 alpha_mask: False                                                          
+                                 resize_interpolation: None                                                 
+                                 custom_attributes: {}                                                      
+                                 is_reg: False                                                              
+                                 class_tokens: m14w00dh4ll person                                           
+                                 caption_extension: .txt                                                    
+                                                                                                            
+                                                                                                            
+                    INFO     [Prepare dataset 0]                                          config_util.py:592
+                    INFO     loading image sizes.                                          train_util.py:987
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 32181.36it/s]
+                    INFO     prepare dataset                                              train_util.py:1012
+                    INFO     preparing accelerator                                      train_network.py:580
+                    INFO     Checking the state dict: Diffusers or BFL, dev or schnell      flux_utils.py:43
+                    INFO     Building Flux model dev from BFL checkpoint                   flux_utils.py:101
+                    INFO     Loading state dict from                                       flux_utils.py:118
+                             /home/eqx/AutoTrainX/models/flux1-dev-fp8.safetensors                          
+2025-08-02 16:22:47 INFO     Loaded Flux: <All keys matched successfully>                  flux_utils.py:137
+                    INFO     Loaded fp8 FLUX model                                 flux_train_network.py:106
+                    INFO     Building CLIP-L                                               flux_utils.py:179
+                    INFO     Loading state dict from                                       flux_utils.py:275
+                             /home/eqx/AutoTrainX/models/clip_l.safetensors                                 
+                    INFO     Loaded CLIP-L: <All keys matched successfully>                flux_utils.py:278
+                    INFO     Loading state dict from                                       flux_utils.py:330
+                             /home/eqx/AutoTrainX/models/t5xxl_fp8_e4m3fn.safetensors                       
+                    INFO     Loaded T5xxl: <All keys matched successfully>                 flux_utils.py:333
+                    INFO     Loaded fp8 T5XXL model                                flux_train_network.py:140
+                    INFO     Building AutoEncoder                                          flux_utils.py:144
+                    INFO     Loading state dict from                                       flux_utils.py:149
+                             /home/eqx/AutoTrainX/models/ae.safetensors                                     
+                    INFO     Loaded AE: <All keys matched successfully>                    flux_utils.py:152
+                    INFO     [Dataset 0]                                                  train_util.py:2613
+                    INFO     caching latents with caching strategy.                       train_util.py:1115
+                    INFO     caching latents...                                           train_util.py:1164
+accelerator device: cuda
+import network module: networks.lora_flux
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 2584.82it/s]
+2025-08-02 16:22:48 INFO     move vae and unet to cpu to save memory               flux_train_network.py:210
+                    INFO     move text encoders to gpu                             flux_train_network.py:218
+2025-08-02 16:22:52 INFO     prepare T5XXL for fp8: set to torch.float8_e4m3fn,    flux_train_network.py:511
+                             set embeddings to torch.bfloat16, add hooks                                    
+                    INFO     [Dataset 0]                                                  train_util.py:2635
+                    INFO     caching Text Encoder outputs with caching strategy.          train_util.py:1298
+                    INFO     checking cache validity...                                   train_util.py:1309
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 53544.31it/s]
+                    INFO     caching Text Encoder outputs...                              train_util.py:1340
+
+  0%|          | 0/3 [00:00<?, ?it/s]                    WARNING  T5 model is using fp8 weights for caching. This may affect strategy_flux.py:160
+                             the quality of the cached outputs. /                                           
+                             T5モデルはfp8の重みを使用しています。これはキャッシュの品                      
+                             質に影響を与える可能性があります。                                             
+
+ 33%|███▎      | 1/3 [00:00<00:00,  2.69it/s]
+100%|██████████| 3/3 [00:00<00:00, 11.98it/s]
+100%|██████████| 3/3 [00:00<00:00,  5.57it/s]
+2025-08-02 16:22:53 INFO     cache Text Encoder outputs for sample prompt:         flux_train_network.py:234
+                             /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/sam                          
+                             ple_prompts.txt                                                                
+                    INFO     cache Text Encoder outputs for prompt: m14w00dh4ll, A flux_train_network.py:245
+                             photo-realistic shoot from a side camera angle about                           
+                             a young woman in a black one-piece swimsuit sitting                            
+                             by a pool, looking over her shoulder with a sultry                             
+                             expression. on the middle of the image, a 20-year-old                          
+                             woman with light skin, blonde hair tied in a high                              
+                             bun, and blue eyes, who appears to be in her early                             
+                             twenties, is sitting on the edge of a swimming pool                            
+                             with her back to the camera, wearing a black swimsuit                          
+                             with a tie side, showing off her bare buttocks. she                            
+                             has a slender physique and is wearing red lipstick.                            
+                             her hair is styled in a messy bun and she is wearing                           
+                             a silver watch on her left wrist. the background                               
+                             features a luxurious villa with white balconies and                            
+                             lush greenery surrounding the pool. the lighting is                            
+                             bright and natural, highlighting the woman's curves                            
+                             and the surrounding greenery.                                                  
+                    INFO     cache Text Encoder outputs for prompt:                flux_train_network.py:245
+                    INFO     cache Text Encoder outputs for prompt: m14w00dh4ll, A flux_train_network.py:245
+                             photo-realistic shoot from the side about a woman in                           
+                             a black swimsuit sitting by a pool, looking directly                           
+                             at the camera with a sultry expression. the woman,                             
+                             who appears to be in her mid-twenties, has long, wavy                          
+                             brown hair that falls down her back, and is wearing a                          
+                             black one-piece swimsuit that accentuates her large                            
+                             breasts and cleavage. she is sitting on the edge of                            
+                             the pool, leaning slightly forward, with one hand                              
+                             resting on the pool's edge and the other on her                                
+                             thigh. her blue eyes are looking straight at the                               
+                             viewer, and she has a neutral expression on her face.                          
+                             the background of the image features a scenic view of                          
+                             the ocean and mountains, with a clear blue sky and                             
+                             fluffy white clouds. the lighting is bright and                                
+                             natural, highlighting the woman's wet hair and the                             
+                             glossy texture of her swimsuit. the image is high                              
+                             quality and has a watermark in the bottom right                                
+                             corner.                                                                        
+                    INFO     cache Text Encoder outputs for prompt: m14w00dh4ll, A flux_train_network.py:245
+                             selfie from a close-up camera angle about a woman                              
+                             with blue eyes wearing a black dress with a plunging                           
+                             neckline, showcasing her cleavage. the woman is                                
+                             positioned in the middle of the image, looking                                 
+                             directly at the camera with a confident expression.                            
+                             she has fair skin, blue eyes, and blonde hair tied up                          
+                             in a high ponytail. her hair is styled in a messy                              
+                             bun, and she is wearing a pair of earrings and a                               
+                             necklace with a large, ornate pendant. her lips are                            
+                             painted a deep red, and her nose is slightly                                   
+                             upturned, giving her a sultry look. she is standing                            
+                             in front of a glass door, with a white tiled floor                             
+                             and a potted plant visible in the background. the                              
+                             overall aesthetic is minimalistic and modern.                                  
+                    INFO     move t5XXL back to cpu                                flux_train_network.py:258
+2025-08-02 16:22:56 INFO     move vae and unet back to original device             flux_train_network.py:263
+                    INFO     create LoRA network. base dim (rank): 64, alpha: 32            lora_flux.py:743
+                    INFO     neuron dropout: p=None, rank dropout: p=None, module dropout:  lora_flux.py:744
+                             p=None                                                                         
+                    INFO     train all blocks only                                          lora_flux.py:758
+                    INFO     create LoRA for Text Encoder 1:                                lora_flux.py:898
+                    INFO     create LoRA for Text Encoder 1: 72 modules.                    lora_flux.py:901
+2025-08-02 16:22:57 INFO     create LoRA for FLUX all blocks: 304 modules.                  lora_flux.py:922
+                    INFO     enable LoRA for text encoder: 72 modules                      lora_flux.py:1098
+                    INFO     enable LoRA for U-Net: 304 modules                            lora_flux.py:1103
+                    INFO     Text Encoder 1 (CLIP-L): 72 modules, LR 5e-05                 lora_flux.py:1205
+                    INFO     use Adafactor optimizer | {'scale_parameter': False,         train_util.py:4963
+                             'relative_step': False, 'warmup_init': False,                                  
+                             'weight_decay': 0.01}                                                          
+                    WARNING  because max_grad_norm is set, clip_grad_norm is enabled.     train_util.py:4991
+                             consider set to 0 /                                                            
+                             max_grad_normが設定されているためclip_grad_normが有効になり                    
+                             ます。0に設定して無効にしたほうがいいかもしれません                            
+                    WARNING  constant_with_warmup will be good /                          train_util.py:4995
+                             スケジューラはconstant_with_warmupが良いかもしれません                         
+2025-08-02 16:22:58 INFO     set U-Net weight dtype to torch.float8_e4m3fn              train_network.py:826
+                    INFO     prepare CLIP-L for fp8: set to torch.float8_e4m3fn,   flux_train_network.py:482
+                             set embeddings to torch.bfloat16                                               
+fatal: not a git repository (or any of the parent directories): .git
+2025-08-02 16:23:12 INFO     unet dtype: torch.float8_e4m3fn, device: cuda:0           train_network.py:1323
+                    INFO     text_encoder [0] dtype: torch.float8_e4m3fn, device:      train_network.py:1329
+                             cuda:0                                                                         
+                    INFO     text_encoder [1] dtype: torch.float8_e4m3fn, device: cpu  train_network.py:1329
+FLUX: Gradient checkpointing enabled. CPU offload: False
+prepare optimizer, data loader etc.
+override steps. steps for 1 epochs is / 指定エポックまでのステップ数: 90
+enable full bf16 training.
+enable fp8 training for U-Net.
+enable fp8 training for Text Encoder.
+running training / 学習開始
+  num train images * repeats / 学習画像の数×繰り返し回数: 90
+  num validation images * repeats / 学習画像の数×繰り返し回数: 0
+  num reg images / 正則化画像の数: 0
+  num batches per epoch / 1epochのバッチ数: 90
+  num epochs / epoch数: 1
+  batch size per device / バッチサイズ: 1
+  gradient accumulation steps / 勾配を合計するステップ数 = 1
+  total optimization steps / 学習ステップ数: 90
+
+steps:   0%|          | 0/90 [00:00<?, ?it/s]                    INFO     epoch is incremented. current_epoch: 0, epoch: 1              train_util.py:779
+
+steps:   1%|          | 1/90 [00:03<05:35,  3.77s/it]
+steps:   1%|          | 1/90 [00:03<05:35,  3.77s/it, avr_loss=0.601]
+steps:   2%|▏         | 2/90 [00:06<05:07,  3.49s/it, avr_loss=0.601]
+steps:   2%|▏         | 2/90 [00:06<05:07,  3.49s/it, avr_loss=0.647]
+steps:   3%|▎         | 3/90 [00:10<05:00,  3.45s/it, avr_loss=0.647]
+steps:   3%|▎         | 3/90 [00:10<05:00,  3.45s/it, avr_loss=0.527]
+steps:   4%|▍         | 4/90 [00:13<04:54,  3.42s/it, avr_loss=0.527]
+steps:   4%|▍         | 4/90 [00:13<04:54,  3.42s/it, avr_loss=0.518]
+steps:   6%|▌         | 5/90 [00:17<04:49,  3.40s/it, avr_loss=0.518]
+steps:   6%|▌         | 5/90 [00:17<04:49,  3.40s/it, avr_loss=0.536]
+steps:   7%|▋         | 6/90 [00:20<04:42,  3.37s/it, avr_loss=0.536]
+steps:   7%|▋         | 6/90 [00:20<04:42,  3.37s/it, avr_loss=0.531]
+steps:   8%|▊         | 7/90 [00:23<04:38,  3.35s/it, avr_loss=0.531]
+steps:   8%|▊         | 7/90 [00:23<04:38,  3.35s/it, avr_loss=0.535]
+steps:   9%|▉         | 8/90 [00:26<04:32,  3.33s/it, avr_loss=0.535]
+steps:   9%|▉         | 8/90 [00:26<04:32,  3.33s/it, avr_loss=0.547]
+steps:  10%|█         | 9/90 [00:30<04:31,  3.35s/it, avr_loss=0.547]

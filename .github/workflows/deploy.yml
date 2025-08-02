@@ -1,0 +1,356 @@
+# AutoTrainX Deployment Pipeline
+# Automated deployment to staging and production environments
+
+name: Deploy
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: 'Version to deploy (leave empty for latest)'
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository_owner }}/autotrainx-api
+
+jobs:
+  # Determine deployment environment
+  setup:
+    name: Setup Deployment
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      version: ${{ steps.env.outputs.version }}
+      deploy_url: ${{ steps.env.outputs.deploy_url }}
+      
+    steps:
+      - name: Determine environment and version
+        id: env
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+            if [[ -n "${{ github.event.inputs.version }}" ]]; then
+              echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            else
+              echo "version=latest" >> $GITHUB_OUTPUT
+            fi
+          else
+            if [[ "${{ github.event.workflow_run.head_branch }}" == "main" ]]; then
+              echo "environment=production" >> $GITHUB_OUTPUT
+            else
+              echo "environment=staging" >> $GITHUB_OUTPUT
+            fi
+            echo "version=${{ github.event.workflow_run.head_sha }}" >> $GITHUB_OUTPUT
+          fi
+          
+          # Set deployment URL based on environment
+          if [[ "${{ steps.env.outputs.environment }}" == "production" ]]; then
+            echo "deploy_url=https://api.autotrainx.com" >> $GITHUB_OUTPUT
+          else
+            echo "deploy_url=https://staging-api.autotrainx.com" >> $GITHUB_OUTPUT
+          fi
+
+  # Deploy to staging
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.environment == 'staging'
+    environment:
+      name: staging
+      url: ${{ needs.setup.outputs.deploy_url }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to ECS
+        run: |
+          # Update ECS service with new image
+          aws ecs update-service \
+            --cluster autotrainx-staging \
+            --service autotrainx-api-staging \
+            --task-definition autotrainx-api-staging:latest \
+            --force-new-deployment
+
+      - name: Wait for deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster autotrainx-staging \
+            --services autotrainx-api-staging
+
+      - name: Run health checks
+        run: |
+          sleep 60  # Wait for service to start
+          
+          max_attempts=10
+          attempt=0
+          
+          while [[ $attempt -lt $max_attempts ]]; do
+            if curl -f "${{ needs.setup.outputs.deploy_url }}/health"; then
+              echo "Health check passed"
+              break
+            fi
+            
+            echo "Health check failed, attempt $((attempt + 1))/$max_attempts"
+            sleep 30
+            ((attempt++))
+          done
+          
+          if [[ $attempt -eq $max_attempts ]]; then
+            echo "Health checks failed after $max_attempts attempts"
+            exit 1
+          fi
+
+      - name: Run smoke tests
+        run: |
+          # Basic smoke tests
+          curl -f "${{ needs.setup.outputs.deploy_url }}/"
+          curl -f "${{ needs.setup.outputs.deploy_url }}/docs"
+          curl -f "${{ needs.setup.outputs.deploy_url }}/api/v1/jobs"
+
+  # Deploy to production
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: setup
+    if: needs.setup.outputs.environment == 'production'
+    environment:
+      name: production
+      url: ${{ needs.setup.outputs.deploy_url }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID_PROD }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY_PROD }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Create deployment backup
+        run: |
+          # Create RDS snapshot before deployment
+          aws rds create-db-snapshot \
+            --db-instance-identifier autotrainx-prod \
+            --db-snapshot-identifier autotrainx-prod-pre-deploy-$(date +%Y%m%d-%H%M%S)
+
+      - name: Deploy with blue-green strategy
+        run: |
+          # Blue-green deployment using ECS
+          
+          # Get current task definition
+          CURRENT_TASK_DEF=$(aws ecs describe-services \
+            --cluster autotrainx-production \
+            --services autotrainx-api-production \
+            --query 'services[0].taskDefinition' \
+            --output text)
+          
+          echo "Current task definition: $CURRENT_TASK_DEF"
+          
+          # Update service with new image (green deployment)
+          aws ecs update-service \
+            --cluster autotrainx-production \
+            --service autotrainx-api-production \
+            --task-definition autotrainx-api-production:latest \
+            --deployment-configuration maximumPercent=200,minimumHealthyPercent=100
+          
+          # Wait for deployment to complete
+          aws ecs wait services-stable \
+            --cluster autotrainx-production \
+            --services autotrainx-api-production
+
+      - name: Production health checks
+        run: |
+          sleep 120  # Wait longer for production startup
+          
+          max_attempts=15
+          attempt=0
+          
+          while [[ $attempt -lt $max_attempts ]]; do
+            if curl -f -m 30 "${{ needs.setup.outputs.deploy_url }}/health"; then
+              echo "Production health check passed"
+              break
+            fi
+            
+            echo "Production health check failed, attempt $((attempt + 1))/$max_attempts"
+            sleep 30
+            ((attempt++))
+          done
+          
+          if [[ $attempt -eq $max_attempts ]]; then
+            echo "Production health checks failed"
+            exit 1
+          fi
+
+      - name: Run production smoke tests
+        run: |
+          # Comprehensive production smoke tests
+          curl -f -m 30 "${{ needs.setup.outputs.deploy_url }}/"
+          curl -f -m 30 "${{ needs.setup.outputs.deploy_url }}/docs"
+          curl -f -m 30 "${{ needs.setup.outputs.deploy_url }}/api/v1/jobs"
+          curl -f -m 30 "${{ needs.setup.outputs.deploy_url }}/api/v1/presets"
+          
+          # Test API response time
+          response_time=$(curl -o /dev/null -s -w '%{time_total}\n' "${{ needs.setup.outputs.deploy_url }}/health")
+          if (( $(echo "$response_time > 5.0" | bc -l) )); then
+            echo "Response time too slow: ${response_time}s"
+            exit 1
+          fi
+
+      - name: Update Route53 if needed
+        run: |
+          # Update DNS records if using custom domain
+          # This is a placeholder - customize based on your DNS setup
+          echo "DNS updates would go here"
+
+  # Kubernetes deployment (alternative)
+  deploy-kubernetes:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: setup
+    if: false  # Enable this job if using Kubernetes
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.0'
+
+      - name: Set up Kustomize
+        run: |
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+          sudo mv kustomize /usr/local/bin/
+
+      - name: Deploy to Kubernetes
+        run: |
+          # Set image in kustomization
+          cd deploy/kubernetes/overlays/${{ needs.setup.outputs.environment }}
+          kustomize edit set image autotrainx-api=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.setup.outputs.version }}
+          
+          # Apply manifests
+          kustomize build . | kubectl apply -f -
+          
+          # Wait for rollout
+          kubectl rollout status deployment/autotrainx-api -n autotrainx-${{ needs.setup.outputs.environment }}
+
+      - name: Verify deployment
+        run: |
+          kubectl get pods -n autotrainx-${{ needs.setup.outputs.environment }}
+          kubectl get services -n autotrainx-${{ needs.setup.outputs.environment }}
+
+  # Post-deployment tasks
+  post-deploy:
+    name: Post-deployment Tasks
+    runs-on: ubuntu-latest
+    needs: [setup, deploy-staging, deploy-production]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    
+    steps:
+      - name: Update deployment tracking
+        run: |
+          # Update deployment database/tracking system
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.DEPLOYMENT_TRACKER_TOKEN }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "environment": "${{ needs.setup.outputs.environment }}",
+              "version": "${{ needs.setup.outputs.version }}",
+              "status": "deployed",
+              "timestamp": "'$(date -Iseconds)'",
+              "commit": "${{ github.sha }}"
+            }' \
+            "${{ secrets.DEPLOYMENT_TRACKER_URL }}/deployments" || true
+
+      - name: Create GitHub deployment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const deployment = await github.rest.repos.createDeployment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: context.sha,
+              environment: '${{ needs.setup.outputs.environment }}',
+              description: 'Automated deployment via GitHub Actions',
+              auto_merge: false
+            });
+            
+            await github.rest.repos.createDeploymentStatus({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              deployment_id: deployment.data.id,
+              state: 'success',
+              target_url: '${{ needs.setup.outputs.deploy_url }}',
+              description: 'Deployment completed successfully'
+            });
+
+      - name: Notify team
+        uses: 8398a7/action-slack@v3
+        if: always()
+        with:
+          status: ${{ job.status }}
+          channel: '#autotrainx-deployments'
+          text: |
+            🚀 AutoTrainX API deployed to ${{ needs.setup.outputs.environment }}
+            Version: ${{ needs.setup.outputs.version }}
+            URL: ${{ needs.setup.outputs.deploy_url }}
+            Commit: ${{ github.sha }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  # Rollback capability
+  rollback:
+    name: Rollback Deployment
+    runs-on: ubuntu-latest
+    if: failure() && (needs.deploy-staging.result == 'failure' || needs.deploy-production.result == 'failure')
+    needs: [setup, deploy-staging, deploy-production]
+    
+    steps:
+      - name: Rollback ECS deployment
+        run: |
+          aws ecs update-service \
+            --cluster autotrainx-${{ needs.setup.outputs.environment }} \
+            --service autotrainx-api-${{ needs.setup.outputs.environment }} \
+            --force-new-deployment \
+            --deployment-configuration maximumPercent=100,minimumHealthyPercent=50
+
+      - name: Notify rollback
+        uses: 8398a7/action-slack@v3
+        with:
+          status: failure
+          channel: '#autotrainx-alerts'
+          text: |
+            🔄 AutoTrainX API deployment rolled back
+            Environment: ${{ needs.setup.outputs.environment }}
+            Failed version: ${{ needs.setup.outputs.version }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

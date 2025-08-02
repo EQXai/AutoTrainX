@@ -1,0 +1,9 @@
+# AutoTrainX Training Log
+# Dataset: b09g13
+# Preset: SX1
+# Job ID: 850c834b
+# Start Time: 2025-08-01T13:37:37.593467
+# Mode: single
+# Command: /home/eqx/AutoTrainX/venv/bin/python /home/eqx/AutoTrainX/sd-scripts/sdxl_train.py --config_file /home/eqx/AutoTrainX/workspace/Presets/b09g13_SX1_850c834b.toml --max_grad_norm=0.0 --no_half_vae --train_text_encoder --learning_rate_te2=0
+================================================================================
+

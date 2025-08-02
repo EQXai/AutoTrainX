@@ -1,0 +1,145 @@
+# AutoTrainX Training Log
+# Dataset: t3t4s
+# Preset: SX1
+# Job ID: 6cfe1cb7
+# Start Time: 2025-08-02T18:16:59.278537
+# Mode: batch
+# Command: /home/eqx/AutoTrainX/venv/bin/python /home/eqx/AutoTrainX/sd-scripts/sdxl_train.py --config_file /home/eqx/AutoTrainX/workspace/Presets/t3t4s_SX1_6cfe1cb7.toml --max_grad_norm=0.0 --no_half_vae --train_text_encoder --learning_rate_te2=0
+================================================================================
+
+2025-08-02 18:17:02 INFO     Loading settings from                                        train_util.py:4651
+                             /home/eqx/AutoTrainX/workspace/Presets/t3t4s_SX1_6cfe1cb7.to                   
+                             ml...                                                                          
+                    WARNING  clip_skip will be unexpected /                           sdxl_train_util.py:349
+                             SDXL学習ではclip_skipは動作しません                                            
+2025-08-02 18:17:03 INFO     Using DreamBooth method.                                      sdxl_train.py:153
+                    INFO     prepare images.                                              train_util.py:2072
+                    INFO     get image size from name of cache files                      train_util.py:1965
+
+  0%|          | 0/30 [00:00<?, ?it/s]
+100%|██████████| 30/30 [00:00<00:00, 827823.16it/s]
+                    INFO     set image size from cache files: 0/30                        train_util.py:1995
+                    INFO     found directory                                              train_util.py:2019
+                             /home/eqx/AutoTrainX/workspace/output/t3t4s/img/30_t3t4s                       
+                             person contains 30 image files                                                 
+
+read caption:   0%|          | 0/30 [00:00<?, ?it/s]
+read caption: 100%|██████████| 30/30 [00:00<00:00, 60611.33it/s]
+                    INFO     900 train images with repeats.                               train_util.py:2116
+                    INFO     0 reg images with repeats.                                   train_util.py:2120
+                    WARNING  no regularization images / 正則化画像が見つかりませんでした  train_util.py:2125
+                    INFO     [Dataset 0]                                                  config_util.py:580
+                               batch_size: 2                                                                
+                               resolution: (1024, 1280)                                                     
+                               resize_interpolation: None                                                   
+                               enable_bucket: False                                                         
+                                                                                                            
+                               [Subset 0 of Dataset 0]                                                      
+                                 image_dir:                                                                 
+                             "/home/eqx/AutoTrainX/workspace/output/t3t4s/img/30_t3t4s                      
+                             person"                                                                        
+                                 image_count: 30                                                            
+                                 num_repeats: 30                                                            
+                                 shuffle_caption: False                                                     
+                                 keep_tokens: 0                                                             
+                                 caption_dropout_rate: 0                                                    
+                                 caption_dropout_every_n_epochs: 0                                          
+                                 caption_tag_dropout_rate: 0.0                                              
+                                 caption_prefix: None                                                       
+                                 caption_suffix: None                                                       
+                                 color_aug: False                                                           
+                                 flip_aug: False                                                            
+                                 face_crop_aug_range: None                                                  
+                                 random_crop: False                                                         
+                                 token_warmup_min: 1,                                                       
+                                 token_warmup_step: 0,                                                      
+                                 alpha_mask: False                                                          
+                                 resize_interpolation: None                                                 
+                                 custom_attributes: {}                                                      
+                                 is_reg: False                                                              
+                                 class_tokens: t3t4s person                                                 
+                                 caption_extension: .txt                                                    
+                                                                                                            
+                                                                                                            
+                    INFO     [Prepare dataset 0]                                          config_util.py:592
+                    INFO     loading image sizes.                                          train_util.py:987
+
+  0%|          | 0/30 [00:00<?, ?it/s]
+100%|██████████| 30/30 [00:00<00:00, 107915.20it/s]
+                    INFO     prepare dataset                                              train_util.py:1012
+                    INFO     prepare accelerator                                           sdxl_train.py:211
+                    INFO     loading model for process 0/1                             sdxl_train_util.py:32
+                    INFO     load StableDiffusion checkpoint:                          sdxl_train_util.py:73
+                             /home/eqx/AutoTrainX/models/SDXLModel.safetensors                              
+                    INFO     building U-Net                                           sdxl_model_util.py:198
+                    INFO     loading U-Net from checkpoint                            sdxl_model_util.py:202
+2025-08-02 18:17:04 INFO     U-Net: <All keys matched successfully>                   sdxl_model_util.py:208
+                    INFO     building text encoders                                   sdxl_model_util.py:211
+                    INFO     loading text encoders from checkpoint                    sdxl_model_util.py:264
+                    INFO     text encoder 1: <All keys matched successfully>          sdxl_model_util.py:278
+2025-08-02 18:17:05 INFO     text encoder 2: <All keys matched successfully>          sdxl_model_util.py:282
+                    INFO     building VAE                                             sdxl_model_util.py:285
+                    INFO     loading VAE from checkpoint                              sdxl_model_util.py:290
+                    INFO     VAE: <All keys matched successfully>                     sdxl_model_util.py:293
+                    INFO     load VAE: stabilityai/sdxl-vae                               model_util.py:1267
+                    INFO     additional VAE loaded                                    sdxl_train_util.py:131
+2025-08-02 18:17:06 INFO     [Dataset 0]                                                  train_util.py:2613
+                    INFO     caching latents with caching strategy.                       train_util.py:1115
+                    INFO     caching latents...                                           train_util.py:1164
+accelerator device: cuda
+Disable Diffusers' xformers
+
+  0%|          | 0/30 [00:00<?, ?it/s]
+  7%|▋         | 2/30 [00:00<00:11,  2.43it/s]
+ 13%|█▎        | 4/30 [00:01<00:09,  2.82it/s]
+ 20%|██        | 6/30 [00:02<00:08,  2.99it/s]
+ 27%|██▋       | 8/30 [00:02<00:07,  3.12it/s]
+ 33%|███▎      | 10/30 [00:03<00:06,  3.22it/s]
+ 40%|████      | 12/30 [00:03<00:05,  3.24it/s]
+ 47%|████▋     | 14/30 [00:04<00:04,  3.24it/s]
+ 53%|█████▎    | 16/30 [00:05<00:04,  3.27it/s]
+ 60%|██████    | 18/30 [00:05<00:03,  3.26it/s]
+ 67%|██████▋   | 20/30 [00:06<00:03,  3.30it/s]
+ 73%|███████▎  | 22/30 [00:06<00:02,  3.29it/s]
+ 80%|████████  | 24/30 [00:07<00:01,  3.33it/s]
+ 87%|████████▋ | 26/30 [00:08<00:01,  3.30it/s]
+ 93%|█████████▎| 28/30 [00:08<00:00,  3.29it/s]
+100%|██████████| 30/30 [00:09<00:00,  3.31it/s]
+100%|██████████| 30/30 [00:09<00:00,  3.22it/s]
+2025-08-02 18:17:16 INFO     use Adafactor optimizer | {'scale_parameter': False,         train_util.py:4963
+                             'relative_step': False, 'warmup_init': False,                                  
+                             'weight_decay': 0.01}                                                          
+                    WARNING  constant_with_warmup will be good /                          train_util.py:4995
+                             スケジューラはconstant_with_warmupが良いかもしれません                         
+enable text encoder training
+train unet: True, text_encoder1: True, text_encoder2: False
+number of models: 2
+number of trainable parameters: 2690524164
+prepare optimizer, data loader etc.
+override steps. steps for 2 epochs is / 指定エポックまでのステップ数: 900
+enable full bf16 training.
+running training / 学習開始
+  num examples / サンプル数: 900
+  num batches per epoch / 1epochのバッチ数: 450
+  num epochs / epoch数: 2
+  batch size per device / バッチサイズ: 2
+  gradient accumulation steps / 勾配を合計するステップ数 = 1
+  total optimization steps / 学習ステップ数: 900
+
+steps:   0%|          | 0/900 [00:00<?, ?it/s]2025-08-02 18:17:17 INFO     epoch is incremented. current_epoch: 0, epoch: 1              train_util.py:779
+
+steps:   0%|          | 1/900 [00:02<35:43,  2.38s/it]
+steps:   0%|          | 1/900 [00:02<35:44,  2.39s/it, avr_loss=0.152]
+steps:   0%|          | 2/900 [00:04<31:39,  2.12s/it, avr_loss=0.152]
+steps:   0%|          | 2/900 [00:04<31:40,  2.12s/it, avr_loss=0.11] 
+steps:   0%|          | 3/900 [00:05<29:49,  2.00s/it, avr_loss=0.11]
+steps:   0%|          | 3/900 [00:05<29:50,  2.00s/it, avr_loss=0.108]
+steps:   0%|          | 4/900 [00:07<28:26,  1.90s/it, avr_loss=0.108]
+steps:   0%|          | 4/900 [00:07<28:26,  1.90s/it, avr_loss=0.125]
+steps:   1%|          | 5/900 [00:09<27:59,  1.88s/it, avr_loss=0.125]
+steps:   1%|          | 5/900 [00:09<27:59,  1.88s/it, avr_loss=0.147]
+steps:   1%|          | 6/900 [00:11<27:58,  1.88s/it, avr_loss=0.147]
+steps:   1%|          | 6/900 [00:11<27:58,  1.88s/it, avr_loss=0.141]
+steps:   1%|          | 7/900 [00:13<27:40,  1.86s/it, avr_loss=0.141]
+steps:   1%|          | 7/900 [00:13<27:41,  1.86s/it, avr_loss=0.123]
+steps:   1%|          | 8/900 [00:14<27:39,  1.86s/it, avr_loss=0.123]

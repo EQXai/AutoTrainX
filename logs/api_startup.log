@@ -1,0 +1,19 @@
+INFO:     Will watch for changes in these directories: ['/home/eqx/AutoTrainX']
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     Started reloader process [1419860] using WatchFiles
+INFO:     Started server process [1419863]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+[DatabaseFactory] Creating engine for postgresql
+[DatabaseFactory] URL: postgresql://autotrainx:1234@localhost:5432/autotr...
+[DatabaseFactory] Creating engine with kwargs: ['connect_args', 'poolclass', 'echo', 'pool_size', 'pool_timeout', 'pool_recycle', 'max_overflow', 'pool_pre_ping']
+[DatabaseFactory] Engine created successfully
+[DatabaseFactory] Skipping connection event configuration
+[DatabaseFactory] Applying engine-level configuration
+[DatabaseFactory] Engine creation complete
+INFO:     127.0.0.1:53158 - "GET /api/v1/database/info HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1419863]
+INFO:     Stopping reloader process [1419860]

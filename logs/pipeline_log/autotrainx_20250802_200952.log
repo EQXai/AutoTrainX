@@ -1,0 +1,6 @@
+2025-08-02 20:09:54,537 - src.utils.job_tracker - ERROR - set_output_path:128 - Failed to set output path: 'DatabaseManager' object has no attribute 'set_variation_output'
+2025-08-02 20:09:54,546 - src.utils.job_tracker - ERROR - set_output_path:128 - Failed to set output path: 'DatabaseManager' object has no attribute 'set_variation_output'
+2025-08-02 20:09:54,556 - src.utils.job_tracker - ERROR - set_output_path:128 - Failed to set output path: 'DatabaseManager' object has no attribute 'set_variation_output'
+2025-08-02 20:09:54,565 - src.utils.job_tracker - ERROR - set_output_path:128 - Failed to set output path: 'DatabaseManager' object has no attribute 'set_variation_output'
+2025-08-02 20:09:54,573 - src.utils.job_tracker - ERROR - set_output_path:128 - Failed to set output path: 'DatabaseManager' object has no attribute 'set_variation_output'
+2025-08-02 20:09:54,582 - src.utils.job_tracker - ERROR - set_output_path:128 - Failed to set output path: 'DatabaseManager' object has no attribute 'set_variation_output'

@@ -1,0 +1,65 @@
+# Docker Compose override for development environment
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.dev.yml up
+
+version: '3.8'
+
+services:
+  api:
+    build:
+      target: development
+    environment:
+      - ENVIRONMENT=development
+      - LOG_LEVEL=debug
+      - RELOAD=true
+    volumes:
+      # Mount source code for hot reloading
+      - ./api:/app/api
+      - ./src:/app/src
+      - ./main.py:/app/main.py
+      - ./menu.py:/app/menu.py
+      # Development tools
+      - ./pytest.ini:/app/pytest.ini
+      - ./.env.dev:/app/.env
+    ports:
+      - "8000:8000"
+      - "5678:5678"  # debugpy port
+    command: >
+      sh -c "python -m debugpy --listen 0.0.0.0:5678 --wait-for-client -m uvicorn api.main:app --host 0.0.0.0 --port 8000 --reload --log-level debug"
+
+  # Development database (PostgreSQL for testing)
+  postgres-dev:
+    image: postgres:15-alpine
+    container_name: autotrainx-postgres-dev
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=autotrainx_dev
+      - POSTGRES_USER=autotrainx
+      - POSTGRES_PASSWORD=dev_password
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+    networks:
+      - autotrainx-network
+
+  # pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: autotrainx-pgadmin
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@autotrainx.dev
+      - PGADMIN_DEFAULT_PASSWORD=admin
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - autotrainx-network
+    depends_on:
+      - postgres-dev
+
+volumes:
+  postgres_dev_data: {}
+  pgadmin_data: {}

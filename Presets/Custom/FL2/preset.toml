@@ -1,0 +1,5 @@
+[preset]
+base = "FluxLORA"
+name = "FL2"
+description = "Custom FLUX LoRA for landscapes"
+created = "2025-07-30 01:42:14"

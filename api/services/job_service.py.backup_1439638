@@ -1,0 +1,768 @@
+"""
+Job service module for managing training jobs.
+
+This module provides the business logic layer for job management,
+integrating with the existing AutoTrainPipeline and database components.
+"""
+
+import asyncio
+import logging
+import uuid
+from datetime import datetime
+from typing import Dict, List, Optional, Any, Tuple
+from pathlib import Path
+import json
+
+from src.pipeline import AutoTrainPipeline
+from src.database.enhanced_manager import EnhancedDatabaseManager
+from src.database.models import Execution, Variation
+from src.database.enums import ExecutionStatus, PipelineMode as DBPipelineMode
+from src.pipeline.base.pipeline_result import PipelineResult, PipelineStatus
+
+from ..models.schemas import (
+    JobCreate, JobUpdate, JobResponse, JobStatus, PipelineMode,
+    TrainingStrategy, ProgressUpdate
+)
+from ..exceptions import (
+    JobNotFoundError, JobAlreadyRunningError, JobCancellationError,
+    TrainingExecutionError, DatabaseError, handle_pipeline_exception
+)
+
+logger = logging.getLogger(__name__)
+
+
+class JobService:
+    """Service class for managing training jobs."""
+    
+    def __init__(self, db_manager: EnhancedDatabaseManager, pipeline: AutoTrainPipeline):
+        """
+        Initialize the job service.
+        
+        Args:
+            db_manager: Database manager instance
+            pipeline: AutoTrainPipeline instance
+        """
+        self.db_manager = db_manager
+        self.pipeline = pipeline
+        self._running_jobs: Dict[str, asyncio.Task] = {}
+        self._progress_callbacks: Dict[str, List[callable]] = {}
+    
+    async def create_job(self, job_data: JobCreate) -> JobResponse:
+        """
+        Create a new training job.
+        
+        Args:
+            job_data: Job creation request data
+            
+        Returns:
+            Created job information
+            
+        Raises:
+            DatabaseError: If job creation fails
+            ValidationError: If job data is invalid
+        """
+        try:
+            # Generate unique job ID
+            job_id = str(uuid.uuid4())
+            
+            # Convert API mode to database mode
+            db_mode = self._convert_mode_to_db(job_data.mode)
+            
+            # Prepare job configuration
+            config = self._prepare_job_config(job_data)
+            
+            # Save job configuration to temp file
+            temp_dir = Path(self.pipeline.base_path) / "temp" / "job_configs"
+            temp_dir.mkdir(parents=True, exist_ok=True)
+            config_file = temp_dir / f"{job_id}.json"
+            logger.info(f"Saving job config to: {config_file}")
+            logger.info(f"Config content: {config}")
+            with open(config_file, 'w') as f:
+                json.dump(config, f, indent=2)
+            logger.info(f"Config file saved successfully")
+            
+            # Create database record
+            with self.db_manager.get_session() as session:
+                execution = Execution(
+                    job_id=job_id,
+                    dataset_name=job_data.dataset_name or self._extract_dataset_name(job_data),
+                    pipeline_mode=db_mode,
+                    preset=job_data.preset or job_data.base_preset,
+                    status=ExecutionStatus.PENDING.value,
+                    created_at=datetime.utcnow()
+                )
+                
+                session.add(execution)
+                session.commit()
+                
+                # Create variations if applicable
+                if job_data.mode == PipelineMode.VARIATIONS and job_data.variations:
+                    await self._create_variations(session, job_id, job_data.variations)
+                
+            logger.info(f"Created job {job_id} with mode {job_data.mode}")
+            
+            # Return job information
+            return await self.get_job(job_id)
+            
+        except Exception as e:
+            logger.error(f"Failed to create job: {e}")
+            raise DatabaseError(
+                operation="create_job",
+                reason=str(e)
+            )
+    
+    async def get_job(self, job_id: str) -> JobResponse:
+        """
+        Get job information by ID.
+        
+        Args:
+            job_id: Unique job identifier
+            
+        Returns:
+            Job information
+            
+        Raises:
+            JobNotFoundError: If job doesn't exist
+        """
+        try:
+            with self.db_manager.get_session() as session:
+                execution = session.query(Execution).filter(
+                    Execution.job_id == job_id
+                ).first()
+                
+                if not execution:
+                    raise JobNotFoundError(job_id)
+                
+                return self._convert_execution_to_response(execution)
+                
+        except JobNotFoundError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to get job {job_id}: {e}")
+            raise DatabaseError(
+                operation="get_job",
+                reason=str(e)
+            )
+    
+    async def list_jobs(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        status_filter: Optional[JobStatus] = None,
+        mode_filter: Optional[PipelineMode] = None
+    ) -> Tuple[List[JobResponse], int]:
+        """
+        List jobs with pagination and filtering.
+        
+        Args:
+            page: Page number (1-based)
+            page_size: Number of items per page
+            status_filter: Optional status filter
+            mode_filter: Optional mode filter
+            
+        Returns:
+            Tuple of (jobs list, total count)
+        """
+        try:
+            with self.db_manager.get_session() as session:
+                query = session.query(Execution)
+                
+                # Apply filters
+                if status_filter:
+                    db_status = self._convert_status_to_db(status_filter)
+                    query = query.filter(Execution.status == db_status)
+                
+                if mode_filter:
+                    db_mode = self._convert_mode_to_db(mode_filter)
+                    query = query.filter(Execution.mode == db_mode)
+                
+                # Get total count
+                total_count = query.count()
+                
+                # Apply pagination and ordering
+                offset = (page - 1) * page_size
+                executions = query.order_by(
+                    Execution.created_at.desc()
+                ).offset(offset).limit(page_size).all()
+                
+                # Convert to response objects
+                jobs = [
+                    self._convert_execution_to_response(execution)
+                    for execution in executions
+                ]
+                
+                return jobs, total_count
+                
+        except Exception as e:
+            logger.error(f"Failed to list jobs: {e}")
+            raise DatabaseError(
+                operation="list_jobs",
+                reason=str(e)
+            )
+    
+    async def update_job(self, job_id: str, update_data: JobUpdate) -> JobResponse:
+        """
+        Update job information.
+        
+        Args:
+            job_id: Job identifier
+            update_data: Update data
+            
+        Returns:
+            Updated job information
+            
+        Raises:
+            JobNotFoundError: If job doesn't exist
+        """
+        try:
+            with self.db_manager.get_session() as session:
+                execution = session.query(Execution).filter(
+                    Execution.job_id == job_id
+                ).first()
+                
+                if not execution:
+                    raise JobNotFoundError(job_id)
+                
+                # Update fields
+                if update_data.name is not None:
+                    execution.job_name = update_data.name
+                if update_data.description is not None:
+                    execution.description = update_data.description
+                if update_data.status is not None:
+                    execution.status = self._convert_status_to_db(update_data.status)
+                    if update_data.status in [JobStatus.DONE, JobStatus.FAILED, JobStatus.CANCELLED]:
+                        execution.ended_at = datetime.utcnow()
+                
+                execution.updated_at = datetime.utcnow()
+                session.commit()
+                
+                return self._convert_execution_to_response(execution)
+                
+        except JobNotFoundError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to update job {job_id}: {e}")
+            raise DatabaseError(
+                operation="update_job",
+                reason=str(e)
+            )
+    
+    async def delete_job(self, job_id: str) -> bool:
+        """
+        Delete a job.
+        
+        Args:
+            job_id: Job identifier
+            
+        Returns:
+            True if deleted successfully
+            
+        Raises:
+            JobNotFoundError: If job doesn't exist
+            JobAlreadyRunningError: If job is currently running
+        """
+        try:
+            # Check if job is running
+            if job_id in self._running_jobs:
+                raise JobAlreadyRunningError(job_id)
+            
+            with self.db_manager.get_session() as session:
+                execution = session.query(Execution).filter(
+                    Execution.job_id == job_id
+                ).first()
+                
+                if not execution:
+                    raise JobNotFoundError(job_id)
+                
+                # Delete variations first (if any)
+                session.query(Variation).filter(
+                    Variation.execution_id == job_id
+                ).delete()
+                
+                # Delete execution
+                session.delete(execution)
+                session.commit()
+                
+                logger.info(f"Deleted job {job_id}")
+                return True
+                
+        except (JobNotFoundError, JobAlreadyRunningError):
+            raise
+        except Exception as e:
+            logger.error(f"Failed to delete job {job_id}: {e}")
+            raise DatabaseError(
+                operation="delete_job",
+                reason=str(e)
+            )
+    
+    async def start_job(self, job_id: str) -> JobResponse:
+        """
+        Start job execution.
+        
+        Args:
+            job_id: Job identifier
+            
+        Returns:
+            Updated job information
+            
+        Raises:
+            JobNotFoundError: If job doesn't exist
+            JobAlreadyRunningError: If job is already running
+        """
+        # Check if job is already running
+        if job_id in self._running_jobs:
+            raise JobAlreadyRunningError(job_id)
+        
+        # Get job information
+        job = await self.get_job(job_id)
+        
+        if job.status == JobStatus.TRAINING:
+            raise JobAlreadyRunningError(job_id)
+        
+        # Update status to running
+        await self.update_job(job_id, JobUpdate(status=JobStatus.TRAINING))
+        
+        # Start execution task
+        task = asyncio.create_task(self._execute_job(job_id))
+        self._running_jobs[job_id] = task
+        
+        logger.info(f"Started job {job_id}")
+        
+        return await self.get_job(job_id)
+    
+    async def cancel_job(self, job_id: str) -> JobResponse:
+        """
+        Cancel a running job.
+        
+        Args:
+            job_id: Job identifier
+            
+        Returns:
+            Updated job information
+            
+        Raises:
+            JobNotFoundError: If job doesn't exist
+            JobCancellationError: If cancellation fails
+        """
+        try:
+            # Check if job is running
+            if job_id not in self._running_jobs:
+                job = await self.get_job(job_id)  # This will raise JobNotFoundError if needed
+                cancellable_statuses = [
+                    JobStatus.TRAINING,
+                    JobStatus.PREPARING_DATASET,
+                    JobStatus.CONFIGURING_PRESET,
+                    JobStatus.GENERATING_PREVIEW,
+                    JobStatus.IN_QUEUE,
+                    JobStatus.READY_FOR_TRAINING
+                ]
+                if job.status not in cancellable_statuses:
+                    raise JobCancellationError(job_id, f"Job cannot be cancelled in status: {job.status}")
+            
+            # Cancel the task
+            task = self._running_jobs.get(job_id)
+            if task:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+                finally:
+                    del self._running_jobs[job_id]
+            
+            # Update status
+            await self.update_job(job_id, JobUpdate(status=JobStatus.CANCELLED))
+            
+            logger.info(f"Cancelled job {job_id}")
+            
+            return await self.get_job(job_id)
+            
+        except (JobNotFoundError, JobCancellationError):
+            raise
+        except Exception as e:
+            logger.error(f"Failed to cancel job {job_id}: {e}")
+            raise JobCancellationError(job_id, str(e))
+    
+    def add_progress_callback(self, job_id: str, callback: callable):
+        """
+        Add a progress callback for a job.
+        
+        Args:
+            job_id: Job identifier
+            callback: Callback function to call with progress updates
+        """
+        if job_id not in self._progress_callbacks:
+            self._progress_callbacks[job_id] = []
+        self._progress_callbacks[job_id].append(callback)
+    
+    def remove_progress_callback(self, job_id: str, callback: callable):
+        """
+        Remove a progress callback for a job.
+        
+        Args:
+            job_id: Job identifier
+            callback: Callback function to remove
+        """
+        if job_id in self._progress_callbacks:
+            try:
+                self._progress_callbacks[job_id].remove(callback)
+                if not self._progress_callbacks[job_id]:
+                    del self._progress_callbacks[job_id]
+            except ValueError:
+                pass
+    
+    async def _execute_job(self, job_id: str):
+        """
+        Execute a job asynchronously.
+        
+        Args:
+            job_id: Job identifier
+        """
+        try:
+            # Get job configuration
+            with self.db_manager.get_session() as session:
+                execution = session.query(Execution).filter(
+                    Execution.job_id == job_id
+                ).first()
+                
+                if not execution:
+                    raise JobNotFoundError(job_id)
+                
+                # Load configuration from temp file
+                temp_dir = Path(self.pipeline.base_path) / "temp" / "job_configs"
+                config_file = temp_dir / f"{job_id}.json"
+                logger.info(f"Looking for config file at: {config_file}")
+                
+                if config_file.exists():
+                    logger.info(f"Loading config from file: {config_file}")
+                    with open(config_file, 'r') as f:
+                        config = json.load(f)
+                    logger.info(f"Loaded config: {config}")
+                else:
+                    # Fallback: Extract configuration from execution data
+                    logger.warning(f"Config file not found for job {job_id}, using defaults")
+                    config = {
+                        'dataset_name': execution.dataset_name,
+                        'preset': execution.preset
+                    }
+                    
+                    # Add mode-specific parameters with defaults
+                    if execution.pipeline_mode == 'single':
+                        config.update({
+                            'source_path': f'workspace/input/{execution.dataset_name}',
+                            'repeats': 30,
+                            'class_name': 'person',
+                            'generate_configs': True
+                        })
+                
+                mode = self._convert_mode_from_db(execution.pipeline_mode)
+            
+            # Update start time
+            await self.update_job(job_id, JobUpdate(status=JobStatus.TRAINING))
+            with self.db_manager.get_session() as session:
+                execution = session.query(Execution).filter(
+                    Execution.job_id == job_id
+                ).first()
+                execution.started_at = datetime.utcnow()
+                session.commit()
+            
+            # Execute pipeline
+            await self._send_progress_update(job_id, JobStatus.TRAINING, 0, "Starting execution...")
+            
+            result = await self._run_pipeline_async(mode, config)
+            
+            # Update job with results
+            if result.status == PipelineStatus.SUCCESS:
+                await self.update_job(job_id, JobUpdate(status=JobStatus.DONE))
+                await self._send_progress_update(job_id, JobStatus.DONE, 100, "Execution completed successfully")
+            else:
+                await self.update_job(job_id, JobUpdate(status=JobStatus.FAILED))
+                await self._send_progress_update(job_id, JobStatus.FAILED, 0, f"Execution failed: {result.error_message}")
+            
+            # Update execution with result data
+            with self.db_manager.get_session() as session:
+                execution = session.query(Execution).filter(
+                    Execution.job_id == job_id
+                ).first()
+                if result.output_dir:
+                    execution.output_path = result.output_dir
+                execution.error_message = result.error_message
+                session.commit()
+            
+        except asyncio.CancelledError:
+            logger.info(f"Job {job_id} was cancelled")
+            await self.update_job(job_id, JobUpdate(status=JobStatus.CANCELLED))
+            await self._send_progress_update(job_id, JobStatus.CANCELLED, 0, "Execution was cancelled")
+        except Exception as e:
+            logger.error(f"Job {job_id} execution failed: {e}")
+            await self.update_job(job_id, JobUpdate(status=JobStatus.FAILED))
+            await self._send_progress_update(job_id, JobStatus.FAILED, 0, f"Execution failed: {str(e)}")
+        finally:
+            # Clean up
+            if job_id in self._running_jobs:
+                del self._running_jobs[job_id]
+            if job_id in self._progress_callbacks:
+                del self._progress_callbacks[job_id]
+            
+            # Clean up temp config file
+            temp_dir = Path(self.pipeline.base_path) / "temp" / "job_configs"
+            config_file = temp_dir / f"{job_id}.json"
+            if config_file.exists():
+                config_file.unlink()
+    
+    async def _run_pipeline_async(self, mode: PipelineMode, config: dict) -> PipelineResult:
+        """
+        Run pipeline execution asynchronously.
+        
+        Args:
+            mode: Pipeline mode
+            config: Pipeline configuration
+            
+        Returns:
+            Pipeline execution result
+        """
+        try:
+            # Convert mode to string
+            mode_str = mode.value
+            
+            # Execute pipeline in thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(
+                None,
+                lambda: self.pipeline.execute(mode_str, **config)
+            )
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Pipeline execution failed: {e}")
+            raise handle_pipeline_exception(e, f"mode={mode}")
+    
+    async def _send_progress_update(self, job_id: str, status: JobStatus, progress: float, message: str):
+        """
+        Send progress update to registered callbacks.
+        
+        Args:
+            job_id: Job identifier
+            status: Current status
+            progress: Progress percentage
+            message: Progress message
+        """
+        if job_id in self._progress_callbacks:
+            update = ProgressUpdate(
+                job_id=job_id,
+                status=status,
+                progress_percentage=progress,
+                current_step=message,
+                completed_steps=int(progress),
+                total_steps=100,
+                message=message
+            )
+            
+            for callback in self._progress_callbacks[job_id]:
+                try:
+                    if asyncio.iscoroutinefunction(callback):
+                        await callback(update)
+                    else:
+                        callback(update)
+                except Exception as e:
+                    logger.error(f"Progress callback failed: {e}")
+    
+    def _prepare_job_config(self, job_data: JobCreate) -> dict:
+        """
+        Prepare job configuration from request data.
+        
+        Args:
+            job_data: Job creation data
+            
+        Returns:
+            Configuration dictionary
+        """
+        config = {
+            "generate_configs": job_data.generate_configs,
+            "auto_clean": job_data.auto_clean,
+            "enable_preview": job_data.enable_preview,
+            "preview_count": getattr(job_data, 'preview_count', 0),
+        }
+        
+        if job_data.mode == PipelineMode.SINGLE:
+            config.update({
+                "source_path": job_data.source_path,
+                "repeats": job_data.repeats,
+                "class_name": job_data.class_name,
+            })
+            if job_data.preset:
+                config["preset"] = job_data.preset
+                
+        elif job_data.mode == PipelineMode.BATCH:
+            config.update({
+                "datasets": job_data.datasets,
+                "strategy": job_data.strategy.value if job_data.strategy else "sequential",
+            })
+            
+        elif job_data.mode == PipelineMode.VARIATIONS:
+            config.update({
+                "dataset_name": job_data.dataset_name,
+                "base_preset": job_data.base_preset,
+                "variations": job_data.variations,
+            })
+        
+        return config
+    
+    def _extract_dataset_name(self, job_data: JobCreate) -> Optional[str]:
+        """
+        Extract dataset name from job data.
+        
+        Args:
+            job_data: Job creation data
+            
+        Returns:
+            Dataset name if available
+        """
+        if job_data.dataset_name:
+            return job_data.dataset_name
+        elif job_data.source_path:
+            return Path(job_data.source_path).name
+        return None
+    
+    async def _create_variations(self, session, job_id: str, variations: dict):
+        """
+        Create variation records for a variations job.
+        
+        Args:
+            session: Database session
+            job_id: Job identifier
+            variations: Variations configuration
+        """
+        for param_name, param_values in variations.items():
+            for i, value in enumerate(param_values):
+                variation = Variation(
+                    job_id=job_id,
+                    variation_id=f"{param_name}_v{i+1}",
+                    experiment_name=job_data.dataset_name or "experiment",
+                    dataset_name=job_data.dataset_name,
+                    preset=job_data.preset,
+                    total_combinations=len(param_values),
+                    varied_parameters=json.dumps({param_name: param_values}),
+                    parameter_values=json.dumps({param_name: value}),
+                    status=ExecutionStatus.PENDING.value,
+                    created_at=datetime.utcnow()
+                )
+                session.add(variation)
+    
+    def _convert_execution_to_response(self, execution: Execution) -> JobResponse:
+        """
+        Convert database execution to API response.
+        
+        Args:
+            execution: Database execution record
+            
+        Returns:
+            Job response object
+        """
+        # Create results from execution data
+        results = {
+            'total_steps': execution.total_steps,
+            'output_path': execution.output_path,
+            'success': execution.success
+        }
+        
+        # Create config from execution data
+        config = {
+            'dataset_name': execution.dataset_name,
+            'preset': execution.preset,
+            'mode': execution.pipeline_mode
+        }
+        
+        # Calculate progress if job is running
+        progress_percentage = None
+        if execution.status == ExecutionStatus.TRAINING.value:
+            # This could be enhanced with actual progress tracking
+            progress_percentage = 50.0
+        elif execution.status == ExecutionStatus.DONE.value:
+            progress_percentage = 100.0
+        elif execution.status in [ExecutionStatus.FAILED.value, ExecutionStatus.CANCELLED.value]:
+            progress_percentage = 0.0
+        
+        return JobResponse(
+            id=execution.job_id,
+            name=f"{execution.dataset_name}_{execution.preset}",
+            description=f"Training {execution.dataset_name} with {execution.preset}",
+            mode=self._convert_mode_from_db(execution.pipeline_mode),
+            status=self._convert_status_from_db(execution.status),
+            created_at=execution.created_at,
+            started_at=execution.start_time,
+            completed_at=execution.end_time,
+            progress_percentage=progress_percentage,
+            successful_datasets=1 if execution.success else 0,
+            failed_datasets=0 if execution.success else 1,
+            error_message=execution.error_message,
+            config=config,
+            results=results
+        )
+    
+    def _convert_mode_to_db(self, mode: PipelineMode) -> str:
+        """Convert API mode to database mode string."""
+        mapping = {
+            PipelineMode.SINGLE: DBPipelineMode.SINGLE.value,
+            PipelineMode.BATCH: DBPipelineMode.BATCH.value,
+            PipelineMode.VARIATIONS: DBPipelineMode.VARIATIONS.value,
+        }
+        return mapping[mode]
+    
+    def _convert_mode_from_db(self, mode: str) -> PipelineMode:
+        """Convert database mode to API mode."""
+        # Database stores mode as string, not enum
+        mapping = {
+            'single': PipelineMode.SINGLE,
+            'batch': PipelineMode.BATCH,
+            'variations': PipelineMode.VARIATIONS,
+            DBPipelineMode.SINGLE.value: PipelineMode.SINGLE,
+            DBPipelineMode.BATCH.value: PipelineMode.BATCH,
+            DBPipelineMode.VARIATIONS.value: PipelineMode.VARIATIONS,
+        }
+        return mapping.get(mode, PipelineMode.SINGLE)
+    
+    def _convert_status_to_db(self, status: JobStatus) -> str:
+        """Convert API status to database status string."""
+        mapping = {
+            JobStatus.PENDING: ExecutionStatus.PENDING.value,
+            JobStatus.IN_QUEUE: ExecutionStatus.IN_QUEUE.value,
+            JobStatus.PREPARING_DATASET: ExecutionStatus.PREPARING_DATASET.value,
+            JobStatus.CONFIGURING_PRESET: ExecutionStatus.CONFIGURING_PRESET.value,
+            JobStatus.READY_FOR_TRAINING: ExecutionStatus.READY_FOR_TRAINING.value,
+            JobStatus.TRAINING: ExecutionStatus.TRAINING.value,
+            JobStatus.GENERATING_PREVIEW: ExecutionStatus.GENERATING_PREVIEW.value,
+            JobStatus.DONE: ExecutionStatus.DONE.value,
+            JobStatus.FAILED: ExecutionStatus.FAILED.value,
+            JobStatus.CANCELLED: ExecutionStatus.CANCELLED.value,
+        }
+        return mapping.get(status, ExecutionStatus.PENDING.value)
+    
+    def _convert_status_from_db(self, status: str) -> JobStatus:
+        """Convert database status to API status - now returns actual database status."""
+        # Database stores status as string
+        # Map database statuses directly to API statuses (no more generic mapping)
+        mapping = {
+            'pending': JobStatus.PENDING,
+            'in_queue': JobStatus.IN_QUEUE,
+            'preparing_dataset': JobStatus.PREPARING_DATASET,
+            'configuring_preset': JobStatus.CONFIGURING_PRESET,
+            'ready_for_training': JobStatus.READY_FOR_TRAINING,
+            'training': JobStatus.TRAINING,
+            'generating_preview': JobStatus.GENERATING_PREVIEW,
+            'done': JobStatus.DONE,
+            'failed': JobStatus.FAILED,
+            'cancelled': JobStatus.CANCELLED,
+            ExecutionStatus.PENDING.value: JobStatus.PENDING,
+            ExecutionStatus.IN_QUEUE.value: JobStatus.IN_QUEUE,
+            ExecutionStatus.PREPARING_DATASET.value: JobStatus.PREPARING_DATASET,
+            ExecutionStatus.CONFIGURING_PRESET.value: JobStatus.CONFIGURING_PRESET,
+            ExecutionStatus.READY_FOR_TRAINING.value: JobStatus.READY_FOR_TRAINING,
+            ExecutionStatus.TRAINING.value: JobStatus.TRAINING,
+            ExecutionStatus.GENERATING_PREVIEW.value: JobStatus.GENERATING_PREVIEW,
+            ExecutionStatus.DONE.value: JobStatus.DONE,
+            ExecutionStatus.FAILED.value: JobStatus.FAILED,
+            ExecutionStatus.CANCELLED.value: JobStatus.CANCELLED,
+        }
+        return mapping.get(status, JobStatus.PENDING)

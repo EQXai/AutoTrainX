@@ -1,0 +1,59 @@
+2025-08-02 12:42:06,664 - src.database.factory - INFO - create_engine:128 - Created postgresql engine: postgresql://autotrainx:1234@localhost:5432/autotrainx
+2025-08-02 12:42:06,669 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql
+2025-08-02 12:42:09,449 - src.database.factory - INFO - create_engine:128 - Created postgresql engine: postgresql://autotrainx:1234@localhost:5432/autotrainx
+2025-08-02 12:42:09,452 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql
+2025-08-02 12:47:56,309 - src.training.enhanced_trainer - INFO - _execute_with_progress:234 - Training completed for dataset: m14w00dh4ll
+2025-08-02 12:47:56,321 - src.pipeline.hooks.hook_manager - INFO - execute_hooks:74 - Executing hook: ImagePreviewHook
+2025-08-02 12:47:56,321 - src.pipeline.hooks.preview_hook - INFO - execute:127 - Executing image preview hook for m14w00dh4ll
+2025-08-02 12:47:56,324 - src.pipeline.hooks.preview_hook - INFO - _find_latest_model:297 - Selected latest model: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/model/m14w00dh4ll_FL1_c8f4158e.safetensors
+2025-08-02 12:47:56,325 - src.image_preview.preview_pipeline - INFO - generate_previews:70 - Generating 2 previews for m14w00dh4ll using FL1
+2025-08-02 12:47:57,580 - src.image_preview.utils - INFO - ensure_comfyui_running:154 - ComfyUI Environment Diagnosis:
+2025-08-02 12:47:57,580 - src.image_preview.utils - INFO - ensure_comfyui_running:155 -   ComfyUI path exists: True
+2025-08-02 12:47:57,580 - src.image_preview.utils - INFO - ensure_comfyui_running:156 -   main.py exists: True
+2025-08-02 12:47:57,580 - src.image_preview.utils - INFO - ensure_comfyui_running:157 -   Python: Python 3.12.3
+2025-08-02 12:47:57,580 - src.image_preview.utils - INFO - ensure_comfyui_running:158 -   GPU available: True
+2025-08-02 12:47:57,580 - src.image_preview.utils - INFO - ensure_comfyui_running:159 -   Port 8188 available: True
+2025-08-02 12:47:57,580 - src.image_preview.utils - INFO - ensure_comfyui_running:177 - Starting ComfyUI from: /home/eqx/ComfyUI
+2025-08-02 12:47:57,580 - src.image_preview.utils - INFO - ensure_comfyui_running:206 - Using ComfyUI virtual environment: /home/eqx/ComfyUI/venv
+2025-08-02 12:47:57,581 - src.image_preview.utils - INFO - ensure_comfyui_running:218 - ComfyUI output will be logged to: /home/eqx/AutoTrainX/logs/ComfyUI_log/comfyui_20250802_124757.log
+2025-08-02 12:47:57,581 - src.image_preview.utils - INFO - ensure_comfyui_running:221 - Executing command: /home/eqx/ComfyUI/venv/bin/python main.py --listen 127.0.0.1 --port 8188
+2025-08-02 12:48:08,695 - src.image_preview.utils - INFO - ensure_comfyui_running:238 - ComfyUI started successfully on http://127.0.0.1:8188
+2025-08-02 12:48:08,701 - src.image_preview.model_manager - INFO - _get_effective_preset:102 - Custom preset 'FL1' detected, using base preset 'FluxLORA' for model type detection
+2025-08-02 12:48:08,702 - src.image_preview.model_manager - INFO - copy_model_to_comfyui:144 - Copying model to ComfyUI: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/model/m14w00dh4ll_FL1_c8f4158e.safetensors -> /home/eqx/ComfyUI/models/loras/m14w00dh4ll_FL1_c8f4158e.safetensors
+2025-08-02 12:48:09,581 - src.image_preview.workflow_handler - INFO - _get_base_preset:70 - Custom preset 'FL1' detected, using base preset 'FluxLORA' for workflow
+2025-08-02 12:48:09,581 - src.image_preview.workflow_handler - INFO - load_workflow:120 - Loaded and validated workflow: Flux_LORA.json for FL1
+2025-08-02 12:48:09,581 - src.image_preview.preview_pipeline - INFO - generate_previews:118 - Generating preview 1/2
+2025-08-02 12:48:09,581 - src.image_preview.workflow_customizer - INFO - customize_workflow:79 - Customizing workflow for FL1 - Preview 1
+2025-08-02 12:48:09,585 - src.image_preview.workflow_customizer - INFO - _get_effective_preset:53 - Custom preset 'FL1' detected, using base preset 'FluxLORA' for customization
+2025-08-02 12:48:09,585 - src.image_preview.workflow_customizer - INFO - _customize_flux_lora_workflow:115 - UNETLoader found - keeping current value (TODO: update in future)
+2025-08-02 12:48:09,585 - src.image_preview.workflow_customizer - INFO - _customize_flux_lora_workflow:135 - Randomized noise seed: 2414388391
+2025-08-02 12:48:09,585 - src.image_preview.workflow_customizer - INFO - _get_sample_image_path:325 - Using sample image 1/5: sample_image_01.jpg
+2025-08-02 12:48:09,586 - src.image_preview.workflow_customizer - INFO - _customize_flux_lora_workflow:128 - Updated LoadImageFromPath: /home/eqx/AutoTrainX/ComfyUI_workflow_utils/sample_Image/sample_image_01.jpg
+2025-08-02 12:48:09,586 - src.image_preview.workflow_customizer - INFO - _customize_flux_lora_workflow:121 - Updated LoraLoader with model: m14w00dh4ll_FL1_c8f4158e.safetensors
+2025-08-02 12:48:09,586 - src.image_preview.workflow_customizer - INFO - _customize_flux_lora_workflow:176 - Updated output path: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/Preview
+2025-08-02 12:48:09,586 - src.image_preview.workflow_customizer - INFO - _update_save_image_nodes:352 - Updated SaveImage_EQX filename: m14w00dh4ll_FL1_01
+2025-08-02 12:48:09,589 - src.image_preview.comfyui_client - INFO - execute_workflow:80 - Submitted workflow with job ID: a445ac3c-1e7a-4706-950c-17a3d1d9c922
+2025-08-02 12:50:15,809 - src.image_preview.preview_pipeline - INFO - generate_previews:204 - Found generated image: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/Preview/m14w00dh4ll_FL1_01_0001.png
+2025-08-02 12:50:15,809 - src.image_preview.preview_pipeline - INFO - generate_previews:118 - Generating preview 2/2
+2025-08-02 12:50:15,810 - src.image_preview.workflow_customizer - INFO - customize_workflow:79 - Customizing workflow for FL1 - Preview 2
+2025-08-02 12:50:15,813 - src.image_preview.workflow_customizer - INFO - _get_effective_preset:53 - Custom preset 'FL1' detected, using base preset 'FluxLORA' for customization
+2025-08-02 12:50:15,813 - src.image_preview.workflow_customizer - INFO - _customize_flux_lora_workflow:115 - UNETLoader found - keeping current value (TODO: update in future)
+2025-08-02 12:50:15,814 - src.image_preview.workflow_customizer - INFO - _customize_flux_lora_workflow:135 - Randomized noise seed: 1050726400
+2025-08-02 12:50:15,814 - src.image_preview.workflow_customizer - INFO - _get_sample_image_path:325 - Using sample image 2/5: sample_image_02.jpg
+2025-08-02 12:50:15,814 - src.image_preview.workflow_customizer - INFO - _customize_flux_lora_workflow:128 - Updated LoadImageFromPath: /home/eqx/AutoTrainX/ComfyUI_workflow_utils/sample_Image/sample_image_02.jpg
+2025-08-02 12:50:15,814 - src.image_preview.workflow_customizer - INFO - _customize_flux_lora_workflow:121 - Updated LoraLoader with model: m14w00dh4ll_FL1_c8f4158e.safetensors
+2025-08-02 12:50:15,814 - src.image_preview.workflow_customizer - INFO - _customize_flux_lora_workflow:176 - Updated output path: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/Preview
+2025-08-02 12:50:15,814 - src.image_preview.workflow_customizer - INFO - _update_save_image_nodes:352 - Updated SaveImage_EQX filename: m14w00dh4ll_FL1_02
+2025-08-02 12:50:15,816 - src.image_preview.comfyui_client - INFO - execute_workflow:80 - Submitted workflow with job ID: e70f11e8-94c2-415c-85be-be1ef828f273
+2025-08-02 12:51:48,972 - src.image_preview.preview_pipeline - INFO - generate_previews:204 - Found generated image: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/Preview/m14w00dh4ll_FL1_02_0001.png
+2025-08-02 12:51:48,972 - src.image_preview.model_manager - INFO - remove_model_from_comfyui:157 - Removing temporary model: /home/eqx/ComfyUI/models/loras/m14w00dh4ll_FL1_c8f4158e.safetensors
+2025-08-02 12:51:48,972 - src.image_preview.preview_pipeline - INFO - generate_previews:250 - Shutting down ComfyUI after preview generation
+2025-08-02 12:51:48,983 - src.image_preview.utils - INFO - shutdown_comfyui:420 - ComfyUI process killed successfully
+2025-08-02 12:51:48,984 - src.pipeline.hooks.hook_manager - INFO - execute_hooks:83 - Hook ImagePreviewHook completed successfully
+2025-08-02 12:51:48,984 - src.pipeline.hooks.file_move_hook - INFO - should_execute:76 - File move hook will execute for mode: single, dataset: m14w00dh4ll
+2025-08-02 12:51:48,984 - src.pipeline.hooks.hook_manager - INFO - execute_hooks:74 - Executing hook: FileMoveHook
+2025-08-02 12:51:48,984 - src.pipeline.hooks.file_move_hook - INFO - execute:95 - FileMoveHook execute - mode: single
+2025-08-02 12:51:48,984 - src.pipeline.hooks.file_move_hook - INFO - execute:96 - FileMoveHook execute - context keys: ['success', 'training_success', 'dataset_name', 'preset', 'model_type', 'preview_count', 'job_id', 'mode', 'config_path', 'preview_enabled']
+2025-08-02 12:51:48,985 - src.pipeline.hooks.file_move_hook - INFO - move_training_files:448 - Moving model: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/model/m14w00dh4ll_FL1_c8f4158e.safetensors -> /home/eqx/custom/m14w00dh4ll_FL1_c8f4158e/m14w00dh4ll_FL1_c8f4158e.safetensors
+2025-08-02 12:51:48,985 - src.pipeline.hooks.file_move_hook - INFO - move_training_files:474 - Moving preview dir: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/Preview -> /home/eqx/custom/m14w00dh4ll_FL1_c8f4158e/Preview
+2025-08-02 12:51:48,985 - src.pipeline.hooks.hook_manager - INFO - execute_hooks:83 - Hook FileMoveHook completed successfully

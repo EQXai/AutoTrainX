@@ -1,0 +1,234 @@
+# AutoTrainX Training Log
+# Dataset: b09g13_FluxLORA_v4
+# Preset: FluxLORA
+# Job ID: 27169b45
+# Start Time: 2025-08-01T13:59:11.123664
+# Mode: variations
+# Command: /home/eqx/AutoTrainX/venv/bin/python /home/eqx/AutoTrainX/sd-scripts/flux_train_network.py --config_file /home/eqx/AutoTrainX/workspace/Presets/Variations/FluxLORA/b09g13_FluxLORA_v4_27169b45.toml
+================================================================================
+
+2025-08-01 13:59:13 INFO     Loading settings from                                        train_util.py:4651
+                             /home/eqx/AutoTrainX/workspace/Presets/Variations/FluxLORA/b                   
+                             09g13_FluxLORA_v4_27169b45.toml...                                             
+                    INFO     highvram is enabled / highvramが有効です                     train_util.py:4316
+2025-08-01 13:59:13 INFO     Checking the state dict: Diffusers or BFL, dev or schnell      flux_utils.py:43
+                    INFO     t5xxl_max_token_length: 512                           flux_train_network.py:157
+You are using the default legacy behaviour of the <class 'transformers.models.t5.tokenization_t5.T5Tokenizer'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565
+2025-08-01 13:59:14 INFO     Using DreamBooth method.                                   train_network.py:517
+                    INFO     prepare images.                                              train_util.py:2072
+                    INFO     get image size from name of cache files                      train_util.py:1965
+
+  0%|          | 0/1 [00:00<?, ?it/s]
+100%|██████████| 1/1 [00:00<00:00, 27235.74it/s]
+                    INFO     set image size from cache files: 1/1                         train_util.py:1995
+                    INFO     found directory                                              train_util.py:2019
+                             /home/eqx/AutoTrainX/workspace/output/b09g13/img/30_b09g13                     
+                             person contains 1 image files                                                  
+
+read caption:   0%|          | 0/1 [00:00<?, ?it/s]
+read caption: 100%|██████████| 1/1 [00:00<00:00, 9731.56it/s]
+                    INFO     30 train images with repeats.                                train_util.py:2116
+                    INFO     0 reg images with repeats.                                   train_util.py:2120
+                    WARNING  no regularization images / 正則化画像が見つかりませんでした  train_util.py:2125
+                    INFO     [Dataset 0]                                                  config_util.py:580
+                               batch_size: 1                                                                
+                               resolution: (1024, 1280)                                                     
+                               resize_interpolation: None                                                   
+                               enable_bucket: False                                                         
+                                                                                                            
+                               [Subset 0 of Dataset 0]                                                      
+                                 image_dir:                                                                 
+                             "/home/eqx/AutoTrainX/workspace/output/b09g13/img/30_b09g13                    
+                             person"                                                                        
+                                 image_count: 1                                                             
+                                 num_repeats: 30                                                            
+                                 shuffle_caption: False                                                     
+                                 keep_tokens: 0                                                             
+                                 caption_dropout_rate: 0.0                                                  
+                                 caption_dropout_every_n_epochs: 0                                          
+                                 caption_tag_dropout_rate: 0.0                                              
+                                 caption_prefix: None                                                       
+                                 caption_suffix: None                                                       
+                                 color_aug: False                                                           
+                                 flip_aug: False                                                            
+                                 face_crop_aug_range: None                                                  
+                                 random_crop: False                                                         
+                                 token_warmup_min: 1,                                                       
+                                 token_warmup_step: 0,                                                      
+                                 alpha_mask: False                                                          
+                                 resize_interpolation: None                                                 
+                                 custom_attributes: {}                                                      
+                                 is_reg: False                                                              
+                                 class_tokens: b09g13 person                                                
+                                 caption_extension: .txt                                                    
+                                                                                                            
+                                                                                                            
+                    INFO     [Prepare dataset 0]                                          config_util.py:592
+                    INFO     loading image sizes.                                          train_util.py:987
+
+  0%|          | 0/1 [00:00<?, ?it/s]
+100%|██████████| 1/1 [00:00<00:00, 63550.06it/s]
+                    INFO     prepare dataset                                              train_util.py:1012
+                    INFO     preparing accelerator                                      train_network.py:580
+                    INFO     Checking the state dict: Diffusers or BFL, dev or schnell      flux_utils.py:43
+                    INFO     Building Flux model dev from BFL checkpoint                   flux_utils.py:101
+                    INFO     Loading state dict from                                       flux_utils.py:118
+                             /home/eqx/AutoTrainX/models/flux1-dev-fp8.safetensors                          
+                    INFO     Loaded Flux: <All keys matched successfully>                  flux_utils.py:137
+                    INFO     Loaded fp8 FLUX model                                 flux_train_network.py:106
+                    INFO     Building CLIP-L                                               flux_utils.py:179
+                    INFO     Loading state dict from                                       flux_utils.py:275
+                             /home/eqx/AutoTrainX/models/clip_l.safetensors                                 
+                    INFO     Loaded CLIP-L: <All keys matched successfully>                flux_utils.py:278
+                    INFO     Loading state dict from                                       flux_utils.py:330
+                             /home/eqx/AutoTrainX/models/t5xxl_fp8_e4m3fn.safetensors                       
+                    INFO     Loaded T5xxl: <All keys matched successfully>                 flux_utils.py:333
+                    INFO     Loaded fp8 T5XXL model                                flux_train_network.py:140
+                    INFO     Building AutoEncoder                                          flux_utils.py:144
+2025-08-01 13:59:15 INFO     Loading state dict from                                       flux_utils.py:149
+                             /home/eqx/AutoTrainX/models/ae.safetensors                                     
+                    INFO     Loaded AE: <All keys matched successfully>                    flux_utils.py:152
+                    INFO     [Dataset 0]                                                  train_util.py:2613
+                    INFO     caching latents with caching strategy.                       train_util.py:1115
+                    INFO     caching latents...                                           train_util.py:1164
+accelerator device: cuda
+import network module: networks.lora_flux
+
+  0%|          | 0/1 [00:00<?, ?it/s]
+100%|██████████| 1/1 [00:00<00:00, 5171.77it/s]
+                    INFO     move vae and unet to cpu to save memory               flux_train_network.py:210
+                    INFO     move text encoders to gpu                             flux_train_network.py:218
+2025-08-01 13:59:16 INFO     prepare T5XXL for fp8: set to torch.float8_e4m3fn,    flux_train_network.py:511
+                             set embeddings to torch.bfloat16, add hooks                                    
+                    INFO     [Dataset 0]                                                  train_util.py:2635
+                    INFO     caching Text Encoder outputs with caching strategy.          train_util.py:1298
+                    INFO     checking cache validity...                                   train_util.py:1309
+
+  0%|          | 0/1 [00:00<?, ?it/s]
+100%|██████████| 1/1 [00:00<00:00, 2559.06it/s]
+                    INFO     no Text Encoder outputs to cache                             train_util.py:1336
+                    INFO     cache Text Encoder outputs for sample prompt:         flux_train_network.py:234
+                             /home/eqx/AutoTrainX/workspace/output/b09g13/sample_p                          
+                             rompts.txt                                                                     
+                    INFO     cache Text Encoder outputs for prompt: b09g13, Photo  flux_train_network.py:245
+                             of a young woman with light skin, blonde hair styled                           
+                             in a side braid, wearing a black fur coat, sitting in                          
+                             a car, looking directly at the camera with a neutral                           
+                             expression, parted lips, and freckles on her cheeks.                           
+                             The background is dark, and the lighting is dim,                               
+                             creating a moody atmosphere. The woman is                                      
+                    INFO     cache Text Encoder outputs for prompt:                flux_train_network.py:245
+                    INFO     move t5XXL back to cpu                                flux_train_network.py:258
+2025-08-01 13:59:18 INFO     move vae and unet back to original device             flux_train_network.py:263
+                    INFO     create LoRA network. base dim (rank): 64, alpha: 32            lora_flux.py:743
+                    INFO     neuron dropout: p=None, rank dropout: p=None, module dropout:  lora_flux.py:744
+                             p=None                                                                         
+                    INFO     train all blocks only                                          lora_flux.py:758
+                    INFO     create LoRA for Text Encoder 1:                                lora_flux.py:898
+                    INFO     create LoRA for Text Encoder 1: 72 modules.                    lora_flux.py:901
+2025-08-01 13:59:20 INFO     create LoRA for FLUX all blocks: 304 modules.                  lora_flux.py:922
+                    INFO     enable LoRA for text encoder: 72 modules                      lora_flux.py:1098
+                    INFO     enable LoRA for U-Net: 304 modules                            lora_flux.py:1103
+                    INFO     Text Encoder 1 (CLIP-L): 72 modules, LR 5e-05                 lora_flux.py:1205
+                    INFO     use Adafactor optimizer | {'scale_parameter': False,         train_util.py:4963
+                             'relative_step': False, 'warmup_init': False,                                  
+                             'weight_decay': 0.01}                                                          
+                    WARNING  because max_grad_norm is set, clip_grad_norm is enabled.     train_util.py:4991
+                             consider set to 0 /                                                            
+                             max_grad_normが設定されているためclip_grad_normが有効になり                    
+                             ます。0に設定して無効にしたほうがいいかもしれません                            
+                    WARNING  constant_with_warmup will be good /                          train_util.py:4995
+                             スケジューラはconstant_with_warmupが良いかもしれません                         
+                    INFO     set U-Net weight dtype to torch.float8_e4m3fn              train_network.py:826
+                    INFO     prepare CLIP-L for fp8: set to torch.float8_e4m3fn,   flux_train_network.py:482
+                             set embeddings to torch.bfloat16                                               
+fatal: not a git repository (or any of the parent directories): .git
+2025-08-01 13:59:29 INFO     unet dtype: torch.float8_e4m3fn, device: cuda:0           train_network.py:1323
+                    INFO     text_encoder [0] dtype: torch.float8_e4m3fn, device:      train_network.py:1329
+                             cuda:0                                                                         
+                    INFO     text_encoder [1] dtype: torch.float8_e4m3fn, device: cpu  train_network.py:1329
+FLUX: Gradient checkpointing enabled. CPU offload: False
+prepare optimizer, data loader etc.
+override steps. steps for 1 epochs is / 指定エポックまでのステップ数: 30
+enable full bf16 training.
+enable fp8 training for U-Net.
+enable fp8 training for Text Encoder.
+running training / 学習開始
+  num train images * repeats / 学習画像の数×繰り返し回数: 30
+  num validation images * repeats / 学習画像の数×繰り返し回数: 0
+  num reg images / 正則化画像の数: 0
+  num batches per epoch / 1epochのバッチ数: 30
+  num epochs / epoch数: 1
+  batch size per device / バッチサイズ: 1
+  gradient accumulation steps / 勾配を合計するステップ数 = 1
+  total optimization steps / 学習ステップ数: 30
+
+steps:   0%|          | 0/30 [00:00<?, ?it/s]                    INFO     epoch is incremented. current_epoch: 0, epoch: 1              train_util.py:779
+
+steps:   3%|▎         | 1/30 [00:03<01:28,  3.06s/it]
+steps:   3%|▎         | 1/30 [00:03<01:28,  3.06s/it, avr_loss=0.631]
+steps:   7%|▋         | 2/30 [00:05<01:20,  2.87s/it, avr_loss=0.631]
+steps:   7%|▋         | 2/30 [00:05<01:20,  2.87s/it, avr_loss=0.535]
+steps:  10%|█         | 3/30 [00:08<01:15,  2.81s/it, avr_loss=0.535]
+steps:  10%|█         | 3/30 [00:08<01:15,  2.81s/it, avr_loss=0.493]
+steps:  13%|█▎        | 4/30 [00:11<01:12,  2.79s/it, avr_loss=0.493]
+steps:  13%|█▎        | 4/30 [00:11<01:12,  2.79s/it, avr_loss=0.475]
+steps:  17%|█▋        | 5/30 [00:14<01:10,  2.81s/it, avr_loss=0.475]
+steps:  17%|█▋        | 5/30 [00:14<01:10,  2.81s/it, avr_loss=0.525]
+steps:  20%|██        | 6/30 [00:16<01:07,  2.80s/it, avr_loss=0.525]
+steps:  20%|██        | 6/30 [00:16<01:07,  2.80s/it, avr_loss=0.55] 
+steps:  23%|██▎       | 7/30 [00:19<01:04,  2.80s/it, avr_loss=0.55]
+steps:  23%|██▎       | 7/30 [00:19<01:04,  2.80s/it, avr_loss=0.538]
+steps:  27%|██▋       | 8/30 [00:22<01:01,  2.80s/it, avr_loss=0.538]
+steps:  27%|██▋       | 8/30 [00:22<01:01,  2.80s/it, avr_loss=0.511]
+steps:  30%|███       | 9/30 [00:25<00:58,  2.79s/it, avr_loss=0.511]
+steps:  30%|███       | 9/30 [00:25<00:58,  2.79s/it, avr_loss=0.533]
+steps:  33%|███▎      | 10/30 [00:27<00:55,  2.79s/it, avr_loss=0.533]
+steps:  33%|███▎      | 10/30 [00:27<00:55,  2.79s/it, avr_loss=0.546]
+steps:  37%|███▋      | 11/30 [00:32<00:56,  2.97s/it, avr_loss=0.546]
+steps:  37%|███▋      | 11/30 [00:32<00:56,  2.97s/it, avr_loss=0.521]
+steps:  40%|████      | 12/30 [00:35<00:53,  2.96s/it, avr_loss=0.521]
+steps:  40%|████      | 12/30 [00:35<00:53,  2.96s/it, avr_loss=0.501]
+steps:  43%|████▎     | 13/30 [00:38<00:50,  2.95s/it, avr_loss=0.501]
+steps:  43%|████▎     | 13/30 [00:38<00:50,  2.95s/it, avr_loss=0.481]
+steps:  47%|████▋     | 14/30 [00:41<00:46,  2.93s/it, avr_loss=0.481]
+steps:  47%|████▋     | 14/30 [00:41<00:46,  2.93s/it, avr_loss=0.468]
+steps:  50%|█████     | 15/30 [00:43<00:43,  2.92s/it, avr_loss=0.468]
+steps:  50%|█████     | 15/30 [00:43<00:43,  2.92s/it, avr_loss=0.48] 
+steps:  53%|█████▎    | 16/30 [00:46<00:40,  2.91s/it, avr_loss=0.48]
+steps:  53%|█████▎    | 16/30 [00:46<00:40,  2.91s/it, avr_loss=0.484]
+steps:  57%|█████▋    | 17/30 [00:49<00:37,  2.90s/it, avr_loss=0.484]
+steps:  57%|█████▋    | 17/30 [00:49<00:37,  2.90s/it, avr_loss=0.492]
+steps:  60%|██████    | 18/30 [00:51<00:34,  2.88s/it, avr_loss=0.492]
+steps:  60%|██████    | 18/30 [00:51<00:34,  2.88s/it, avr_loss=0.479]
+steps:  63%|██████▎   | 19/30 [00:54<00:31,  2.88s/it, avr_loss=0.479]
+steps:  63%|██████▎   | 19/30 [00:54<00:31,  2.88s/it, avr_loss=0.485]
+steps:  67%|██████▋   | 20/30 [00:57<00:28,  2.88s/it, avr_loss=0.485]
+steps:  67%|██████▋   | 20/30 [00:57<00:28,  2.88s/it, avr_loss=0.484]
+steps:  70%|███████   | 21/30 [01:00<00:25,  2.88s/it, avr_loss=0.484]
+steps:  70%|███████   | 21/30 [01:00<00:25,  2.88s/it, avr_loss=0.473]
+steps:  73%|███████▎  | 22/30 [01:05<00:23,  2.97s/it, avr_loss=0.473]
+steps:  73%|███████▎  | 22/30 [01:05<00:23,  2.97s/it, avr_loss=0.474]
+steps:  77%|███████▋  | 23/30 [01:08<00:20,  2.96s/it, avr_loss=0.474]
+steps:  77%|███████▋  | 23/30 [01:08<00:20,  2.96s/it, avr_loss=0.485]
+steps:  80%|████████  | 24/30 [01:10<00:17,  2.96s/it, avr_loss=0.485]
+steps:  80%|████████  | 24/30 [01:10<00:17,  2.96s/it, avr_loss=0.495]
+steps:  83%|████████▎ | 25/30 [01:13<00:14,  2.95s/it, avr_loss=0.495]
+steps:  83%|████████▎ | 25/30 [01:13<00:14,  2.95s/it, avr_loss=0.491]
+steps:  87%|████████▋ | 26/30 [01:16<00:11,  2.93s/it, avr_loss=0.491]
+steps:  87%|████████▋ | 26/30 [01:16<00:11,  2.93s/it, avr_loss=0.488]
+steps:  90%|█████████ | 27/30 [01:18<00:08,  2.92s/it, avr_loss=0.488]
+steps:  90%|█████████ | 27/30 [01:18<00:08,  2.92s/it, avr_loss=0.489]
+steps:  93%|█████████▎| 28/30 [01:21<00:05,  2.91s/it, avr_loss=0.489]
+steps:  93%|█████████▎| 28/30 [01:21<00:05,  2.91s/it, avr_loss=0.494]
+steps:  97%|█████████▋| 29/30 [01:24<00:02,  2.90s/it, avr_loss=0.494]
+steps:  97%|█████████▋| 29/30 [01:24<00:02,  2.90s/it, avr_loss=0.498]
+steps: 100%|██████████| 30/30 [01:26<00:00,  2.90s/it, avr_loss=0.498]
+steps: 100%|██████████| 30/30 [01:26<00:00,  2.90s/it, avr_loss=0.496]2025-08-01 14:01:00 INFO     model saved.                                              train_network.py:1703
+
+steps: 100%|██████████| 30/30 [01:30<00:00,  3.03s/it, avr_loss=0.496]
+
+epoch 1/1
+
+
+saving checkpoint: /home/eqx/AutoTrainX/workspace/variations/exp_0c3e0d0e/b09g13_FluxLORA_v4/model/b09g13_FluxLORA_v4_27169b45.safetensors

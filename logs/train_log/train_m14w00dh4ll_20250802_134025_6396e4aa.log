@@ -1,0 +1,100 @@
+# AutoTrainX Training Log
+# Dataset: m14w00dh4ll
+# Preset: FL1
+# Job ID: 6396e4aa
+# Start Time: 2025-08-02T13:40:25.581512
+# Mode: single
+# Command: /home/eqx/AutoTrainX/venv/bin/python /home/eqx/AutoTrainX/sd-scripts/flux_train_network.py --config_file /home/eqx/AutoTrainX/workspace/Presets/m14w00dh4ll_FL1_6396e4aa.toml
+================================================================================
+
+2025-08-02 13:40:29 INFO     Loading settings from                                        train_util.py:4651
+                             /home/eqx/AutoTrainX/workspace/Presets/m14w00dh4ll_FL1_6396e                   
+                             4aa.toml...                                                                    
+                    INFO     highvram is enabled / highvramが有効です                     train_util.py:4316
+2025-08-02 13:40:29 INFO     Checking the state dict: Diffusers or BFL, dev or schnell      flux_utils.py:43
+                    INFO     t5xxl_max_token_length: 512                           flux_train_network.py:157
+You are using the default legacy behaviour of the <class 'transformers.models.t5.tokenization_t5.T5Tokenizer'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565
+2025-08-02 13:40:30 INFO     Using DreamBooth method.                                   train_network.py:517
+                    INFO     prepare images.                                              train_util.py:2072
+                    INFO     get image size from name of cache files                      train_util.py:1965
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 119837.26it/s]
+                    INFO     set image size from cache files: 0/3                         train_util.py:1995
+                    INFO     found directory                                              train_util.py:2019
+                             /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/img/30_m14                   
+                             w00dh4ll person contains 3 image files                                         
+
+read caption:   0%|          | 0/3 [00:00<?, ?it/s]
+read caption: 100%|██████████| 3/3 [00:00<00:00, 31936.32it/s]
+                    INFO     90 train images with repeats.                                train_util.py:2116
+                    INFO     0 reg images with repeats.                                   train_util.py:2120
+                    WARNING  no regularization images / 正則化画像が見つかりませんでした  train_util.py:2125
+                    INFO     [Dataset 0]                                                  config_util.py:580
+                               batch_size: 1                                                                
+                               resolution: (1024, 1280)                                                     
+                               resize_interpolation: None                                                   
+                               enable_bucket: False                                                         
+                                                                                                            
+                               [Subset 0 of Dataset 0]                                                      
+                                 image_dir:                                                                 
+                             "/home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/img/30_m1                   
+                             4w00dh4ll person"                                                              
+                                 image_count: 3                                                             
+                                 num_repeats: 30                                                            
+                                 shuffle_caption: False                                                     
+                                 keep_tokens: 0                                                             
+                                 caption_dropout_rate: 0.0                                                  
+                                 caption_dropout_every_n_epochs: 0                                          
+                                 caption_tag_dropout_rate: 0.0                                              
+                                 caption_prefix: None                                                       
+                                 caption_suffix: None                                                       
+                                 color_aug: False                                                           
+                                 flip_aug: False                                                            
+                                 face_crop_aug_range: None                                                  
+                                 random_crop: False                                                         
+                                 token_warmup_min: 1,                                                       
+                                 token_warmup_step: 0,                                                      
+                                 alpha_mask: False                                                          
+                                 resize_interpolation: None                                                 
+                                 custom_attributes: {}                                                      
+                                 is_reg: False                                                              
+                                 class_tokens: m14w00dh4ll person                                           
+                                 caption_extension: .txt                                                    
+                                                                                                            
+                                                                                                            
+                    INFO     [Prepare dataset 0]                                          config_util.py:592
+                    INFO     loading image sizes.                                          train_util.py:987
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 40459.52it/s]
+                    INFO     prepare dataset                                              train_util.py:1012
+                    INFO     preparing accelerator                                      train_network.py:580
+                    INFO     Checking the state dict: Diffusers or BFL, dev or schnell      flux_utils.py:43
+                    INFO     Building Flux model dev from BFL checkpoint                   flux_utils.py:101
+                    INFO     Loading state dict from                                       flux_utils.py:118
+                             /home/eqx/AutoTrainX/models/flux1-dev-fp8.safetensors                          
+                    INFO     Loaded Flux: <All keys matched successfully>                  flux_utils.py:137
+                    INFO     Loaded fp8 FLUX model                                 flux_train_network.py:106
+                    INFO     Building CLIP-L                                               flux_utils.py:179
+                    INFO     Loading state dict from                                       flux_utils.py:275
+                             /home/eqx/AutoTrainX/models/clip_l.safetensors                                 
+                    INFO     Loaded CLIP-L: <All keys matched successfully>                flux_utils.py:278
+                    INFO     Loading state dict from                                       flux_utils.py:330
+                             /home/eqx/AutoTrainX/models/t5xxl_fp8_e4m3fn.safetensors                       
+                    INFO     Loaded T5xxl: <All keys matched successfully>                 flux_utils.py:333
+                    INFO     Loaded fp8 T5XXL model                                flux_train_network.py:140
+                    INFO     Building AutoEncoder                                          flux_utils.py:144
+                    INFO     Loading state dict from                                       flux_utils.py:149
+                             /home/eqx/AutoTrainX/models/ae.safetensors                                     
+                    INFO     Loaded AE: <All keys matched successfully>                    flux_utils.py:152
+2025-08-02 13:40:31 INFO     [Dataset 0]                                                  train_util.py:2613
+                    INFO     caching latents with caching strategy.                       train_util.py:1115
+                    INFO     caching latents...                                           train_util.py:1164
+accelerator device: cuda
+import network module: networks.lora_flux
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 1570.70it/s]
+                    INFO     move vae and unet to cpu to save memory               flux_train_network.py:210
+2025-08-02 13:40:32 INFO     move text encoders to gpu                             flux_train_network.py:218

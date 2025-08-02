@@ -1,0 +1,33 @@
+2025-08-02 17:33:09,526 - src.database.factory - INFO - create_engine:128 - Created postgresql engine: postgresql://autotrainx:1234@localhost:5432/autotrainx
+2025-08-02 17:33:09,532 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql
+2025-08-02 17:36:31,726 - src.training.enhanced_trainer - INFO - _execute_with_progress:234 - Training completed for dataset: m14w00dh4ll
+2025-08-02 17:36:31,726 - src.pipeline.hooks.preview_hook - INFO - should_execute:74 - Skipping preview generation - no previews requested (use --preview N)
+2025-08-02 17:36:31,727 - src.pipeline.hooks.file_move_hook - INFO - should_execute:76 - File move hook will execute for mode: single, dataset: m14w00dh4ll
+2025-08-02 17:36:31,727 - src.pipeline.hooks.hook_manager - INFO - execute_hooks:74 - Executing hook: FileMoveHook
+2025-08-02 17:36:31,727 - src.pipeline.hooks.file_move_hook - INFO - execute:95 - FileMoveHook execute - mode: single
+2025-08-02 17:36:31,727 - src.pipeline.hooks.file_move_hook - INFO - execute:96 - FileMoveHook execute - context keys: ['success', 'training_success', 'dataset_name', 'preset', 'model_type', 'preview_count', 'job_id', 'mode', 'config_path', 'preview_enabled']
+2025-08-02 17:36:31,728 - src.pipeline.hooks.file_move_hook - INFO - move_training_files:448 - Moving model: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/model/m14w00dh4ll_SX1_1e0cccac.safetensors -> /home/eqx/custom/m14w00dh4ll_SX1_1e0cccac/m14w00dh4ll_SX1_1e0cccac.safetensors
+2025-08-02 17:36:31,728 - src.pipeline.hooks.hook_manager - INFO - execute_hooks:83 - Hook FileMoveHook completed successfully
+2025-08-02 17:36:31,728 - __main__ - ERROR - async_main:338 - Unexpected error occurred
+Traceback (most recent call last):
+  File "/home/eqx/AutoTrainX/src/cli/unified_handlers.py", line 452, in _train_single
+    tracker.update_status(job_id, ExecutionStatus.DONE)
+    ^^^^^^^
+UnboundLocalError: cannot access local variable 'tracker' where it is not associated with a value
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/eqx/AutoTrainX/main.py", line 287, in async_main
+    result = handler.execute(args)
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/src/cli/unified_handlers.py", line 56, in execute
+    return handler(args)
+           ^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/src/cli/unified_handlers.py", line 74, in _handle_train
+    return self._train_single(args, prepare_result, trainer)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/eqx/AutoTrainX/src/cli/unified_handlers.py", line 459, in _train_single
+    tracker.update_status(job_id, ExecutionStatus.DONE)
+    ^^^^^^^
+UnboundLocalError: cannot access local variable 'tracker' where it is not associated with a value

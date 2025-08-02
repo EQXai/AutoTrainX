@@ -1,0 +1,2 @@
+2025-08-02 19:53:45,185 - src.database.factory - INFO - create_engine:136 - ✅ POSTGRESQL database ready
+2025-08-02 19:53:45,190 - src.database.manager_v2 - INFO - __init__:62 - ✅ Database ready (postgresql)

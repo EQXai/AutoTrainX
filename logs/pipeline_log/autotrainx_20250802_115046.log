@@ -1,0 +1,18 @@
+2025-08-02 11:50:46,151 - src.database.factory - INFO - create_engine:128 - Created sqlite engine: sqlite:////home/eqx/AutoTrainX/DB/executions.db
+2025-08-02 11:50:46,152 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with sqlite
+2025-08-02 11:50:46,162 - src.utils.job_tracker - ERROR - update_status:102 - Failed to update status: type object 'ExecutionStatus' has no attribute 'COMPLETED'
+2025-08-02 11:50:49,805 - src.utils.job_tracker - ERROR - update_status:102 - Failed to update status: type object 'ExecutionStatus' has no attribute 'COMPLETED'
+2025-08-02 11:50:49,811 - src.utils.job_tracker - ERROR - update_status:102 - Failed to update status: type object 'ExecutionStatus' has no attribute 'COMPLETED'
+2025-08-02 11:50:49,812 - src.utils.job_tracker - ERROR - set_output_path:126 - Failed to set output path: 'DatabaseManager' object has no attribute 'set_execution_output'
+2025-08-02 11:50:49,813 - src.utils.job_tracker - ERROR - update_status:102 - Failed to update status: type object 'ExecutionStatus' has no attribute 'COMPLETED'
+2025-08-02 11:52:15,558 - src.database.factory - INFO - create_engine:128 - Created sqlite engine: sqlite:////home/eqx/AutoTrainX/DB/executions.db
+2025-08-02 11:52:15,558 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with sqlite
+2025-08-02 11:52:16,881 - src.database.factory - INFO - create_engine:128 - Created sqlite engine: sqlite:////home/eqx/AutoTrainX/DB/executions.db
+2025-08-02 11:52:16,881 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with sqlite
+2025-08-02 11:52:16,886 - src.database.factory - INFO - create_engine:128 - Created sqlite engine: sqlite:////home/eqx/AutoTrainX/DB/executions.db
+2025-08-02 11:52:16,886 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with sqlite
+2025-08-02 11:52:16,887 - src.utils.job_tracker - ERROR - update_status:102 - Failed to update status: type object 'ExecutionStatus' has no attribute 'COMPLETED'
+2025-08-02 11:52:16,889 - src.database.factory - INFO - create_engine:128 - Created sqlite engine: sqlite:////home/eqx/AutoTrainX/DB/executions.db
+2025-08-02 11:52:16,889 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with sqlite
+2025-08-02 11:52:16,891 - src.database.factory - INFO - create_engine:128 - Created sqlite engine: sqlite:////home/eqx/AutoTrainX/DB/executions.db
+2025-08-02 11:52:16,892 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with sqlite

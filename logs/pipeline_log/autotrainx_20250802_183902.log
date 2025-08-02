@@ -1,0 +1,5 @@
+2025-08-02 18:39:02,549 - src.database.factory - INFO - create_engine:128 - Created postgresql engine: postgresql://autotrainx:1234@localhost:5432/autotrainx
+2025-08-02 18:39:02,553 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql
+2025-08-02 18:41:10,657 - src.database.factory - INFO - create_engine:128 - Created postgresql engine: postgresql://autotrainx:1234@localhost:5432/autotrainx
+2025-08-02 18:41:10,660 - src.database.manager_v2 - INFO - __init__:62 - Database manager initialized with postgresql
+2025-08-02 18:41:36,026 - src.training.enhanced_trainer - ERROR - _execute_with_progress:252 - Training error: [Errno 32] Broken pipe

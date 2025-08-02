@@ -1,0 +1,155 @@
+INFO:     Started server process [1907345]
+INFO:     Waiting for application startup.
+Failed to get statistics: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:42396 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:44024 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:44026 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get statistics: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:51798 - "GET /health HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:51804 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:51818 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:40256 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:40260 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:43078 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:43082 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:44734 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:44744 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:53646 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:53656 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:45502 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:45504 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:33384 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:33398 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:55992 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:56000 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:39556 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:39560 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:39878 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:39886 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:56428 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:56442 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:56016 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:56028 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:47898 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:47904 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:53992 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:54008 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:34398 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:34402 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:43290 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:43298 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK
+Failed to get jobs list: connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+connection to server at "localhost" (127.0.0.1), port 5432 failed: FATAL:  password authentication failed for user "autotrainx_user"
+
+INFO:     127.0.0.1:58208 - "GET /api/v1/jobs?page=1&page_size=10 HTTP/1.1" 200 OK

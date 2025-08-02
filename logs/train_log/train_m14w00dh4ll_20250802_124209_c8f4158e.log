@@ -1,0 +1,407 @@
+# AutoTrainX Training Log
+# Dataset: m14w00dh4ll
+# Preset: FL1
+# Job ID: c8f4158e
+# Start Time: 2025-08-02T12:42:09.458238
+# Mode: single
+# Command: /home/eqx/AutoTrainX/venv/bin/python /home/eqx/AutoTrainX/sd-scripts/flux_train_network.py --config_file /home/eqx/AutoTrainX/workspace/Presets/m14w00dh4ll_FL1_c8f4158e.toml
+================================================================================
+
+2025-08-02 12:42:14 INFO     Loading settings from                                        train_util.py:4651
+                             /home/eqx/AutoTrainX/workspace/Presets/m14w00dh4ll_FL1_c8f41                   
+                             58e.toml...                                                                    
+                    INFO     highvram is enabled / highvramが有効です                     train_util.py:4316
+2025-08-02 12:42:14 INFO     Checking the state dict: Diffusers or BFL, dev or schnell      flux_utils.py:43
+                    INFO     t5xxl_max_token_length: 512                           flux_train_network.py:157
+You are using the default legacy behaviour of the <class 'transformers.models.t5.tokenization_t5.T5Tokenizer'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565
+2025-08-02 12:42:15 INFO     Using DreamBooth method.                                   train_network.py:517
+                    INFO     prepare images.                                              train_util.py:2072
+                    INFO     get image size from name of cache files                      train_util.py:1965
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 114390.11it/s]
+                    INFO     set image size from cache files: 0/3                         train_util.py:1995
+                    INFO     found directory                                              train_util.py:2019
+                             /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/img/30_m14                   
+                             w00dh4ll person contains 3 image files                                         
+
+read caption:   0%|          | 0/3 [00:00<?, ?it/s]
+read caption: 100%|██████████| 3/3 [00:00<00:00, 32017.59it/s]
+                    INFO     90 train images with repeats.                                train_util.py:2116
+                    INFO     0 reg images with repeats.                                   train_util.py:2120
+                    WARNING  no regularization images / 正則化画像が見つかりませんでした  train_util.py:2125
+                    INFO     [Dataset 0]                                                  config_util.py:580
+                               batch_size: 1                                                                
+                               resolution: (1024, 1280)                                                     
+                               resize_interpolation: None                                                   
+                               enable_bucket: False                                                         
+                                                                                                            
+                               [Subset 0 of Dataset 0]                                                      
+                                 image_dir:                                                                 
+                             "/home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/img/30_m1                   
+                             4w00dh4ll person"                                                              
+                                 image_count: 3                                                             
+                                 num_repeats: 30                                                            
+                                 shuffle_caption: False                                                     
+                                 keep_tokens: 0                                                             
+                                 caption_dropout_rate: 0.0                                                  
+                                 caption_dropout_every_n_epochs: 0                                          
+                                 caption_tag_dropout_rate: 0.0                                              
+                                 caption_prefix: None                                                       
+                                 caption_suffix: None                                                       
+                                 color_aug: False                                                           
+                                 flip_aug: False                                                            
+                                 face_crop_aug_range: None                                                  
+                                 random_crop: False                                                         
+                                 token_warmup_min: 1,                                                       
+                                 token_warmup_step: 0,                                                      
+                                 alpha_mask: False                                                          
+                                 resize_interpolation: None                                                 
+                                 custom_attributes: {}                                                      
+                                 is_reg: False                                                              
+                                 class_tokens: m14w00dh4ll person                                           
+                                 caption_extension: .txt                                                    
+                                                                                                            
+                                                                                                            
+                    INFO     [Prepare dataset 0]                                          config_util.py:592
+                    INFO     loading image sizes.                                          train_util.py:987
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 39321.60it/s]
+                    INFO     prepare dataset                                              train_util.py:1012
+                    INFO     preparing accelerator                                      train_network.py:580
+                    INFO     Checking the state dict: Diffusers or BFL, dev or schnell      flux_utils.py:43
+                    INFO     Building Flux model dev from BFL checkpoint                   flux_utils.py:101
+                    INFO     Loading state dict from                                       flux_utils.py:118
+                             /home/eqx/AutoTrainX/models/flux1-dev-fp8.safetensors                          
+                    INFO     Loaded Flux: <All keys matched successfully>                  flux_utils.py:137
+                    INFO     Loaded fp8 FLUX model                                 flux_train_network.py:106
+                    INFO     Building CLIP-L                                               flux_utils.py:179
+                    INFO     Loading state dict from                                       flux_utils.py:275
+                             /home/eqx/AutoTrainX/models/clip_l.safetensors                                 
+                    INFO     Loaded CLIP-L: <All keys matched successfully>                flux_utils.py:278
+                    INFO     Loading state dict from                                       flux_utils.py:330
+                             /home/eqx/AutoTrainX/models/t5xxl_fp8_e4m3fn.safetensors                       
+                    INFO     Loaded T5xxl: <All keys matched successfully>                 flux_utils.py:333
+                    INFO     Loaded fp8 T5XXL model                                flux_train_network.py:140
+                    INFO     Building AutoEncoder                                          flux_utils.py:144
+                    INFO     Loading state dict from                                       flux_utils.py:149
+                             /home/eqx/AutoTrainX/models/ae.safetensors                                     
+2025-08-02 12:42:16 INFO     Loaded AE: <All keys matched successfully>                    flux_utils.py:152
+                    INFO     [Dataset 0]                                                  train_util.py:2613
+                    INFO     caching latents with caching strategy.                       train_util.py:1115
+                    INFO     caching latents...                                           train_util.py:1164
+accelerator device: cuda
+import network module: networks.lora_flux
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 2924.90it/s]
+2025-08-02 12:42:17 INFO     move vae and unet to cpu to save memory               flux_train_network.py:210
+                    INFO     move text encoders to gpu                             flux_train_network.py:218
+2025-08-02 12:42:33 INFO     prepare T5XXL for fp8: set to torch.float8_e4m3fn,    flux_train_network.py:511
+                             set embeddings to torch.bfloat16, add hooks                                    
+                    INFO     [Dataset 0]                                                  train_util.py:2635
+                    INFO     caching Text Encoder outputs with caching strategy.          train_util.py:1298
+                    INFO     checking cache validity...                                   train_util.py:1309
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 54471.48it/s]
+                    INFO     caching Text Encoder outputs...                              train_util.py:1340
+
+  0%|          | 0/3 [00:00<?, ?it/s]                    WARNING  T5 model is using fp8 weights for caching. This may affect strategy_flux.py:160
+                             the quality of the cached outputs. /                                           
+                             T5モデルはfp8の重みを使用しています。これはキャッシュの品                      
+                             質に影響を与える可能性があります。                                             
+
+ 33%|███▎      | 1/3 [00:00<00:00,  2.98it/s]
+100%|██████████| 3/3 [00:00<00:00, 12.68it/s]
+100%|██████████| 3/3 [00:00<00:00,  6.08it/s]
+                    INFO     cache Text Encoder outputs for sample prompt:         flux_train_network.py:234
+                             /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/sam                          
+                             ple_prompts.txt                                                                
+                    INFO     cache Text Encoder outputs for prompt: m14w00dh4ll, A flux_train_network.py:245
+                             photo-realistic shoot from a side camera angle about                           
+                             a young woman in a black one-piece swimsuit sitting                            
+                             by a pool, looking over her shoulder with a sultry                             
+                             expression. on the middle of the image, a 20-year-old                          
+                             woman with light skin, blonde hair tied in a high                              
+                             bun, and blue eyes, who appears to be in her early                             
+                             twenties, is sitting on the edge of a swimming pool                            
+                             with her back to the camera, wearing a black swimsuit                          
+                             with a tie side, showing off her bare buttocks. she                            
+                             has a slender physique and is wearing red lipstick.                            
+                             her hair is styled in a messy bun and she is wearing                           
+                             a silver watch on her left wrist. the background                               
+                             features a luxurious villa with white balconies and                            
+                             lush greenery surrounding the pool. the lighting is                            
+                             bright and natural, highlighting the woman's curves                            
+                             and the surrounding greenery.                                                  
+                    INFO     cache Text Encoder outputs for prompt:                flux_train_network.py:245
+                    INFO     cache Text Encoder outputs for prompt: m14w00dh4ll, A flux_train_network.py:245
+                             photo-realistic shoot from the side about a woman in                           
+                             a black swimsuit sitting by a pool, looking directly                           
+                             at the camera with a sultry expression. the woman,                             
+                             who appears to be in her mid-twenties, has long, wavy                          
+                             brown hair that falls down her back, and is wearing a                          
+                             black one-piece swimsuit that accentuates her large                            
+                             breasts and cleavage. she is sitting on the edge of                            
+                             the pool, leaning slightly forward, with one hand                              
+                             resting on the pool's edge and the other on her                                
+                             thigh. her blue eyes are looking straight at the                               
+                             viewer, and she has a neutral expression on her face.                          
+                             the background of the image features a scenic view of                          
+                             the ocean and mountains, with a clear blue sky and                             
+                             fluffy white clouds. the lighting is bright and                                
+                             natural, highlighting the woman's wet hair and the                             
+                             glossy texture of her swimsuit. the image is high                              
+                             quality and has a watermark in the bottom right                                
+                             corner.                                                                        
+                    INFO     cache Text Encoder outputs for prompt: m14w00dh4ll, A flux_train_network.py:245
+                             selfie from a close-up camera angle about a woman                              
+                             with blue eyes wearing a black dress with a plunging                           
+                             neckline, showcasing her cleavage. the woman is                                
+                             positioned in the middle of the image, looking                                 
+                             directly at the camera with a confident expression.                            
+                             she has fair skin, blue eyes, and blonde hair tied up                          
+                             in a high ponytail. her hair is styled in a messy                              
+                             bun, and she is wearing a pair of earrings and a                               
+                             necklace with a large, ornate pendant. her lips are                            
+                             painted a deep red, and her nose is slightly                                   
+                             upturned, giving her a sultry look. she is standing                            
+                             in front of a glass door, with a white tiled floor                             
+                             and a potted plant visible in the background. the                              
+                             overall aesthetic is minimalistic and modern.                                  
+                    INFO     move t5XXL back to cpu                                flux_train_network.py:258
+2025-08-02 12:42:36 INFO     move vae and unet back to original device             flux_train_network.py:263
+                    INFO     create LoRA network. base dim (rank): 64, alpha: 32            lora_flux.py:743
+                    INFO     neuron dropout: p=None, rank dropout: p=None, module dropout:  lora_flux.py:744
+                             p=None                                                                         
+                    INFO     train all blocks only                                          lora_flux.py:758
+                    INFO     create LoRA for Text Encoder 1:                                lora_flux.py:898
+2025-08-02 12:42:37 INFO     create LoRA for Text Encoder 1: 72 modules.                    lora_flux.py:901
+2025-08-02 12:42:39 INFO     create LoRA for FLUX all blocks: 304 modules.                  lora_flux.py:922
+                    INFO     enable LoRA for text encoder: 72 modules                      lora_flux.py:1098
+                    INFO     enable LoRA for U-Net: 304 modules                            lora_flux.py:1103
+                    INFO     Text Encoder 1 (CLIP-L): 72 modules, LR 5e-05                 lora_flux.py:1205
+                    INFO     use Adafactor optimizer | {'scale_parameter': False,         train_util.py:4963
+                             'relative_step': False, 'warmup_init': False,                                  
+                             'weight_decay': 0.01}                                                          
+                    WARNING  because max_grad_norm is set, clip_grad_norm is enabled.     train_util.py:4991
+                             consider set to 0 /                                                            
+                             max_grad_normが設定されているためclip_grad_normが有効になり                    
+                             ます。0に設定して無効にしたほうがいいかもしれません                            
+                    WARNING  constant_with_warmup will be good /                          train_util.py:4995
+                             スケジューラはconstant_with_warmupが良いかもしれません                         
+                    INFO     set U-Net weight dtype to torch.float8_e4m3fn              train_network.py:826
+                    INFO     prepare CLIP-L for fp8: set to torch.float8_e4m3fn,   flux_train_network.py:482
+                             set embeddings to torch.bfloat16                                               
+fatal: not a git repository (or any of the parent directories): .git
+2025-08-02 12:43:25 INFO     unet dtype: torch.float8_e4m3fn, device: cuda:0           train_network.py:1323
+                    INFO     text_encoder [0] dtype: torch.float8_e4m3fn, device:      train_network.py:1329
+                             cuda:0                                                                         
+                    INFO     text_encoder [1] dtype: torch.float8_e4m3fn, device: cpu  train_network.py:1329
+FLUX: Gradient checkpointing enabled. CPU offload: False
+prepare optimizer, data loader etc.
+override steps. steps for 1 epochs is / 指定エポックまでのステップ数: 90
+enable full bf16 training.
+enable fp8 training for U-Net.
+enable fp8 training for Text Encoder.
+running training / 学習開始
+  num train images * repeats / 学習画像の数×繰り返し回数: 90
+  num validation images * repeats / 学習画像の数×繰り返し回数: 0
+  num reg images / 正則化画像の数: 0
+  num batches per epoch / 1epochのバッチ数: 90
+  num epochs / epoch数: 1
+  batch size per device / バッチサイズ: 1
+  gradient accumulation steps / 勾配を合計するステップ数 = 1
+  total optimization steps / 学習ステップ数: 90
+
+steps:   0%|          | 0/90 [00:00<?, ?it/s]                    INFO     epoch is incremented. current_epoch: 0, epoch: 1              train_util.py:779
+
+steps:   1%|          | 1/90 [00:03<05:19,  3.59s/it]
+steps:   1%|          | 1/90 [00:03<05:19,  3.59s/it, avr_loss=0.601]
+steps:   2%|▏         | 2/90 [00:06<04:44,  3.24s/it, avr_loss=0.601]
+steps:   2%|▏         | 2/90 [00:06<04:44,  3.24s/it, avr_loss=0.647]
+steps:   3%|▎         | 3/90 [00:09<04:32,  3.13s/it, avr_loss=0.647]
+steps:   3%|▎         | 3/90 [00:09<04:32,  3.13s/it, avr_loss=0.527]
+steps:   4%|▍         | 4/90 [00:12<04:22,  3.05s/it, avr_loss=0.527]
+steps:   4%|▍         | 4/90 [00:12<04:22,  3.05s/it, avr_loss=0.518]
+steps:   6%|▌         | 5/90 [00:15<04:16,  3.02s/it, avr_loss=0.518]
+steps:   6%|▌         | 5/90 [00:15<04:16,  3.02s/it, avr_loss=0.536]
+steps:   7%|▋         | 6/90 [00:17<04:11,  3.00s/it, avr_loss=0.536]
+steps:   7%|▋         | 6/90 [00:17<04:11,  3.00s/it, avr_loss=0.531]
+steps:   8%|▊         | 7/90 [00:20<04:08,  2.99s/it, avr_loss=0.531]
+steps:   8%|▊         | 7/90 [00:20<04:08,  2.99s/it, avr_loss=0.535]
+steps:   9%|▉         | 8/90 [00:23<04:04,  2.98s/it, avr_loss=0.535]
+steps:   9%|▉         | 8/90 [00:23<04:04,  2.98s/it, avr_loss=0.547]
+steps:  10%|█         | 9/90 [00:26<04:00,  2.97s/it, avr_loss=0.547]
+steps:  10%|█         | 9/90 [00:26<04:00,  2.97s/it, avr_loss=0.52] 
+steps:  11%|█         | 10/90 [00:29<03:56,  2.96s/it, avr_loss=0.52]
+steps:  11%|█         | 10/90 [00:29<03:56,  2.96s/it, avr_loss=0.523]
+steps:  12%|█▏        | 11/90 [00:32<03:55,  2.98s/it, avr_loss=0.523]
+steps:  12%|█▏        | 11/90 [00:32<03:55,  2.98s/it, avr_loss=0.532]
+steps:  13%|█▎        | 12/90 [00:35<03:52,  2.98s/it, avr_loss=0.532]
+steps:  13%|█▎        | 12/90 [00:35<03:52,  2.98s/it, avr_loss=0.549]
+steps:  14%|█▍        | 13/90 [00:38<03:49,  2.98s/it, avr_loss=0.549]
+steps:  14%|█▍        | 13/90 [00:38<03:49,  2.98s/it, avr_loss=0.554]
+steps:  16%|█▌        | 14/90 [00:41<03:46,  2.98s/it, avr_loss=0.554]
+steps:  16%|█▌        | 14/90 [00:41<03:46,  2.98s/it, avr_loss=0.544]
+steps:  17%|█▋        | 15/90 [00:44<03:42,  2.97s/it, avr_loss=0.544]
+steps:  17%|█▋        | 15/90 [00:44<03:42,  2.97s/it, avr_loss=0.529]
+steps:  18%|█▊        | 16/90 [00:47<03:39,  2.96s/it, avr_loss=0.529]
+steps:  18%|█▊        | 16/90 [00:47<03:39,  2.96s/it, avr_loss=0.528]
+steps:  19%|█▉        | 17/90 [00:50<03:36,  2.96s/it, avr_loss=0.528]
+steps:  19%|█▉        | 17/90 [00:50<03:36,  2.96s/it, avr_loss=0.53] 
+steps:  20%|██        | 18/90 [00:53<03:33,  2.96s/it, avr_loss=0.53]
+steps:  20%|██        | 18/90 [00:53<03:33,  2.96s/it, avr_loss=0.535]
+steps:  21%|██        | 19/90 [00:56<03:30,  2.96s/it, avr_loss=0.535]
+steps:  21%|██        | 19/90 [00:56<03:30,  2.96s/it, avr_loss=0.525]
+steps:  22%|██▏       | 20/90 [00:59<03:28,  2.97s/it, avr_loss=0.525]
+steps:  22%|██▏       | 20/90 [00:59<03:28,  2.97s/it, avr_loss=0.528]
+steps:  23%|██▎       | 21/90 [01:02<03:24,  2.97s/it, avr_loss=0.528]
+steps:  23%|██▎       | 21/90 [01:02<03:24,  2.97s/it, avr_loss=0.521]
+steps:  24%|██▍       | 22/90 [01:05<03:21,  2.97s/it, avr_loss=0.521]
+steps:  24%|██▍       | 22/90 [01:05<03:21,  2.97s/it, avr_loss=0.521]
+steps:  26%|██▌       | 23/90 [01:08<03:18,  2.96s/it, avr_loss=0.521]
+steps:  26%|██▌       | 23/90 [01:08<03:18,  2.96s/it, avr_loss=0.522]
+steps:  27%|██▋       | 24/90 [01:11<03:15,  2.96s/it, avr_loss=0.522]
+steps:  27%|██▋       | 24/90 [01:11<03:15,  2.96s/it, avr_loss=0.516]
+steps:  28%|██▊       | 25/90 [01:13<03:12,  2.96s/it, avr_loss=0.516]
+steps:  28%|██▊       | 25/90 [01:13<03:12,  2.96s/it, avr_loss=0.516]
+steps:  29%|██▉       | 26/90 [01:17<03:09,  2.96s/it, avr_loss=0.516]
+steps:  29%|██▉       | 26/90 [01:17<03:09,  2.96s/it, avr_loss=0.515]
+steps:  30%|███       | 27/90 [01:19<03:06,  2.96s/it, avr_loss=0.515]
+steps:  30%|███       | 27/90 [01:19<03:06,  2.96s/it, avr_loss=0.508]
+steps:  31%|███       | 28/90 [01:22<03:03,  2.96s/it, avr_loss=0.508]
+steps:  31%|███       | 28/90 [01:22<03:03,  2.96s/it, avr_loss=0.5]  
+steps:  32%|███▏      | 29/90 [01:25<03:00,  2.96s/it, avr_loss=0.5]
+steps:  32%|███▏      | 29/90 [01:25<03:00,  2.96s/it, avr_loss=0.506]
+steps:  33%|███▎      | 30/90 [01:28<02:57,  2.96s/it, avr_loss=0.506]
+steps:  33%|███▎      | 30/90 [01:28<02:57,  2.96s/it, avr_loss=0.502]
+steps:  34%|███▍      | 31/90 [01:31<02:54,  2.96s/it, avr_loss=0.502]
+steps:  34%|███▍      | 31/90 [01:31<02:54,  2.96s/it, avr_loss=0.497]
+steps:  36%|███▌      | 32/90 [01:34<02:51,  2.96s/it, avr_loss=0.497]
+steps:  36%|███▌      | 32/90 [01:34<02:51,  2.96s/it, avr_loss=0.493]
+steps:  37%|███▋      | 33/90 [01:37<02:48,  2.96s/it, avr_loss=0.493]
+steps:  37%|███▋      | 33/90 [01:37<02:48,  2.96s/it, avr_loss=0.494]
+steps:  38%|███▊      | 34/90 [01:40<02:45,  2.95s/it, avr_loss=0.494]
+steps:  38%|███▊      | 34/90 [01:40<02:45,  2.95s/it, avr_loss=0.49] 
+steps:  39%|███▉      | 35/90 [01:43<02:42,  2.95s/it, avr_loss=0.49]
+steps:  39%|███▉      | 35/90 [01:43<02:42,  2.95s/it, avr_loss=0.485]
+steps:  40%|████      | 36/90 [01:46<02:39,  2.96s/it, avr_loss=0.485]
+steps:  40%|████      | 36/90 [01:46<02:39,  2.96s/it, avr_loss=0.488]
+steps:  41%|████      | 37/90 [01:49<02:37,  2.96s/it, avr_loss=0.488]
+steps:  41%|████      | 37/90 [01:49<02:37,  2.96s/it, avr_loss=0.482]
+steps:  42%|████▏     | 38/90 [01:52<02:34,  2.96s/it, avr_loss=0.482]
+steps:  42%|████▏     | 38/90 [01:52<02:34,  2.96s/it, avr_loss=0.486]
+steps:  43%|████▎     | 39/90 [01:55<02:31,  2.96s/it, avr_loss=0.486]
+steps:  43%|████▎     | 39/90 [01:55<02:31,  2.96s/it, avr_loss=0.489]
+steps:  44%|████▍     | 40/90 [01:58<02:28,  2.97s/it, avr_loss=0.489]
+steps:  44%|████▍     | 40/90 [01:58<02:28,  2.97s/it, avr_loss=0.492]
+steps:  46%|████▌     | 41/90 [02:01<02:25,  2.97s/it, avr_loss=0.492]
+steps:  46%|████▌     | 41/90 [02:01<02:25,  2.97s/it, avr_loss=0.487]
+steps:  47%|████▋     | 42/90 [02:04<02:22,  2.97s/it, avr_loss=0.487]
+steps:  47%|████▋     | 42/90 [02:04<02:22,  2.97s/it, avr_loss=0.49] 
+steps:  48%|████▊     | 43/90 [02:07<02:19,  2.97s/it, avr_loss=0.49]
+steps:  48%|████▊     | 43/90 [02:07<02:19,  2.97s/it, avr_loss=0.485]
+steps:  49%|████▉     | 44/90 [02:10<02:16,  2.97s/it, avr_loss=0.485]
+steps:  49%|████▉     | 44/90 [02:10<02:16,  2.97s/it, avr_loss=0.482]
+steps:  50%|█████     | 45/90 [02:13<02:13,  2.97s/it, avr_loss=0.482]
+steps:  50%|█████     | 45/90 [02:13<02:13,  2.97s/it, avr_loss=0.481]
+steps:  51%|█████     | 46/90 [02:16<02:10,  2.97s/it, avr_loss=0.481]
+steps:  51%|█████     | 46/90 [02:16<02:10,  2.97s/it, avr_loss=0.476]
+steps:  52%|█████▏    | 47/90 [02:19<02:07,  2.96s/it, avr_loss=0.476]
+steps:  52%|█████▏    | 47/90 [02:19<02:07,  2.96s/it, avr_loss=0.476]
+steps:  53%|█████▎    | 48/90 [02:22<02:04,  2.96s/it, avr_loss=0.476]
+steps:  53%|█████▎    | 48/90 [02:22<02:04,  2.96s/it, avr_loss=0.475]
+steps:  54%|█████▍    | 49/90 [02:25<02:01,  2.96s/it, avr_loss=0.475]
+steps:  54%|█████▍    | 49/90 [02:25<02:01,  2.96s/it, avr_loss=0.478]
+steps:  56%|█████▌    | 50/90 [02:28<01:58,  2.96s/it, avr_loss=0.478]
+steps:  56%|█████▌    | 50/90 [02:28<01:58,  2.96s/it, avr_loss=0.481]
+steps:  57%|█████▋    | 51/90 [02:31<01:55,  2.97s/it, avr_loss=0.481]
+steps:  57%|█████▋    | 51/90 [02:31<01:55,  2.97s/it, avr_loss=0.482]
+steps:  58%|█████▊    | 52/90 [02:34<01:52,  2.97s/it, avr_loss=0.482]
+steps:  58%|█████▊    | 52/90 [02:34<01:52,  2.97s/it, avr_loss=0.485]
+steps:  59%|█████▉    | 53/90 [02:37<01:49,  2.97s/it, avr_loss=0.485]
+steps:  59%|█████▉    | 53/90 [02:37<01:49,  2.97s/it, avr_loss=0.483]
+steps:  60%|██████    | 54/90 [02:40<01:46,  2.97s/it, avr_loss=0.483]
+steps:  60%|██████    | 54/90 [02:40<01:46,  2.97s/it, avr_loss=0.487]
+steps:  61%|██████    | 55/90 [02:43<01:43,  2.97s/it, avr_loss=0.487]
+steps:  61%|██████    | 55/90 [02:43<01:43,  2.97s/it, avr_loss=0.483]
+steps:  62%|██████▏   | 56/90 [02:46<01:40,  2.97s/it, avr_loss=0.483]
+steps:  62%|██████▏   | 56/90 [02:46<01:40,  2.97s/it, avr_loss=0.485]
+steps:  63%|██████▎   | 57/90 [02:48<01:37,  2.96s/it, avr_loss=0.485]
+steps:  63%|██████▎   | 57/90 [02:48<01:37,  2.96s/it, avr_loss=0.485]
+steps:  64%|██████▍   | 58/90 [02:51<01:34,  2.96s/it, avr_loss=0.485]
+steps:  64%|██████▍   | 58/90 [02:51<01:34,  2.96s/it, avr_loss=0.483]
+steps:  66%|██████▌   | 59/90 [02:55<01:32,  2.97s/it, avr_loss=0.483]
+steps:  66%|██████▌   | 59/90 [02:55<01:32,  2.97s/it, avr_loss=0.486]
+steps:  67%|██████▋   | 60/90 [02:58<01:29,  2.97s/it, avr_loss=0.486]
+steps:  67%|██████▋   | 60/90 [02:58<01:29,  2.97s/it, avr_loss=0.486]
+steps:  68%|██████▊   | 61/90 [03:01<01:26,  2.97s/it, avr_loss=0.486]
+steps:  68%|██████▊   | 61/90 [03:01<01:26,  2.97s/it, avr_loss=0.489]
+steps:  69%|██████▉   | 62/90 [03:03<01:23,  2.97s/it, avr_loss=0.489]
+steps:  69%|██████▉   | 62/90 [03:03<01:23,  2.97s/it, avr_loss=0.486]
+steps:  70%|███████   | 63/90 [03:06<01:20,  2.97s/it, avr_loss=0.486]
+steps:  70%|███████   | 63/90 [03:06<01:20,  2.97s/it, avr_loss=0.485]
+steps:  71%|███████   | 64/90 [03:09<01:17,  2.97s/it, avr_loss=0.485]
+steps:  71%|███████   | 64/90 [03:09<01:17,  2.97s/it, avr_loss=0.486]
+steps:  72%|███████▏  | 65/90 [03:12<01:14,  2.97s/it, avr_loss=0.486]
+steps:  72%|███████▏  | 65/90 [03:12<01:14,  2.97s/it, avr_loss=0.488]
+steps:  73%|███████▎  | 66/90 [03:15<01:11,  2.96s/it, avr_loss=0.488]
+steps:  73%|███████▎  | 66/90 [03:15<01:11,  2.96s/it, avr_loss=0.486]
+steps:  74%|███████▍  | 67/90 [03:18<01:08,  2.96s/it, avr_loss=0.486]
+steps:  74%|███████▍  | 67/90 [03:18<01:08,  2.96s/it, avr_loss=0.488]
+steps:  76%|███████▌  | 68/90 [03:21<01:05,  2.96s/it, avr_loss=0.488]
+steps:  76%|███████▌  | 68/90 [03:21<01:05,  2.96s/it, avr_loss=0.491]
+steps:  77%|███████▋  | 69/90 [03:24<01:02,  2.96s/it, avr_loss=0.491]
+steps:  77%|███████▋  | 69/90 [03:24<01:02,  2.96s/it, avr_loss=0.493]
+steps:  78%|███████▊  | 70/90 [03:27<00:59,  2.96s/it, avr_loss=0.493]
+steps:  78%|███████▊  | 70/90 [03:27<00:59,  2.96s/it, avr_loss=0.494]
+steps:  79%|███████▉  | 71/90 [03:30<00:56,  2.96s/it, avr_loss=0.494]
+steps:  79%|███████▉  | 71/90 [03:30<00:56,  2.96s/it, avr_loss=0.494]
+steps:  80%|████████  | 72/90 [03:33<00:53,  2.96s/it, avr_loss=0.494]
+steps:  80%|████████  | 72/90 [03:33<00:53,  2.96s/it, avr_loss=0.494]
+steps:  81%|████████  | 73/90 [03:36<00:50,  2.96s/it, avr_loss=0.494]
+steps:  81%|████████  | 73/90 [03:36<00:50,  2.96s/it, avr_loss=0.495]
+steps:  82%|████████▏ | 74/90 [03:39<00:47,  2.96s/it, avr_loss=0.495]
+steps:  82%|████████▏ | 74/90 [03:39<00:47,  2.96s/it, avr_loss=0.497]
+steps:  83%|████████▎ | 75/90 [03:42<00:44,  2.96s/it, avr_loss=0.497]
+steps:  83%|████████▎ | 75/90 [03:42<00:44,  2.96s/it, avr_loss=0.495]
+steps:  84%|████████▍ | 76/90 [03:44<00:41,  2.96s/it, avr_loss=0.495]
+steps:  84%|████████▍ | 76/90 [03:44<00:41,  2.96s/it, avr_loss=0.494]
+steps:  86%|████████▌ | 77/90 [03:47<00:38,  2.96s/it, avr_loss=0.494]
+steps:  86%|████████▌ | 77/90 [03:47<00:38,  2.96s/it, avr_loss=0.493]
+steps:  87%|████████▋ | 78/90 [03:50<00:35,  2.96s/it, avr_loss=0.493]
+steps:  87%|████████▋ | 78/90 [03:50<00:35,  2.96s/it, avr_loss=0.491]
+steps:  88%|████████▊ | 79/90 [03:53<00:32,  2.96s/it, avr_loss=0.491]
+steps:  88%|████████▊ | 79/90 [03:53<00:32,  2.96s/it, avr_loss=0.494]
+steps:  89%|████████▉ | 80/90 [03:56<00:29,  2.96s/it, avr_loss=0.494]
+steps:  89%|████████▉ | 80/90 [03:56<00:29,  2.96s/it, avr_loss=0.496]
+steps:  90%|█████████ | 81/90 [03:59<00:26,  2.95s/it, avr_loss=0.496]
+steps:  90%|█████████ | 81/90 [03:59<00:26,  2.95s/it, avr_loss=0.499]
+steps:  91%|█████████ | 82/90 [04:02<00:23,  2.95s/it, avr_loss=0.499]
+steps:  91%|█████████ | 82/90 [04:02<00:23,  2.95s/it, avr_loss=0.501]
+steps:  92%|█████████▏| 83/90 [04:05<00:20,  2.96s/it, avr_loss=0.501]
+steps:  92%|█████████▏| 83/90 [04:05<00:20,  2.96s/it, avr_loss=0.5]  
+steps:  93%|█████████▎| 84/90 [04:08<00:17,  2.96s/it, avr_loss=0.5]
+steps:  93%|█████████▎| 84/90 [04:08<00:17,  2.96s/it, avr_loss=0.498]
+steps:  94%|█████████▍| 85/90 [04:11<00:14,  2.96s/it, avr_loss=0.498]
+steps:  94%|█████████▍| 85/90 [04:11<00:14,  2.96s/it, avr_loss=0.5]  
+steps:  96%|█████████▌| 86/90 [04:14<00:11,  2.95s/it, avr_loss=0.5]
+steps:  96%|█████████▌| 86/90 [04:14<00:11,  2.95s/it, avr_loss=0.5]
+steps:  97%|█████████▋| 87/90 [04:16<00:08,  2.95s/it, avr_loss=0.5]
+steps:  97%|█████████▋| 87/90 [04:16<00:08,  2.95s/it, avr_loss=0.497]
+steps:  98%|█████████▊| 88/90 [04:19<00:05,  2.95s/it, avr_loss=0.497]
+steps:  98%|█████████▊| 88/90 [04:19<00:05,  2.95s/it, avr_loss=0.499]
+steps:  99%|█████████▉| 89/90 [04:22<00:02,  2.95s/it, avr_loss=0.499]
+steps:  99%|█████████▉| 89/90 [04:22<00:02,  2.95s/it, avr_loss=0.497]
+steps: 100%|██████████| 90/90 [04:25<00:00,  2.95s/it, avr_loss=0.497]
+steps: 100%|██████████| 90/90 [04:25<00:00,  2.95s/it, avr_loss=0.495]2025-08-02 12:47:55 INFO     model saved.                                              train_network.py:1703
+
+steps: 100%|██████████| 90/90 [04:29<00:00,  3.00s/it, avr_loss=0.495]
+
+epoch 1/1
+
+
+saving checkpoint: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/model/m14w00dh4ll_FL1_c8f4158e.safetensors

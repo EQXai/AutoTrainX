@@ -1,0 +1,6 @@
+2025-08-02 20:02:31,384 - src.utils.job_tracker - ERROR - create_variation:176 - Failed to create variation record: DatabaseManager.create_variation() got an unexpected keyword argument 'total_steps'
+2025-08-02 20:02:31,391 - src.utils.job_tracker - ERROR - create_variation:176 - Failed to create variation record: DatabaseManager.create_variation() got an unexpected keyword argument 'total_steps'
+2025-08-02 20:02:31,396 - src.utils.job_tracker - ERROR - create_variation:176 - Failed to create variation record: DatabaseManager.create_variation() got an unexpected keyword argument 'total_steps'
+2025-08-02 20:02:31,401 - src.utils.job_tracker - ERROR - create_variation:176 - Failed to create variation record: DatabaseManager.create_variation() got an unexpected keyword argument 'total_steps'
+2025-08-02 20:02:31,406 - src.utils.job_tracker - ERROR - create_variation:176 - Failed to create variation record: DatabaseManager.create_variation() got an unexpected keyword argument 'total_steps'
+2025-08-02 20:02:31,411 - src.utils.job_tracker - ERROR - create_variation:176 - Failed to create variation record: DatabaseManager.create_variation() got an unexpected keyword argument 'total_steps'

@@ -1,0 +1,5 @@
+[preset]
+base = "SDXLCheckpoint"
+name = "SX1"
+description = "Custom SDXL for anime style"
+created = "2025-07-30 01:43:00"
