@@ -828,6 +828,16 @@ step_install_huggingface_hub() {
 }
 
 step_download_models() {
+    print_info "Model Download Configuration"
+    print_warning "The models from 'EQX55/trainX' are large files and may take significant time to download."
+    print_info "You can skip this step now and download the models later using:"
+    print_info "  huggingface-cli download EQX55/trainX --repo-type model --local-dir models/trainX"
+    
+    if ! ask_confirmation "Do you want to download the models now?"; then
+        print_info "Skipping model download. You can download them later."
+        return 0
+    fi
+    
     print_info "Downloading models from Hugging Face repository 'EQX55/trainX'..."
     
     # Ensure we're in the virtual environment
@@ -1080,8 +1090,10 @@ step_verify_installation() {
         model_count=$(find "$SCRIPT_DIR/models/trainX" -type f | wc -l)
         print_success "Models directory exists with $model_count files"
     else
-        print_error "Models directory is missing or empty"
-        verification_failed=true
+        print_warning "Models directory is missing or empty"
+        print_info "You can download models later with:"
+        print_info "  huggingface-cli download EQX55/trainX --repo-type model --local-dir models/trainX"
+        # Don't mark as failed since models can be downloaded later
     fi
     
     # Summary of optional components
