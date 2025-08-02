@@ -33,9 +33,64 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 MENU_SELECTION=0
 MENU_SIZE=0
 
+# Detect if running as root
+RUNNING_AS_ROOT=false
+if [ "$(whoami)" = "root" ]; then
+    RUNNING_AS_ROOT=true
+fi
+
 # =====================================================
 # Helper Functions
 # =====================================================
+
+# Function to run commands with appropriate privileges
+run_privileged() {
+    if [ "$RUNNING_AS_ROOT" = true ]; then
+        # Running as root, execute directly
+        "$@"
+    else
+        # Not root, check if sudo is available
+        if command -v sudo &> /dev/null; then
+            sudo "$@"
+        else
+            echo -e "${RED}✗ This command requires root privileges but sudo is not available${NC}"
+            echo -e "${YELLOW}Please run this script as root or install sudo${NC}"
+            return 1
+        fi
+    fi
+}
+
+# Function to run psql as postgres user
+run_psql_as_postgres() {
+    if [ "$RUNNING_AS_ROOT" = true ]; then
+        su - postgres -c "psql -tAc \"$1\""
+    else
+        if command -v sudo &> /dev/null; then
+            sudo -u postgres psql -tAc "$1"
+        else
+            echo -e "${RED}✗ Cannot run PostgreSQL commands: not running as root and sudo not available${NC}"
+            return 1
+        fi
+    fi
+}
+
+# Function to run psql commands
+run_psql_commands() {
+    if [ "$RUNNING_AS_ROOT" = true ]; then
+        su - postgres -c "psql" << EOF
+$1
+EOF
+    else
+        if command -v sudo &> /dev/null; then
+            sudo -u postgres psql << EOF
+$1
+EOF
+        else
+            echo -e "${RED}✗ Cannot run PostgreSQL commands: not running as root and sudo not available${NC}"
+            return 1
+        fi
+    fi
+}
 
 print_header() {
     clear
@@ -44,6 +99,11 @@ print_header() {
     echo "║       AutoTrainX PostgreSQL Interactive Setup                 ║"
     echo "╚═══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
+    if [ "$RUNNING_AS_ROOT" = true ]; then
+        echo -e "${YELLOW}Running as: root${NC}"
+    else
+        echo -e "${GREEN}Running as: $(whoami)${NC}"
+    fi
 }
 
 print_section() {
@@ -489,7 +549,7 @@ check_postgresql_installed() {
 }
 
 check_postgresql_running() {
-    if sudo systemctl is-active --quiet postgresql; then
+    if run_privileged systemctl is-active --quiet postgresql; then
         return 0
     else
         return 1
@@ -599,7 +659,7 @@ check_status_enhanced() {
             # Show service details
             echo
             echo -e "${BOLD}Service Status:${NC}"
-            sudo systemctl status postgresql --no-pager | head -n 15
+            run_privileged systemctl status postgresql --no-pager | head -n 15
             
             # Test connection
             source ~/.bashrc 2>/dev/null || true
@@ -630,7 +690,7 @@ EOF
         else
             print_error "PostgreSQL service is not running"
             if confirm "Start PostgreSQL service?" "y"; then
-                sudo systemctl start postgresql
+                run_privileged systemctl start postgresql
                 print_success "PostgreSQL service started"
             fi
         fi
@@ -689,7 +749,7 @@ GREEN='\033[0;32m'
 NC='\033[0m'
 
 echo -e "${BOLD}Connecting to AutoTrainX PostgreSQL...${NC}"
-echo -e "${GREEN}Tip: Use \\? for help, \\dt to list tables, \\q to quit${NC}"
+echo -e "${GREEN}Tip: Use \? for help, \dt to list tables, \q to quit${NC}"
 echo
 
 psql -h ${AUTOTRAINX_DB_HOST:-localhost} \
@@ -736,10 +796,10 @@ install_postgresql() {
         
         if confirm "Do you want to install PostgreSQL now?" "y"; then
             print_step "Updating package list..."
-            sudo apt update
+            run_privileged apt update
             
             print_step "Installing PostgreSQL and contrib package..."
-            sudo apt install -y postgresql postgresql-contrib
+            run_privileged apt install -y postgresql postgresql-contrib
             
             if check_postgresql_installed; then
                 print_success "PostgreSQL installed successfully"
@@ -756,8 +816,8 @@ install_postgresql() {
     # Ensure PostgreSQL is running
     if ! check_postgresql_running; then
         print_step "Starting PostgreSQL service..."
-        sudo systemctl start postgresql
-        sudo systemctl enable postgresql
+        run_privileged systemctl start postgresql
+        run_privileged systemctl enable postgresql
     fi
     
     print_success "PostgreSQL service is running"
@@ -803,8 +863,7 @@ configure_postgresql() {
     # Create user and database
     print_step "Creating database and user..."
     
-    sudo -u postgres psql <<EOF
--- Create user if not exists
+    run_psql_commands "-- Create user if not exists
 DO \$\$
 BEGIN
     IF NOT EXISTS (SELECT FROM pg_user WHERE usename = '$db_user') THEN
@@ -825,8 +884,7 @@ END
 \$\$;
 
 -- Grant all privileges
-GRANT ALL PRIVILEGES ON DATABASE $db_name TO $db_user;
-EOF
+GRANT ALL PRIVILEGES ON DATABASE $db_name TO $db_user;"
     
     if [ $? -eq 0 ]; then
         print_success "Database and user created successfully"
@@ -860,26 +918,26 @@ update_pg_hba_conf() {
     print_step "Updating pg_hba.conf..."
     
     # Find pg_hba.conf
-    local pg_version=$(sudo -u postgres psql -t -c "SHOW server_version;" | awk -F. '{print $1}')
+    local pg_version=$(run_psql_as_postgres "SHOW server_version;" | awk -F. '{print $1}')
     local pg_hba_conf="/etc/postgresql/$pg_version/main/pg_hba.conf"
     
     if [ ! -f "$pg_hba_conf" ]; then
         # Try to find it
-        pg_hba_conf=$(sudo -u postgres psql -t -c "SHOW hba_file;" | xargs)
+        pg_hba_conf=$(run_psql_as_postgres "SHOW hba_file;" | xargs)
     fi
     
     if [ -f "$pg_hba_conf" ]; then
         print_info "Found pg_hba.conf at: $pg_hba_conf"
         
         # Backup original
-        sudo cp "$pg_hba_conf" "$pg_hba_conf.backup.$(date +%Y%m%d_%H%M%S)"
+        run_privileged cp "$pg_hba_conf" "$pg_hba_conf.backup.$(date +%Y%m%d_%H%M%S)"
         
         # Update local connections to use md5
-        sudo sed -i 's/local   all             all                                     peer/local   all             all                                     md5/g' "$pg_hba_conf"
+        run_privileged sed -i 's/local   all             all                                     peer/local   all             all                                     md5/g' "$pg_hba_conf"
         
         # Restart PostgreSQL
         print_step "Restarting PostgreSQL..."
-        sudo systemctl restart postgresql
+        run_privileged systemctl restart postgresql
         
         print_success "pg_hba.conf updated successfully"
     else
@@ -1086,11 +1144,9 @@ run_quick_setup() {
     
     # Create database with defaults
     print_step "Creating database with default values..."
-    sudo -u postgres psql <<EOF
-CREATE USER $DEFAULT_DB_USER WITH PASSWORD '$DEFAULT_DB_PASSWORD';
+    run_psql_commands "CREATE USER $DEFAULT_DB_USER WITH PASSWORD '$DEFAULT_DB_PASSWORD';
 CREATE DATABASE $DEFAULT_DB_NAME OWNER $DEFAULT_DB_USER;
-GRANT ALL PRIVILEGES ON DATABASE $DEFAULT_DB_NAME TO $DEFAULT_DB_USER;
-EOF
+GRANT ALL PRIVILEGES ON DATABASE $DEFAULT_DB_NAME TO $DEFAULT_DB_USER;"
     
     # Save configuration
     save_configuration "$DEFAULT_DB_NAME" "$DEFAULT_DB_USER" "$DEFAULT_DB_PASSWORD" \

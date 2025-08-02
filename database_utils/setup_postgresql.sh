@@ -15,6 +15,12 @@ DB_NAME="autotrainx"
 DB_USER="autotrainx"
 DB_PASSWORD="1234"
 
+# Detect if running as root
+RUNNING_AS_ROOT=false
+if [ "$(whoami)" = "root" ]; then
+    RUNNING_AS_ROOT=true
+fi
+
 echo -e "${GREEN}================================================${NC}"
 echo -e "${GREEN}   AutoTrainX PostgreSQL Setup Script${NC}"
 echo -e "${GREEN}================================================${NC}"
@@ -34,17 +40,70 @@ check_postgresql() {
 # Function to install PostgreSQL
 install_postgresql() {
     echo -e "${YELLOW}Installing PostgreSQL...${NC}"
-    sudo apt update
-    sudo apt install -y postgresql postgresql-contrib
+    if [ "$RUNNING_AS_ROOT" = true ]; then
+        apt update
+        apt install -y postgresql postgresql-contrib
+    else
+        if command -v sudo &> /dev/null; then
+            sudo apt update
+            sudo apt install -y postgresql postgresql-contrib
+        else
+            echo -e "${RED}✗ Cannot install PostgreSQL: not running as root and sudo not available${NC}"
+            echo -e "${YELLOW}Please run this script as root or install sudo${NC}"
+            exit 1
+        fi
+    fi
     echo -e "${GREEN}✓ PostgreSQL installed successfully${NC}"
 }
 
 # Function to start PostgreSQL service
 start_postgresql() {
     echo -e "${YELLOW}Starting PostgreSQL service...${NC}"
-    sudo systemctl start postgresql
-    sudo systemctl enable postgresql
+    if [ "$RUNNING_AS_ROOT" = true ]; then
+        systemctl start postgresql
+        systemctl enable postgresql
+    else
+        if command -v sudo &> /dev/null; then
+            sudo systemctl start postgresql
+            sudo systemctl enable postgresql
+        else
+            echo -e "${RED}✗ Cannot start PostgreSQL service: not running as root and sudo not available${NC}"
+            exit 1
+        fi
+    fi
     echo -e "${GREEN}✓ PostgreSQL service started and enabled${NC}"
+}
+
+# Function to run psql as postgres user
+run_psql_as_postgres() {
+    if [ "$RUNNING_AS_ROOT" = true ]; then
+        su - postgres -c "psql -tAc \"$1\""
+    else
+        if command -v sudo &> /dev/null; then
+            sudo -u postgres psql -tAc "$1"
+        else
+            echo -e "${RED}✗ Cannot run PostgreSQL commands: not running as root and sudo not available${NC}"
+            exit 1
+        fi
+    fi
+}
+
+# Function to run psql commands
+run_psql_commands() {
+    if [ "$RUNNING_AS_ROOT" = true ]; then
+        su - postgres -c "psql" << EOF
+$1
+EOF
+    else
+        if command -v sudo &> /dev/null; then
+            sudo -u postgres psql << EOF
+$1
+EOF
+        else
+            echo -e "${RED}✗ Cannot run PostgreSQL commands: not running as root and sudo not available${NC}"
+            exit 1
+        fi
+    fi
 }
 
 # Function to create database and user
@@ -52,7 +111,7 @@ setup_database() {
     echo -e "${YELLOW}Setting up database and user...${NC}"
     
     # Check if user exists
-    USER_EXISTS=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_user WHERE usename='$DB_USER'")
+    USER_EXISTS=$(run_psql_as_postgres "SELECT 1 FROM pg_user WHERE usename='$DB_USER'")
     
     if [ "$USER_EXISTS" = "1" ]; then
         echo -e "${YELLOW}User $DB_USER already exists${NC}"
@@ -60,30 +119,24 @@ setup_database() {
         read -p "Do you want to reset the password? (y/N): " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            sudo -u postgres psql << EOF
-ALTER USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
-EOF
+            run_psql_commands "ALTER USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
             echo -e "${GREEN}✓ Password reset successfully${NC}"
         fi
     else
         # Create user
-        sudo -u postgres psql << EOF
-CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';
-EOF
+        run_psql_commands "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
         echo -e "${GREEN}✓ User $DB_USER created${NC}"
     fi
     
     # Check if database exists
-    DB_EXISTS=$(sudo -u postgres psql -tAc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'")
+    DB_EXISTS=$(run_psql_as_postgres "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'")
     
     if [ "$DB_EXISTS" = "1" ]; then
         echo -e "${YELLOW}Database $DB_NAME already exists${NC}"
     else
         # Create database
-        sudo -u postgres psql << EOF
-CREATE DATABASE $DB_NAME OWNER $DB_USER;
-GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;
-EOF
+        run_psql_commands "CREATE DATABASE $DB_NAME OWNER $DB_USER;
+GRANT ALL PRIVILEGES ON DATABASE $DB_NAME TO $DB_USER;"
         echo -e "${GREEN}✓ Database $DB_NAME created${NC}"
     fi
 }
@@ -197,7 +250,11 @@ main() {
     else
         echo -e "${RED}There was an error setting up the database${NC}"
         echo "Please check the PostgreSQL logs:"
-        echo "  sudo journalctl -u postgresql -n 50"
+        if [ "$RUNNING_AS_ROOT" = true ]; then
+            echo "  journalctl -u postgresql -n 50"
+        else
+            echo "  sudo journalctl -u postgresql -n 50"
+        fi
         exit 1
     fi
 }
