@@ -363,6 +363,25 @@ step_check_prerequisites() {
         fi
     else
         export RUNNING_AS_ROOT=false
+        
+        # Check if sudo is available for non-root users
+        if ! command -v sudo &> /dev/null; then
+            print_error "sudo is not installed and you're not running as root"
+            print_info "You have two options:"
+            print_info "  1. Install sudo and run the script again"
+            print_info "  2. Run the script as root: su root -c './setup.sh'"
+            return 1
+        fi
+        
+        # Test if user has sudo privileges
+        if ! sudo -n true 2>/dev/null; then
+            print_info "Testing sudo access..."
+            if ! sudo true; then
+                print_error "Failed to obtain sudo privileges"
+                print_info "Please ensure your user has sudo access or run as root"
+                return 1
+            fi
+        fi
     fi
     
     # Check Python 3
@@ -657,9 +676,17 @@ step_install_system_dependencies() {
     # Function to run commands with appropriate privileges
     run_privileged() {
         if [ "$RUNNING_AS_ROOT" = true ]; then
+            # Running as root, execute directly
             "$@"
         else
-            sudo "$@"
+            # Not root, check if sudo is available
+            if command -v sudo &> /dev/null; then
+                sudo "$@"
+            else
+                print_error "This command requires root privileges but sudo is not available"
+                print_info "Please run the script as root or install sudo"
+                return 1
+            fi
         fi
     }
     
@@ -669,9 +696,12 @@ step_install_system_dependencies() {
     else
         if ask_confirmation "Install PostgreSQL for database support?"; then
             print_info "Installing PostgreSQL..."
-            run_privileged apt-get update
-            run_privileged apt-get install -y postgresql postgresql-contrib
-            print_success "PostgreSQL installed"
+            if run_privileged apt-get update && run_privileged apt-get install -y postgresql postgresql-contrib; then
+                print_success "PostgreSQL installed"
+            else
+                print_error "Failed to install PostgreSQL"
+                print_info "You may need to install it manually"
+            fi
         else
             print_warning "Skipping PostgreSQL installation. You may need to install it manually for full functionality."
         fi
@@ -683,9 +713,31 @@ step_install_system_dependencies() {
     else
         if ask_confirmation "Install Node.js for web interface support?"; then
             print_info "Installing Node.js..."
-            curl -fsSL https://deb.nodesource.com/setup_lts.x | run_privileged -E bash -
-            run_privileged apt-get install -y nodejs
-            print_success "Node.js installed"
+            local install_success=false
+            
+            if [ "$RUNNING_AS_ROOT" = true ]; then
+                # Running as root, execute directly
+                if curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && apt-get install -y nodejs; then
+                    install_success=true
+                fi
+            else
+                # Not root, use sudo
+                if command -v sudo &> /dev/null; then
+                    if curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs; then
+                        install_success=true
+                    fi
+                else
+                    print_error "Node.js installation requires root privileges but sudo is not available"
+                    print_info "Please run the script as root or install sudo"
+                fi
+            fi
+            
+            if [ "$install_success" = true ]; then
+                print_success "Node.js installed"
+            else
+                print_error "Failed to install Node.js"
+                print_info "You may need to install it manually"
+            fi
         else
             print_warning "Skipping Node.js installation. Web interface will not be available."
         fi
