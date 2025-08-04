@@ -57,10 +57,8 @@ INSTALL_CONFIG=""
 ENVIRONMENT_TYPE=""
 
 # Component flags
-INSTALL_POSTGRESQL=false
 INSTALL_NODEJS=false
 INSTALL_DOCKER=false
-INSTALL_GOOGLE_SHEETS=false
 INSTALL_MODELS=false
 INSTALL_DEV_TOOLS=false
 CUDA_VERSION="12.8"
@@ -283,15 +281,16 @@ show_resume_options() {
     echo ""
     echo "Available checkpoints to resume from:"
     echo "  1. system_deps - System dependencies installation"
-    echo "  2. nodejs - Node.js installation"
-    echo "  3. python_env - Python environment setup"
-    echo "  4. core_deps - Core dependencies installation"
-    echo "  5. web_deps - Web dependencies installation"
-    echo "  6. postgresql - PostgreSQL setup"
-    echo "  7. config - Configuration setup"
-    echo "  8. permissions - File permissions setup"
-    echo "  9. git_setup - Git repository setup"
-    echo "  10. validation - Final validation"
+    echo "  2. python_env - Python environment setup"
+    echo "  3. pytorch - PyTorch installation"
+    echo "  4. xformers - XFormers installation"
+    echo "  5. core_deps - Core dependencies installation"
+    echo "  6. optional - Optional components installation"
+    echo "  7. web - Web interface setup"
+    echo "  8. models - Model downloads"
+    echo "  9. env_config - Environment configuration"
+    echo "  10. optimize - Final optimizations"
+    echo "  11. validation - Installation verification"
     echo ""
     echo "  clean - Start fresh (remove all checkpoints)"
     echo "  list - Show completed checkpoints"
@@ -340,10 +339,8 @@ save_configuration() {
     "profile": "$SELECTED_PROFILE",
     "environment": "$ENVIRONMENT_TYPE",
     "components": {
-        "postgresql": $INSTALL_POSTGRESQL,
         "nodejs": $INSTALL_NODEJS,
         "docker": $INSTALL_DOCKER,
-        "google_sheets": $INSTALL_GOOGLE_SHEETS,
         "models": $INSTALL_MODELS,
         "dev_tools": $INSTALL_DEV_TOOLS
     },
@@ -360,10 +357,8 @@ load_configuration() {
         print_info "Loading configuration from $1"
         # Parse JSON configuration (basic parsing)
         SELECTED_PROFILE=$(grep '"profile"' "$1" | cut -d'"' -f4)
-        INSTALL_POSTGRESQL=$(grep '"postgresql"' "$1" | grep -o 'true\|false')
         INSTALL_NODEJS=$(grep '"nodejs"' "$1" | grep -o 'true\|false')
         INSTALL_DOCKER=$(grep '"docker"' "$1" | grep -o 'true\|false')
-        INSTALL_GOOGLE_SHEETS=$(grep '"google_sheets"' "$1" | grep -o 'true\|false')
         INSTALL_MODELS=$(grep '"models"' "$1" | grep -o 'true\|false')
         INSTALL_DEV_TOOLS=$(grep '"dev_tools"' "$1" | grep -o 'true\|false')
         CUDA_VERSION=$(grep '"cuda_version"' "$1" | cut -d'"' -f4)
@@ -426,42 +421,32 @@ configure_profile_defaults() {
     # Set default component selections based on profile
     case "$SELECTED_PROFILE" in
         docker)
-            INSTALL_POSTGRESQL=false  # Use containerized
             INSTALL_NODEJS=false      # Use containerized
             INSTALL_DOCKER=true
-            INSTALL_GOOGLE_SHEETS=true
             INSTALL_MODELS=false      # Mount from host
             INSTALL_DEV_TOOLS=false
             ;;
         wsl)
-            INSTALL_POSTGRESQL=true
             INSTALL_NODEJS=true
             INSTALL_DOCKER=false      # Usually use Windows Docker Desktop
-            INSTALL_GOOGLE_SHEETS=true
             INSTALL_MODELS=true
             INSTALL_DEV_TOOLS=false
             ;;
         linux)
-            INSTALL_POSTGRESQL=true
             INSTALL_NODEJS=true
             INSTALL_DOCKER=false
-            INSTALL_GOOGLE_SHEETS=true
             INSTALL_MODELS=true
             INSTALL_DEV_TOOLS=false
             ;;
         dev)
-            INSTALL_POSTGRESQL=true
             INSTALL_NODEJS=true
             INSTALL_DOCKER=true
-            INSTALL_GOOGLE_SHEETS=true
             INSTALL_MODELS=true
             INSTALL_DEV_TOOLS=true
             ;;
         minimal)
-            INSTALL_POSTGRESQL=false
             INSTALL_NODEJS=false
             INSTALL_DOCKER=false
-            INSTALL_GOOGLE_SHEETS=false
             INSTALL_MODELS=false
             INSTALL_DEV_TOOLS=false
             ;;
@@ -473,10 +458,8 @@ customize_components() {
     
     echo "The following components are selected based on your profile ($SELECTED_PROFILE):"
     echo ""
-    echo "  PostgreSQL Database : $([ "$INSTALL_POSTGRESQL" = true ] && echo "Yes" || echo "No")"
     echo "  Node.js/Web UI     : $([ "$INSTALL_NODEJS" = true ] && echo "Yes" || echo "No")"
     echo "  Docker Runtime     : $([ "$INSTALL_DOCKER" = true ] && echo "Yes" || echo "No")"
-    echo "  Google Sheets Sync : $([ "$INSTALL_GOOGLE_SHEETS" = true ] && echo "Yes" || echo "No")"
     echo "  Pre-trained Models : $([ "$INSTALL_MODELS" = true ] && echo "Yes" || echo "No")"
     echo "  Dev Tools          : $([ "$INSTALL_DEV_TOOLS" = true ] && echo "Yes" || echo "No")"
     echo ""
@@ -484,10 +467,6 @@ customize_components() {
     read -p "Do you want to customize these selections? (y/N): " customize
     
     if [[ $customize =~ ^[Yy]$ ]]; then
-        # PostgreSQL
-        read -p "Install PostgreSQL database? (y/n) [$([ "$INSTALL_POSTGRESQL" = true ] && echo "y" || echo "n")]: " response
-        [[ $response =~ ^[Yy]$ ]] && INSTALL_POSTGRESQL=true || INSTALL_POSTGRESQL=false
-        
         # Node.js
         read -p "Install Node.js and web interface? (y/n) [$([ "$INSTALL_NODEJS" = true ] && echo "y" || echo "n")]: " response
         [[ $response =~ ^[Yy]$ ]] && INSTALL_NODEJS=true || INSTALL_NODEJS=false
@@ -497,10 +476,6 @@ customize_components() {
             read -p "Install Docker runtime? (y/n) [$([ "$INSTALL_DOCKER" = true ] && echo "y" || echo "n")]: " response
             [[ $response =~ ^[Yy]$ ]] && INSTALL_DOCKER=true || INSTALL_DOCKER=false
         fi
-        
-        # Google Sheets
-        read -p "Install Google Sheets sync? (y/n) [$([ "$INSTALL_GOOGLE_SHEETS" = true ] && echo "y" || echo "n")]: " response
-        [[ $response =~ ^[Yy]$ ]] && INSTALL_GOOGLE_SHEETS=true || INSTALL_GOOGLE_SHEETS=false
         
         # Models
         read -p "Download pre-trained models? (y/n) [$([ "$INSTALL_MODELS" = true ] && echo "y" || echo "n")]: " response
@@ -531,10 +506,8 @@ show_installation_summary() {
     echo "Environment: $ENVIRONMENT_TYPE"
     echo ""
     echo "Components to install:"
-    [ "$INSTALL_POSTGRESQL" = true ] && echo "  ✓ PostgreSQL Database"
     [ "$INSTALL_NODEJS" = true ] && echo "  ✓ Node.js and Web Interface"
     [ "$INSTALL_DOCKER" = true ] && echo "  ✓ Docker Runtime"
-    [ "$INSTALL_GOOGLE_SHEETS" = true ] && echo "  ✓ Google Sheets Sync"
     [ "$INSTALL_MODELS" = true ] && echo "  ✓ Pre-trained Models"
     [ "$INSTALL_DEV_TOOLS" = true ] && echo "  ✓ Development Tools"
     echo ""
@@ -592,7 +565,7 @@ install_system_dependencies() {
         return 0
     fi
     
-    print_step 1 12 "Installing System Dependencies"
+    print_step 1 11 "Installing System Dependencies"
     
     # Update package list
     print_info "Updating package list..."
@@ -623,14 +596,6 @@ install_system_dependencies() {
         return 1
     fi
     
-    # Install PostgreSQL if selected
-    if [ "$INSTALL_POSTGRESQL" = true ]; then
-        print_info "Installing PostgreSQL..."
-        if ! run_privileged apt-get install -y postgresql postgresql-contrib; then
-            print_error "Failed to install PostgreSQL"
-            return 1
-        fi
-    fi
     
     # Install Docker if selected
     if [ "$INSTALL_DOCKER" = true ]; then
@@ -720,7 +685,7 @@ install_nodejs() {
 
 # Step 2: Python Virtual Environment
 create_virtual_environment() {
-    print_step 2 12 "Creating Python Virtual Environment"
+    print_step 2 11 "Creating Python Virtual Environment"
     
     # Remove existing venv if corrupted
     if [ -d "$VENV_PATH" ] && [ ! -f "$VENV_PATH/bin/activate" ]; then
@@ -748,7 +713,7 @@ create_virtual_environment() {
 
 # Step 3: PyTorch Installation
 install_pytorch() {
-    print_step 3 12 "Installing PyTorch"
+    print_step 3 11 "Installing PyTorch"
     
     # Ensure venv exists and is activated
     if [ ! -f "$VENV_PATH/bin/activate" ]; then
@@ -799,7 +764,7 @@ install_pytorch() {
 
 # Step 4: xformers Installation
 install_xformers() {
-    print_step 4 12 "Installing xformers"
+    print_step 4 11 "Installing xformers"
     
     # Ensure venv exists and is activated
     if [ ! -f "$VENV_PATH/bin/activate" ]; then
@@ -842,7 +807,7 @@ install_xformers() {
 
 # Step 5: Core Dependencies
 install_core_dependencies() {
-    print_step 5 12 "Installing Core Dependencies"
+    print_step 5 11 "Installing Core Dependencies"
     
     # Ensure venv exists and is activated
     if [ ! -f "$VENV_PATH/bin/activate" ]; then
@@ -881,7 +846,7 @@ install_core_dependencies() {
 
 # Step 6: Optional Components
 install_optional_components() {
-    print_step 6 12 "Installing Optional Components"
+    print_step 6 11 "Installing Optional Components"
     
     # Ensure venv exists and is activated
     if [ ! -f "$VENV_PATH/bin/activate" ]; then
@@ -891,19 +856,6 @@ install_optional_components() {
     
     source "$VENV_PATH/bin/activate"
     
-    # Google Sheets sync
-    if [ "$INSTALL_GOOGLE_SHEETS" = true ]; then
-        print_info "Installing Google Sheets sync dependencies..."
-        if [ -f "src/sheets_sync/requirements.txt" ]; then
-            pip install -r src/sheets_sync/requirements.txt
-        else
-            # Fallback to direct installation
-            pip install google-api-python-client>=2.100.0 \
-                       google-auth>=2.20.0 \
-                       google-auth-oauthlib>=1.0.0 \
-                       google-auth-httplib2>=0.1.0
-        fi
-    fi
     
     # Interactive menu
     if [ -f "src/menu/interactive_menu_requirements.txt" ]; then
@@ -920,29 +872,13 @@ install_optional_components() {
     print_success "Optional components installed"
 }
 
-# Step 7: PostgreSQL Setup
-setup_postgresql() {
-    if [ "$INSTALL_POSTGRESQL" != true ]; then
-        return 0
-    fi
-    
-    print_step 7 12 "Setting up PostgreSQL"
-    
-    # Run PostgreSQL setup script
-    if [ -f "database_utils/setup_postgresql.sh" ]; then
-        bash database_utils/setup_postgresql.sh
-    else
-        print_warning "PostgreSQL setup script not found"
-    fi
-}
-
-# Step 8: Web Interface Setup
+# Step 7: Web Interface Setup (moved from step 8)
 setup_web_interface() {
     if [ "$INSTALL_NODEJS" != true ]; then
         return 0
     fi
     
-    print_step 8 12 "Setting up Web Interface"
+    print_step 7 12 "Setting up Web Interface"
     
     if [ -d "autotrainx-web" ] && [ -f "autotrainx-web/package.json" ]; then
         print_info "Installing web dependencies..."
@@ -962,13 +898,13 @@ setup_web_interface() {
     fi
 }
 
-# Step 9: Model Downloads
+# Step 8: Model Downloads (moved from step 9)
 download_models() {
     if [ "$INSTALL_MODELS" != true ]; then
         return 0
     fi
     
-    print_step 9 12 "Downloading Models"
+    print_step 8 12 "Downloading Models"
     
     # Ensure venv exists and is activated
     if [ ! -f "$VENV_PATH/bin/activate" ]; then
@@ -1016,9 +952,9 @@ download_models() {
     esac
 }
 
-# Step 10: Environment Configuration
+# Step 9: Environment Configuration (moved from step 10)
 setup_environment() {
-    print_step 10 12 "Setting up Environment Configuration"
+    print_step 9 12 "Setting up Environment Configuration"
     
     # Create .env file
     mkdir -p "$SCRIPT_DIR/settings"
@@ -1029,14 +965,6 @@ setup_environment() {
 # Profile Configuration
 AUTOTRAINX_PROFILE=$SELECTED_PROFILE
 AUTOTRAINX_ENVIRONMENT=$ENVIRONMENT_TYPE
-
-# Database Configuration
-AUTOTRAINX_DB_TYPE=postgresql
-AUTOTRAINX_DB_HOST=localhost
-AUTOTRAINX_DB_PORT=5432
-AUTOTRAINX_DB_NAME=autotrainx
-AUTOTRAINX_DB_USER=autotrainx
-AUTOTRAINX_DB_PASSWORD=1234
 
 # API Configuration
 API_HOST=0.0.0.0
@@ -1054,10 +982,8 @@ CUDA_VERSION=$CUDA_VERSION
 DOCKER_ROOT_INSTALL=$DOCKER_ROOT_INSTALL
 
 # Component Flags
-POSTGRESQL_ENABLED=$INSTALL_POSTGRESQL
 NODEJS_ENABLED=$INSTALL_NODEJS
 DOCKER_ENABLED=$INSTALL_DOCKER
-GOOGLE_SHEETS_ENABLED=$INSTALL_GOOGLE_SHEETS
 EOF
 
     # Create activation script
@@ -1095,9 +1021,9 @@ EOF
     print_success "Environment configuration completed"
 }
 
-# Step 11: Final Optimizations
+# Step 10: Final Optimizations (moved from step 11)
 apply_final_optimizations() {
-    print_step 11 12 "Applying Final Optimizations"
+    print_step 10 12 "Applying Final Optimizations"
     
     # Ensure venv exists and is activated
     if [ ! -f "$VENV_PATH/bin/activate" ]; then
@@ -1156,9 +1082,9 @@ EOF
     print_success "Optimizations applied"
 }
 
-# Step 12: Verification
+# Step 11: Installation Verification (moved from step 12)
 verify_installation() {
-    print_step 12 12 "Verifying Installation"
+    print_step 11 12 "Verifying Installation"
     
     # Ensure venv exists and is activated
     if [ ! -f "$VENV_PATH/bin/activate" ]; then
@@ -1184,10 +1110,6 @@ verify_installation() {
     fi
     
     # Check optional components
-    if [ "$INSTALL_POSTGRESQL" = true ]; then
-        command -v psql &> /dev/null && print_success "PostgreSQL installed" || print_warning "PostgreSQL not found"
-    fi
-    
     if [ "$INSTALL_NODEJS" = true ]; then
         command -v node &> /dev/null && print_success "Node.js installed" || print_warning "Node.js not found"
     fi
@@ -1204,6 +1126,7 @@ verify_installation() {
         return 1
     fi
 }
+
 
 # ============================================================================
 # Main Installation Flow
@@ -1409,7 +1332,6 @@ run_installation_with_checkpoints() {
         "xformers:install_xformers:XFormers (Optional):false"
         "core_deps:install_core_dependencies:Core Dependencies:false"
         "optional:install_optional_components:Optional Components:false"
-        "postgresql:setup_postgresql:PostgreSQL:false"
         "web:setup_web_interface:Web Interface:false"
         "models:download_models:Models:false"
         "env_config:setup_environment:Environment Configuration:false"
