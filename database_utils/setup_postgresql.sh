@@ -45,6 +45,38 @@ check_postgresql() {
     fi
 }
 
+# Function to start PostgreSQL service
+start_postgresql() {
+    echo "🔄 Starting PostgreSQL service..."
+    
+    # Try systemctl first
+    if command -v systemctl &> /dev/null; then
+        run_privileged systemctl start postgresql
+        run_privileged systemctl enable postgresql
+        sleep 2
+    # Try service command
+    elif command -v service &> /dev/null; then
+        run_privileged service postgresql start
+        sleep 2
+    # Try direct pg_ctl (for manual installations)
+    elif command -v pg_ctl &> /dev/null; then
+        su - postgres -c "pg_ctl -D /var/lib/postgresql/data -l /var/lib/postgresql/logfile start"
+        sleep 2
+    else
+        echo "❌ Cannot start PostgreSQL - no service manager found"
+        return 1
+    fi
+    
+    # Check if PostgreSQL is running
+    if su - postgres -c "pg_isready" &> /dev/null; then
+        echo "✅ PostgreSQL is running"
+        return 0
+    else
+        echo "❌ PostgreSQL failed to start"
+        return 1
+    fi
+}
+
 # Install PostgreSQL
 install_postgresql() {
     echo ""
@@ -162,6 +194,12 @@ if ! check_postgresql; then
         echo "PostgreSQL is required. Exiting."
         exit 1
     fi
+fi
+
+# Start PostgreSQL service
+if ! start_postgresql; then
+    echo "❌ Failed to start PostgreSQL service"
+    exit 1
 fi
 
 # Setup database
