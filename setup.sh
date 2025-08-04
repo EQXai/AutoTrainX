@@ -581,6 +581,12 @@ install_core_dependencies() {
     if [ -f "sd-scripts/requirements.txt" ]; then
         print_info "Installing sd-scripts dependencies..."
         pip install -r sd-scripts/requirements.txt
+        
+        # Install sd-scripts as editable package
+        if [ -f "sd-scripts/setup.py" ]; then
+            print_info "Installing sd-scripts package..."
+            pip install -e sd-scripts/
+        fi
     fi
     
     # Install main requirements
