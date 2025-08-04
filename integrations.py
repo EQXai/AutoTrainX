@@ -323,7 +323,7 @@ class IntegrationsManager:
                     {
                         "type": "service_account",
                         "project_id": env_vars['GOOGLE_PROJECT_ID'],
-                        "private_key": env_vars['GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY'].replace('\\n', '\n'),
+                        "private_key": env_vars['GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY'],
                         "client_email": env_vars['GOOGLE_SERVICE_ACCOUNT_EMAIL'],
                         "client_id": "",
                         "auth_uri": "https://accounts.google.com/o/oauth2/auth",
