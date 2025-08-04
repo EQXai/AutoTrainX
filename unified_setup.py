@@ -160,11 +160,16 @@ class UnifiedSetup:
     def check_postgresql_running(self) -> bool:
         """Check if PostgreSQL is running"""
         try:
-            # Check if running as root or in Docker
+            # Method 1: Check if postgres process is running
+            ps_result = subprocess.run(['pgrep', '-f', 'postgres'], capture_output=True, text=True)
+            if ps_result.returncode != 0:
+                return False
+                
+            # Method 2: Try to connect
             if self.is_root or self.is_docker:
                 # Direct connection as postgres user without sudo
                 result = subprocess.run(
-                    ['su', '-', 'postgres', '-c', 'psql -c "SELECT 1;"'],
+                    ['su', '-', 'postgres', '-c', 'psql -c "SELECT 1;" 2>/dev/null'],
                     capture_output=True, text=True
                 )
             else:
@@ -383,6 +388,40 @@ class UnifiedSetup:
             # Use sudo for non-root users
             return subprocess.run(['sudo'] + command, capture_output=True, text=True)
     
+    def configure_postgresql_docker_auth(self):
+        """Configure PostgreSQL authentication for Docker environment"""
+        try:
+            # Find PostgreSQL version
+            pg_versions = subprocess.run(['ls', '/etc/postgresql/'], capture_output=True, text=True)
+            if pg_versions.returncode == 0 and pg_versions.stdout.strip():
+                version = pg_versions.stdout.strip().split()[0]
+                hba_file = f"/etc/postgresql/{version}/main/pg_hba.conf"
+                
+                if os.path.exists(hba_file):
+                    # Backup original
+                    subprocess.run(['cp', hba_file, f"{hba_file}.backup"], check=False)
+                    
+                    # Write trust authentication config
+                    hba_content = """# PostgreSQL Client Authentication Configuration
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# Allow local connections without password (Docker environment)
+local   all             postgres                                trust
+local   all             all                                     trust
+host    all             all             127.0.0.1/32            trust
+host    all             all             ::1/128                 trust
+
+# Allow connections from Docker network
+host    all             all             172.16.0.0/12           trust
+host    all             all             192.168.0.0/16          trust
+"""
+                    with open(hba_file, 'w') as f:
+                        f.write(hba_content)
+                    
+                    self.print_info("PostgreSQL authentication configured for Docker")
+        except Exception as e:
+            self.print_warning(f"Could not configure PostgreSQL auth: {e}")
+    
     def setup_postgresql(self):
         """Set up PostgreSQL (from setup_postgresql.sh)"""
         self.print_step(2, 4, "Setting up PostgreSQL Database")
@@ -414,27 +453,59 @@ class UnifiedSetup:
             try:
                 # Try different methods to start PostgreSQL
                 if self.is_docker:
-                    # In Docker, try direct pg_ctl
                     self.print_info("Starting PostgreSQL in Docker environment...")
-                    # Create run directory if needed
-                    os.makedirs('/var/run/postgresql', exist_ok=True)
-                    subprocess.run(['chown', 'postgres:postgres', '/var/run/postgresql'], check=False)
                     
-                    # Try to start using pg_ctl
-                    pg_version = subprocess.run(['ls', '/etc/postgresql/'], capture_output=True, text=True)
-                    if pg_version.returncode == 0 and pg_version.stdout.strip():
-                        version = pg_version.stdout.strip().split()[0]
-                        data_dir = f"/var/lib/postgresql/{version}/main"
-                        subprocess.run([
-                            'su', '-', 'postgres', '-c',
-                            f'pg_ctl -D {data_dir} -l /var/log/postgresql/postgresql.log start'
-                        ], check=False)
+                    # Create necessary directories
+                    os.makedirs('/var/run/postgresql', exist_ok=True)
+                    os.makedirs('/var/log/postgresql', exist_ok=True)
+                    subprocess.run(['chown', 'postgres:postgres', '/var/run/postgresql'], check=False)
+                    subprocess.run(['chown', 'postgres:postgres', '/var/log/postgresql'], check=False)
+                    
+                    # Method 1: Try using service command first (works in some Docker setups)
+                    service_result = subprocess.run(['service', 'postgresql', 'start'], 
+                                                  capture_output=True, text=True)
+                    if service_result.returncode == 0:
+                        self.print_success("PostgreSQL started using service command")
+                        time.sleep(3)
+                    else:
+                        # Method 2: Try to find and use pg_ctl
+                        pg_versions = subprocess.run(['ls', '/usr/lib/postgresql/'], 
+                                                   capture_output=True, text=True)
+                        if pg_versions.returncode == 0 and pg_versions.stdout.strip():
+                            version = pg_versions.stdout.strip().split()[0]
+                            pg_ctl_path = f"/usr/lib/postgresql/{version}/bin/pg_ctl"
+                            data_dir = f"/var/lib/postgresql/{version}/main"
+                            
+                            if os.path.exists(pg_ctl_path) and os.path.exists(data_dir):
+                                # Start PostgreSQL using pg_ctl
+                                start_cmd = f"{pg_ctl_path} -D {data_dir} -l /var/log/postgresql/postgresql.log start"
+                                subprocess.run(['su', '-', 'postgres', '-c', start_cmd], check=False)
+                                self.print_info(f"Started PostgreSQL {version} using pg_ctl")
+                                time.sleep(3)
+                            else:
+                                # Method 3: Try direct postgres command
+                                postgres_cmd = f"/usr/lib/postgresql/{version}/bin/postgres"
+                                if os.path.exists(postgres_cmd):
+                                    # Start in background
+                                    subprocess.Popen([
+                                        'su', '-', 'postgres', '-c',
+                                        f'{postgres_cmd} -D {data_dir}'
+                                    ])
+                                    self.print_info("Started PostgreSQL using postgres command")
+                                    time.sleep(3)
                 else:
-                    # Use service command
+                    # Use service command for non-Docker
                     self.run_privileged_command(['service', 'postgresql', 'start'])
-                time.sleep(2)
-            except:
-                self.print_warning("Could not start PostgreSQL service")
+                    time.sleep(2)
+                    
+                # Verify PostgreSQL is running
+                if not self.check_postgresql_running():
+                    self.print_warning("PostgreSQL may not have started properly")
+                    self.print_info("Continuing anyway - database operations may fail")
+                    
+            except Exception as e:
+                self.print_warning(f"Could not start PostgreSQL service: {e}")
+                self.print_info("Continuing anyway - database operations may fail")
                 
         # Get database password from .env or environment
         db_password = os.environ.get('DATABASE_PASSWORD')
@@ -448,6 +519,11 @@ class UnifiedSetup:
                         
         if not db_password:
             db_password = self.config.get('DATABASE_PASSWORD', 'AutoTrainX2024Secure123')
+            
+        # Configure PostgreSQL authentication for Docker if needed
+        if self.is_docker and not self.check_postgresql_running():
+            self.print_info("Configuring PostgreSQL for Docker environment...")
+            self.configure_postgresql_docker_auth()
             
         # Create database and user
         self.print_info("Creating database and user...")
