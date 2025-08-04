@@ -52,6 +52,10 @@ class UnifiedSetup:
         self.setup_config_path = self.root_dir / ".setup_config.json"
         self.daemon_pid_file = self.root_dir / ".sheets_sync_daemon.pid"
         
+        # Check if running in Docker or as root
+        self.is_docker = os.path.exists('/.dockerenv')
+        self.is_root = os.geteuid() == 0
+        
         # Track what needs to be configured
         self.needs_env_config = False
         self.needs_postgresql = False
@@ -156,11 +160,19 @@ class UnifiedSetup:
     def check_postgresql_running(self) -> bool:
         """Check if PostgreSQL is running"""
         try:
-            # Try to connect as postgres user
-            result = subprocess.run(
-                ['sudo', '-u', 'postgres', 'psql', '-c', 'SELECT 1;'],
-                capture_output=True, text=True
-            )
+            # Check if running as root or in Docker
+            if self.is_root or self.is_docker:
+                # Direct connection as postgres user without sudo
+                result = subprocess.run(
+                    ['su', '-', 'postgres', '-c', 'psql -c "SELECT 1;"'],
+                    capture_output=True, text=True
+                )
+            else:
+                # Use sudo for non-root users
+                result = subprocess.run(
+                    ['sudo', '-u', 'postgres', 'psql', '-c', 'SELECT 1;'],
+                    capture_output=True, text=True
+                )
             return result.returncode == 0
         except:
             return False
@@ -362,6 +374,15 @@ class UnifiedSetup:
                 f.write(f"AUTOTRAINX_DB_USER={self.config.get('DATABASE_USER', 'autotrainx')}\n")
                 f.write(f"AUTOTRAINX_DB_PASSWORD={self.config.get('DATABASE_PASSWORD', '')}\n")
                 
+    def run_privileged_command(self, command: list) -> subprocess.CompletedProcess:
+        """Run a command with appropriate privileges"""
+        if self.is_root or self.is_docker:
+            # Already root or in Docker, run directly
+            return subprocess.run(command, capture_output=True, text=True)
+        else:
+            # Use sudo for non-root users
+            return subprocess.run(['sudo'] + command, capture_output=True, text=True)
+    
     def setup_postgresql(self):
         """Set up PostgreSQL (from setup_postgresql.sh)"""
         self.print_step(2, 4, "Setting up PostgreSQL Database")
@@ -376,9 +397,9 @@ class UnifiedSetup:
             if install:
                 self.print_info("Installing PostgreSQL...")
                 try:
-                    subprocess.run(['sudo', 'apt-get', 'update'], check=True)
-                    subprocess.run(['sudo', 'apt-get', 'install', '-y', 
-                                  'postgresql', 'postgresql-client', 'postgresql-contrib'], check=True)
+                    self.run_privileged_command(['apt-get', 'update'])
+                    self.run_privileged_command(['apt-get', 'install', '-y', 
+                                               'postgresql', 'postgresql-client', 'postgresql-contrib'])
                     self.print_success("PostgreSQL installed successfully")
                 except subprocess.CalledProcessError as e:
                     self.print_error(f"Failed to install PostgreSQL: {e}")
@@ -391,7 +412,26 @@ class UnifiedSetup:
         if not self.check_postgresql_running():
             self.print_info("Starting PostgreSQL service...")
             try:
-                subprocess.run(['sudo', 'service', 'postgresql', 'start'], check=True)
+                # Try different methods to start PostgreSQL
+                if self.is_docker:
+                    # In Docker, try direct pg_ctl
+                    self.print_info("Starting PostgreSQL in Docker environment...")
+                    # Create run directory if needed
+                    os.makedirs('/var/run/postgresql', exist_ok=True)
+                    subprocess.run(['chown', 'postgres:postgres', '/var/run/postgresql'], check=False)
+                    
+                    # Try to start using pg_ctl
+                    pg_version = subprocess.run(['ls', '/etc/postgresql/'], capture_output=True, text=True)
+                    if pg_version.returncode == 0 and pg_version.stdout.strip():
+                        version = pg_version.stdout.strip().split()[0]
+                        data_dir = f"/var/lib/postgresql/{version}/main"
+                        subprocess.run([
+                            'su', '-', 'postgres', '-c',
+                            f'pg_ctl -D {data_dir} -l /var/log/postgresql/postgresql.log start'
+                        ], check=False)
+                else:
+                    # Use service command
+                    self.run_privileged_command(['service', 'postgresql', 'start'])
                 time.sleep(2)
             except:
                 self.print_warning("Could not start PostgreSQL service")
@@ -427,13 +467,25 @@ GRANT ALL PRIVILEGES ON DATABASE autotrainx TO autotrainx;
         
         try:
             # Create database and user
-            process = subprocess.Popen(
-                ['sudo', '-u', 'postgres', 'psql'],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
-            )
+            if self.is_root or self.is_docker:
+                # Running as root or in Docker
+                process = subprocess.Popen(
+                    ['su', '-', 'postgres', '-c', 'psql'],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+            else:
+                # Use sudo for non-root users
+                process = subprocess.Popen(
+                    ['sudo', '-u', 'postgres', 'psql'],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True
+                )
+            
             stdout, stderr = process.communicate(input=sql_commands)
             
             if process.returncode == 0:
@@ -610,6 +662,12 @@ GRANT ALL PRIVILEGES ON DATABASE autotrainx TO autotrainx;
     def run(self, check_only: bool = False, fix_conflicts: bool = False):
         """Run the unified setup process"""
         self.print_header("AutoTrainX Unified Setup")
+        
+        # Show environment info
+        if self.is_docker:
+            self.print_info("Running in Docker environment")
+        if self.is_root:
+            self.print_info("Running as root user")
         
         # Check current state
         state = self.check_current_state()
