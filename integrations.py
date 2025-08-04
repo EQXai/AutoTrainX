@@ -599,6 +599,7 @@ class IntegrationsManager:
             
         while True:
             choices = [
+                "🚨 EMERGENCY: Connect as Superuser (postgres)",
                 "📊 View Active Connections",
                 "🔍 View Connection Statistics",
                 "⚡ Kill Idle Connections",
@@ -619,7 +620,9 @@ class IntegrationsManager:
             if choice is None or "Back" in choice:
                 break
                 
-            if "View Active Connections" in choice:
+            if "EMERGENCY" in choice:
+                self._emergency_superuser_cleanup(env_vars)
+            elif "View Active Connections" in choice:
                 self._view_active_connections(env_vars)
             elif "View Connection Statistics" in choice:
                 self._view_connection_stats(env_vars)
@@ -949,6 +952,199 @@ class IntegrationsManager:
         except Exception as e:
             print(f"❌ Error: {e}")
             
+        questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
+        
+    def _emergency_superuser_cleanup(self, env_vars: Dict[str, str]):
+        """Emergency cleanup using superuser access."""
+        print("\n🚨 EMERGENCY SUPERUSER CLEANUP\n")
+        print("⚠️  This requires PostgreSQL superuser (postgres) access!")
+        print("⚠️  This will attempt to connect directly as postgres user\n")
+        
+        # Detect environment
+        is_docker = os.path.exists('/.dockerenv') or os.environ.get('DOCKER_CONTAINER')
+        
+        print("Attempting superuser connection methods...\n")
+        
+        # Try different superuser connection methods
+        methods = []
+        
+        if is_docker:
+            methods.extend([
+                {
+                    'name': 'Direct postgres user in Docker',
+                    'cmd': ['psql', '-U', 'postgres', '-d', 'postgres'],
+                    'env': None
+                }
+            ])
+        else:
+            # Get postgres password if available
+            postgres_pwd = questionary.password(
+                "Enter postgres user password (leave empty to use peer auth):",
+                style=AUTOTRAINX_STYLE
+            ).ask()
+            
+            if postgres_pwd:
+                env_with_pwd = os.environ.copy()
+                env_with_pwd['PGPASSWORD'] = postgres_pwd
+                methods.extend([
+                    {
+                        'name': 'postgres user with password',
+                        'cmd': ['psql', '-U', 'postgres', '-h', env_vars.get('DATABASE_HOST', 'localhost'), '-d', 'postgres'],
+                        'env': env_with_pwd
+                    }
+                ])
+            
+            methods.extend([
+                {
+                    'name': 'sudo postgres peer auth',
+                    'cmd': ['sudo', '-u', 'postgres', 'psql', '-d', 'postgres'],
+                    'env': None
+                },
+                {
+                    'name': 'Direct postgres connection',
+                    'cmd': ['psql', '-U', 'postgres', '-d', 'postgres'],
+                    'env': None
+                }
+            ])
+        
+        # Find working method
+        working_method = None
+        for method in methods:
+            print(f"Trying: {method['name']}...")
+            test_cmd = method['cmd'] + ['-c', 'SELECT 1;']
+            
+            try:
+                result = subprocess.run(
+                    test_cmd, 
+                    capture_output=True, 
+                    text=True, 
+                    env=method['env'],
+                    timeout=5
+                )
+                
+                if result.returncode == 0:
+                    print(f"✅ Success with: {method['name']}")
+                    working_method = method
+                    break
+                else:
+                    print(f"❌ Failed: {result.stderr.strip()}")
+            except Exception as e:
+                print(f"❌ Failed: {str(e)}")
+        
+        if not working_method:
+            print("\n❌ Could not connect as superuser!")
+            print("\nManual cleanup instructions:")
+            print("1. SSH to the PostgreSQL server")
+            print("2. Run: sudo -u postgres psql")
+            print("3. Execute these commands:")
+            print(f"   SELECT pg_terminate_backend(pid)")
+            print(f"   FROM pg_stat_activity")
+            print(f"   WHERE datname = '{env_vars.get('DATABASE_NAME', 'autotrainx')}'")
+            print(f"   AND pid <> pg_backend_pid();")
+            questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
+            return
+        
+        # Show current connections
+        print("\n📊 Current connection statistics:\n")
+        
+        show_stats_sql = """
+        SELECT 
+            datname as database,
+            count(*) as connections,
+            string_agg(DISTINCT usename::text, ', ') as users
+        FROM pg_stat_activity 
+        WHERE datname IS NOT NULL
+        GROUP BY datname
+        ORDER BY count(*) DESC;
+        """
+        
+        cmd = working_method['cmd'] + ['-c', show_stats_sql]
+        result = subprocess.run(cmd, capture_output=True, text=True, env=working_method['env'])
+        
+        if result.returncode == 0:
+            print(result.stdout)
+        
+        # Ask what to do
+        print("\nEmergency cleanup options:")
+        
+        action = questionary.select(
+            "Select emergency action:",
+            choices=[
+                f"Kill all connections to database '{env_vars.get('DATABASE_NAME', 'autotrainx')}'",
+                "Kill ALL idle connections (all databases)",
+                "Kill ALL connections except mine (DANGEROUS!)",
+                "Show detailed connection info",
+                "Cancel"
+            ],
+            style=AUTOTRAINX_STYLE
+        ).ask()
+        
+        if action == "Cancel" or not action:
+            return
+        
+        if "Show detailed" in action:
+            detail_sql = """
+            SELECT pid, datname, usename, application_name, client_addr, state,
+                   state_change, backend_start
+            FROM pg_stat_activity
+            WHERE pid <> pg_backend_pid()
+            ORDER BY backend_start;
+            """
+            cmd = working_method['cmd'] + ['-c', detail_sql]
+            result = subprocess.run(cmd, capture_output=True, text=True, env=working_method['env'])
+            print(result.stdout)
+            questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
+            return
+        
+        # Confirm dangerous action
+        confirm = questionary.confirm(
+            f"\n⚠️  Confirm: {action}?",
+            default=False,
+            style=AUTOTRAINX_STYLE
+        ).ask()
+        
+        if not confirm:
+            return
+        
+        # Execute cleanup
+        if f"database '{env_vars.get('DATABASE_NAME', 'autotrainx')}'" in action:
+            cleanup_sql = f"""
+            SELECT pg_terminate_backend(pid)
+            FROM pg_stat_activity
+            WHERE datname = '{env_vars.get('DATABASE_NAME', 'autotrainx')}'
+            AND pid <> pg_backend_pid();
+            """
+        elif "idle connections" in action:
+            cleanup_sql = """
+            SELECT pg_terminate_backend(pid)
+            FROM pg_stat_activity
+            WHERE state = 'idle'
+            AND pid <> pg_backend_pid();
+            """
+        else:  # Kill ALL
+            cleanup_sql = """
+            SELECT pg_terminate_backend(pid)
+            FROM pg_stat_activity
+            WHERE pid <> pg_backend_pid();
+            """
+        
+        print("\nExecuting cleanup...")
+        cmd = working_method['cmd'] + ['-c', cleanup_sql]
+        result = subprocess.run(cmd, capture_output=True, text=True, env=working_method['env'])
+        
+        if result.returncode == 0:
+            # Count terminated
+            terminated = result.stdout.count('(1 row)')
+            print(f"\n✅ Successfully terminated {terminated} connection(s)!")
+            
+            # Show new stats
+            print("\nNew connection statistics:")
+            cmd = working_method['cmd'] + ['-c', show_stats_sql]
+            result = subprocess.run(cmd, capture_output=True, text=True, env=working_method['env'])
+            print(result.stdout)
+        else:
+            print(f"\n❌ Cleanup failed: {result.stderr}")
+        
         questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
         
     def _configure_google_sheets(self):
