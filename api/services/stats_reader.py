@@ -25,7 +25,7 @@ class StatsReader:
             'port': int(os.getenv('DATABASE_PORT') or os.getenv('AUTOTRAINX_DB_PORT', 5432)),
             'database': os.getenv('DATABASE_NAME') or os.getenv('AUTOTRAINX_DB_NAME', 'autotrainx'),
             'user': os.getenv('DATABASE_USER') or os.getenv('AUTOTRAINX_DB_USER', 'autotrainx'),
-            'password': os.getenv('DATABASE_PASSWORD') or os.getenv('AUTOTRAINX_DB_PASSWORD', '1234')
+            'password': os.getenv('DATABASE_PASSWORD') or os.getenv('AUTOTRAINX_DB_PASSWORD', 'AutoTrainX2024Secure123')
         }
     
     def _get_connection(self):

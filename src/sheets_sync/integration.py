@@ -217,7 +217,7 @@ class AutoTrainXSheetsIntegration:
                 "3. If using service account, share spreadsheet with service account email",
                 "4. Provide spreadsheet ID to the sync setup"
             ],
-            "config_file_location": str(Path(self.base_path or ".") / "config.json"),
+            "config_file_location": str(Path(self.base_path or ".") / "settings" / "config.json"),
             "example_config": {
                 "sheets_sync": {
                     "enabled": True,
@@ -324,21 +324,28 @@ async def test_connection(base_path: Optional[str] = None) -> bool:
         from googleapiclient.discovery import build
         
         # Get config
-        config_path = Path(base_path or ".") / "config.json"
+        config_path = Path(base_path or ".") / "settings" / "config.json"
         with open(config_path, 'r') as f:
             config = json.load(f)
         
         sheets_config = config.get('google_sheets_sync', {})
         spreadsheet_id = sheets_config.get('spreadsheet_id')
-        creds_path = sheets_config.get('credentials_path', 'settings/google_credentials.json')
         
         if not spreadsheet_id:
             logger.error("No spreadsheet ID configured")
             return False
             
-        # Create credentials
-        credentials = service_account.Credentials.from_service_account_file(
-            creds_path,
+        # Create credentials using secure config
+        from ..configuration.secure_config import secure_config
+        
+        google_creds = secure_config.google_credentials
+        if not google_creds:
+            logger.error("Google credentials not configured in environment")
+            return False
+            
+        # Create credentials from dict instead of file
+        credentials = service_account.Credentials.from_service_account_info(
+            google_creds,
             scopes=['https://www.googleapis.com/auth/spreadsheets']
         )
         
@@ -372,13 +379,12 @@ async def manual_full_sync(base_path: Optional[str] = None) -> SyncResult:
         from googleapiclient.discovery import build
         
         # Get configuration
-        config_path = Path(base_path or ".") / "config.json"
+        config_path = Path(base_path or ".") / "settings" / "config.json"
         with open(config_path, 'r') as f:
             config = json.load(f)
         
         sheets_config = config.get('google_sheets_sync', {})
         spreadsheet_id = sheets_config.get('spreadsheet_id')
-        creds_path = sheets_config.get('credentials_path', 'settings/google_credentials.json')
         
         if not spreadsheet_id:
             return SyncResult(
@@ -387,9 +393,21 @@ async def manual_full_sync(base_path: Optional[str] = None) -> SyncResult:
                 data=None
             )
         
-        # Create credentials and service
-        credentials = service_account.Credentials.from_service_account_file(
-            creds_path,
+        # Create credentials using secure config
+        from ..configuration.secure_config import secure_config
+        
+        google_creds = secure_config.google_credentials
+        if not google_creds:
+            logger.error("Google credentials not configured in environment")
+            return SyncResult(
+                success=False,
+                records_synced=0,
+                errors=["Google credentials not configured"]
+            )
+            
+        # Create credentials from dict instead of file
+        credentials = service_account.Credentials.from_service_account_info(
+            google_creds,
             scopes=['https://www.googleapis.com/auth/spreadsheets']
         )
         service = build('sheets', 'v4', credentials=credentials)

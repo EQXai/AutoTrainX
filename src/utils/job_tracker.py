@@ -6,7 +6,8 @@ from pathlib import Path
 from contextlib import contextmanager
 import traceback
 
-from src.database import DatabaseManager, ExecutionStatus, PipelineMode
+from src.database import EnhancedDatabaseManager
+from src.database.enums import ExecutionStatus, PipelineMode
 
 
 logger = logging.getLogger(__name__)
@@ -28,9 +29,12 @@ class JobTracker:
         if self.enabled:
             try:
                 from src.utils.quiet_mode import quiet_database_init
+                from src.database.config import db_settings
+                
                 with quiet_database_init():
-                    self.db_manager = DatabaseManager(db_path)
-                logger.debug("Job tracking enabled")
+                    # Use the v2 manager with auto-configuration
+                    self.db_manager = EnhancedDatabaseManager()
+                logger.debug(f"Job tracking enabled with {db_settings.db_type}")
             except Exception as e:
                 logger.warning(f"Failed to initialize job tracking: {e}")
                 self.enabled = False

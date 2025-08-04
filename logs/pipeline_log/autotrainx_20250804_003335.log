@@ -1,0 +1,12 @@
+2025-08-04 00:33:35,795 - src.database.connection_pool - INFO - start_monitoring:204 - Connection monitoring started (interval: 60s)
+2025-08-04 00:33:35,795 - src.database.manager - INFO - __init__:92 - Enhanced database manager initialized with postgresql
+2025-08-04 00:33:42,086 - src.database.connection_pool - INFO - start_monitoring:204 - Connection monitoring started (interval: 60s)
+2025-08-04 00:33:42,087 - src.database.manager - INFO - __init__:92 - Enhanced database manager initialized with postgresql
+2025-08-04 00:33:43,068 - src.database.connection_pool - INFO - start_monitoring:204 - Connection monitoring started (interval: 60s)
+2025-08-04 00:33:43,068 - src.database.manager - INFO - __init__:92 - Enhanced database manager initialized with postgresql
+2025-08-04 00:33:43,114 - src.database.connection_pool - INFO - start_monitoring:204 - Connection monitoring started (interval: 60s)
+2025-08-04 00:33:43,115 - src.database.manager - INFO - __init__:92 - Enhanced database manager initialized with postgresql
+2025-08-04 00:33:43,157 - src.database.connection_pool - INFO - start_monitoring:204 - Connection monitoring started (interval: 60s)
+2025-08-04 00:33:43,158 - src.database.manager - INFO - __init__:92 - Enhanced database manager initialized with postgresql
+2025-08-04 00:33:43,195 - src.database.connection_pool - INFO - start_monitoring:204 - Connection monitoring started (interval: 60s)
+2025-08-04 00:33:43,195 - src.database.manager - INFO - __init__:92 - Enhanced database manager initialized with postgresql

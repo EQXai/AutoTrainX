@@ -133,7 +133,7 @@ class Config:
         """
         if base_path is None:
             base_path = Config.get_default_base_path()
-        return Path(base_path) / "config.json"
+        return Path(base_path) / "settings" / "config.json"
     
     @staticmethod
     def load_config(base_path: Optional[str] = None) -> dict:

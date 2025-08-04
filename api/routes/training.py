@@ -73,7 +73,7 @@ async def single_training(request: SingleTrainingRequest) -> TrainingResponse:
     
     Equivalent to running:
     ```
-    python main.py --train --batch --datasets-file datasets.json --strategy sequential
+    python main.py --train --batch --source /home/eqx/datasets/full --preset SX1 --parallel
     ```
     """
 )
@@ -111,19 +111,21 @@ async def batch_training(request: BatchTrainingRequest) -> TrainingResponse:
     
     Equivalent to running:
     ```
-    python main.py --train --variations --dataset my_dataset --base-preset FluxLORA --variations-file variations.json
+    python main.py --train --mode variations --source /path/to/dataset --preset FluxLORA --variations network_dim=32,64 network_alpha=16,32
     ```
     """
 )
 async def variations_training(request: VariationsTrainingRequest) -> TrainingResponse:
     """Execute variations mode training."""
     try:
-        logger.info(f"Variations training request: dataset={request.dataset_name}, base_preset={request.base_preset}")
+        logger.info(f"Variations training request: source={request.source_path}, preset={request.preset}")
         
         result = await cli_translator.execute_variations_training(
-            dataset_name=request.dataset_name,
-            base_preset=request.base_preset,
+            source_path=request.source_path,
+            preset=request.preset,
             variations=request.variations,
+            dataset_name=request.dataset_name,
+            preview_count=request.preview_count,
             auto_clean=request.auto_clean
         )
         

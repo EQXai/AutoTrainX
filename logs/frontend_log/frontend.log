@@ -8,25 +8,111 @@
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 1669ms
- ○ Compiling /dashboard/jobs ...
- ✓ Compiled /dashboard/jobs in 2.2s (1238 modules)
- GET /dashboard/jobs 200 in 2784ms
- ✓ Compiled in 618ms (504 modules)
- ○ Compiling /dashboard/settings ...
- ✓ Compiled /dashboard/settings in 693ms (1267 modules)
- GET /dashboard/settings 200 in 783ms
- GET /dashboard/settings 200 in 216ms
- ○ Compiling /dashboard ...
- ✓ Compiled /dashboard in 1043ms (2078 modules)
- GET /dashboard 200 in 1139ms
+ ✓ Ready in 1610ms
  ○ Compiling / ...
- ✓ Compiled / in 676ms (2091 modules)
- GET / 200 in 873ms
- ○ Compiling /docs ...
- ✓ Compiled /docs in 642ms (2118 modules)
- GET /docs 200 in 708ms
- GET /dashboard 200 in 22ms
- GET /dashboard/settings 200 in 18ms
- GET /dashboard/settings 200 in 230ms
- GET /dashboard/settings 200 in 55ms
+ ✓ Compiled / in 1531ms (714 modules)
+ GET / 200 in 1937ms
+ ✓ Compiled in 162ms (293 modules)
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 1532ms (2013 modules)
+ GET /dashboard 200 in 1677ms
+ ○ Compiling /dashboard/jobs ...
+ ✓ Compiled /dashboard/jobs in 729ms (2054 modules)
+ GET /dashboard/jobs 200 in 817ms
+ ⨯ ./src/app/dashboard/jobs/new/page.tsx
+Error:   [31mx[0m Expected ',', got 'preview_count'
+    ,-[[36;1;4m/home/eqx/AutoTrainX/autotrainx-web/src/app/dashboard/jobs/new/page.tsx[0m:51:1]
+ [2m48[0m |   class_name: z.string().min(1).default("person")
+ [2m49[0m |   
+ [2m50[0m |   // Training options
+ [2m51[0m |   preview_count: z.number().min(0).max(20).default(0),
+    : [35;1m  ^^^^^^^^^^^^^[0m
+ [2m52[0m |   generate_configs: z.boolean().default(true),
+ [2m53[0m |   auto_clean: z.boolean().default(true),
+ [2m54[0m |   
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/dashboard/jobs/new/page.tsx
+ ○ Compiling /dashboard/jobs/[id] ...
+ ⨯ ./src/app/dashboard/jobs/new/page.tsx
+Error:   [31mx[0m Expected ',', got 'preview_count'
+    ,-[[36;1;4m/home/eqx/AutoTrainX/autotrainx-web/src/app/dashboard/jobs/new/page.tsx[0m:51:1]
+ [2m48[0m |   class_name: z.string().min(1).default("person")
+ [2m49[0m |   
+ [2m50[0m |   // Training options
+ [2m51[0m |   preview_count: z.number().min(0).max(20).default(0),
+    : [35;1m  ^^^^^^^^^^^^^[0m
+ [2m52[0m |   generate_configs: z.boolean().default(true),
+ [2m53[0m |   auto_clean: z.boolean().default(true),
+ [2m54[0m |   
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/dashboard/jobs/new/page.tsx
+ ⨯ ./src/app/dashboard/jobs/new/page.tsx
+Error:   [31mx[0m Expected ',', got 'preview_count'
+    ,-[[36;1;4m/home/eqx/AutoTrainX/autotrainx-web/src/app/dashboard/jobs/new/page.tsx[0m:51:1]
+ [2m48[0m |   class_name: z.string().min(1).default("person")
+ [2m49[0m |   
+ [2m50[0m |   // Training options
+ [2m51[0m |   preview_count: z.number().min(0).max(20).default(0),
+    : [35;1m  ^^^^^^^^^^^^^[0m
+ [2m52[0m |   generate_configs: z.boolean().default(true),
+ [2m53[0m |   auto_clean: z.boolean().default(true),
+ [2m54[0m |   
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/dashboard/jobs/new/page.tsx
+ ⨯ ./src/app/dashboard/jobs/new/page.tsx
+Error:   [31mx[0m Expected ',', got 'preview_count'
+    ,-[[36;1;4m/home/eqx/AutoTrainX/autotrainx-web/src/app/dashboard/jobs/new/page.tsx[0m:51:1]
+ [2m48[0m |   class_name: z.string().min(1).default("person")
+ [2m49[0m |   
+ [2m50[0m |   // Training options
+ [2m51[0m |   preview_count: z.number().min(0).max(20).default(0),
+    : [35;1m  ^^^^^^^^^^^^^[0m
+ [2m52[0m |   generate_configs: z.boolean().default(true),
+ [2m53[0m |   auto_clean: z.boolean().default(true),
+ [2m54[0m |   
+    `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./src/app/dashboard/jobs/new/page.tsx
+ GET /dashboard/jobs/new 500 in 3781ms
+ GET /dashboard/jobs/new 500 in 11ms
+ GET /dashboard/jobs/new 500 in 9ms
+ GET /dashboard/jobs/new 500 in 9ms
+ GET /dashboard/jobs/new 500 in 11ms
+ GET /dashboard 500 in 13ms
+ ✓ Compiled /_error in 1589ms (2698 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /_next/static/webpack/cd6e3d2c6b217400.webpack.hot-update.json 404 in 1743ms
+ GET /dashboard 200 in 69ms
+ GET /dashboard/jobs 200 in 18ms
+ GET /dashboard/jobs/new 200 in 22ms
+ ○ Compiling /dashboard/datasets ...
+ ✓ Compiled /dashboard/datasets in 963ms (2239 modules)
+ GET /dashboard/datasets 200 in 1071ms
+ ✓ Compiled /dashboard/database in 468ms (2252 modules)
+ GET /dashboard/database 200 in 538ms
+ GET /dashboard/jobs 200 in 16ms
+ GET /dashboard/jobs/new 200 in 40ms
+ GET /dashboard/jobs 200 in 16ms
+ GET /dashboard/datasets 200 in 20ms
+ GET /dashboard/jobs 200 in 14ms
+ GET /dashboard/jobs 200 in 223ms
+[?25h

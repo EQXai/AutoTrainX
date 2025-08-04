@@ -983,7 +983,8 @@ class UnifiedCommandHandler:
             print("\n\033[92m✓ Database cleared successfully!\033[0m")
             print(f"  • Deleted {deleted_counts['executions']} execution records")
             print(f"  • Deleted {deleted_counts['variations']} variation records")
-            print(f"  • Total: {deleted_counts['total']} records deleted")
+            total = deleted_counts['executions'] + deleted_counts['variations']
+            print(f"  • Total: {total} records deleted")
             
             return 0
             

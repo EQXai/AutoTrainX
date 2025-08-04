@@ -4,7 +4,7 @@ import os
 import logging
 from pathlib import Path
 from typing import Dict, Any, Optional, Union
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlunparse
 
 from sqlalchemy import create_engine, Engine, event
 from sqlalchemy.pool import QueuePool, NullPool
@@ -52,6 +52,42 @@ class DatabaseFactory:
         'postgresql': PostgreSQLDialect(),
     }
     
+    @staticmethod
+    def _sanitize_db_url(url: str) -> str:
+        """Remove sensitive information from database URL for logging.
+        
+        Args:
+            url: Database connection URL
+            
+        Returns:
+            Sanitized URL safe for logging
+        """
+        try:
+            parsed = urlparse(url)
+            # Replace password with asterisks
+            if parsed.password:
+                # Reconstruct netloc without password
+                if parsed.username:
+                    netloc = f"{parsed.username}:****@{parsed.hostname}"
+                    if parsed.port:
+                        netloc += f":{parsed.port}"
+                else:
+                    netloc = parsed.hostname or ''
+                # Reconstruct URL
+                sanitized = urlunparse((
+                    parsed.scheme,
+                    netloc,
+                    parsed.path,
+                    parsed.params,
+                    parsed.query,
+                    parsed.fragment
+                ))
+                return sanitized
+            return url
+        except Exception:
+            # If parsing fails, just truncate
+            return url[:50] + "..."
+    
     @classmethod
     def create_engine(cls, config: DatabaseConfig) -> Engine:
         """Create a database engine based on configuration.
@@ -79,7 +115,9 @@ class DatabaseFactory:
             url = config.db_url
         
         if verbose:
-            print(f"📍 Connection: {url[:50]}...")
+            # Sanitize URL to hide credentials
+            sanitized_url = cls._sanitize_db_url(url)
+            print(f"📍 Connection: {sanitized_url}")
         
         # Get dialect-specific configurations
         connect_args = dialect.get_connection_args()
@@ -116,7 +154,8 @@ class DatabaseFactory:
             if 'pool_pre_ping' in pool_config:
                 engine_kwargs['pool_pre_ping'] = pool_config.pop('pool_pre_ping')
         
-        # Log engine configuration details silently
+        # Log engine configuration (with sanitized URL)
+        logger.debug(f"Creating engine with URL: {cls._sanitize_db_url(url)}")
         engine = create_engine(url, **engine_kwargs)
         # Engine created
         
@@ -133,7 +172,7 @@ class DatabaseFactory:
             logger.warning(f"Could not configure engine: {e}")
         
         # Use logging instead of print for this message
-        logger.info(f"✅ {config.db_type.upper()} database ready")
+        logger.debug(f"✅ {config.db_type.upper()} database ready")
         
         if verbose:
             print(f"✅ Database engine initialized successfully")

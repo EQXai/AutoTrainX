@@ -68,7 +68,7 @@ async def get_connection():
         host=os.getenv('AUTOTRAINX_DB_HOST', 'localhost'),
         port=int(os.getenv('AUTOTRAINX_DB_PORT', '5432')),
         user=os.getenv('AUTOTRAINX_DB_USER', 'autotrainx'),
-        password=os.getenv('AUTOTRAINX_DB_PASSWORD', '1234'),
+        password=os.getenv('AUTOTRAINX_DB_PASSWORD', os.getenv('DATABASE_PASSWORD', 'AutoTrainX2024Secure123')),
         database=os.getenv('AUTOTRAINX_DB_NAME', 'autotrainx')
     )
 

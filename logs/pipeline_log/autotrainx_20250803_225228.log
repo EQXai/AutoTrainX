@@ -1,0 +1,45 @@
+2025-08-03 22:52:28,871 - src.database.enhanced_manager_v2 - INFO - __init__:85 - Enhanced database manager initialized with postgresql
+2025-08-03 22:55:36,732 - src.training.enhanced_trainer - INFO - _execute_with_progress:236 - Training completed for dataset: m14w00dh4ll
+2025-08-03 22:55:36,747 - src.pipeline.hooks.hook_manager - INFO - execute_hooks:74 - Executing hook: ImagePreviewHook
+2025-08-03 22:55:36,747 - src.pipeline.hooks.preview_hook - INFO - execute:127 - Executing image preview hook for m14w00dh4ll
+2025-08-03 22:55:36,750 - src.pipeline.hooks.preview_hook - INFO - _find_latest_model:297 - Selected latest model: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/model/m14w00dh4ll_SX1_c39a3289.safetensors
+2025-08-03 22:55:36,750 - src.image_preview.preview_pipeline - INFO - generate_previews:70 - Generating 3 previews for m14w00dh4ll using SX1
+2025-08-03 22:55:37,970 - src.image_preview.utils - INFO - ensure_comfyui_running:154 - ComfyUI Environment Diagnosis:
+2025-08-03 22:55:37,970 - src.image_preview.utils - INFO - ensure_comfyui_running:155 -   ComfyUI path exists: True
+2025-08-03 22:55:37,970 - src.image_preview.utils - INFO - ensure_comfyui_running:156 -   main.py exists: True
+2025-08-03 22:55:37,971 - src.image_preview.utils - INFO - ensure_comfyui_running:157 -   Python: Python 3.12.3
+2025-08-03 22:55:37,971 - src.image_preview.utils - INFO - ensure_comfyui_running:158 -   GPU available: True
+2025-08-03 22:55:37,971 - src.image_preview.utils - INFO - ensure_comfyui_running:159 -   Port 8188 available: True
+2025-08-03 22:55:37,971 - src.image_preview.utils - INFO - ensure_comfyui_running:177 - Starting ComfyUI from: /home/eqx/ComfyUI
+2025-08-03 22:55:37,971 - src.image_preview.utils - INFO - ensure_comfyui_running:206 - Using ComfyUI virtual environment: /home/eqx/ComfyUI/venv
+2025-08-03 22:55:37,972 - src.image_preview.utils - INFO - ensure_comfyui_running:218 - ComfyUI output will be logged to: /home/eqx/AutoTrainX/logs/ComfyUI_log/comfyui_20250803_225537.log
+2025-08-03 22:55:37,972 - src.image_preview.utils - INFO - ensure_comfyui_running:221 - Executing command: /home/eqx/ComfyUI/venv/bin/python main.py --listen 127.0.0.1 --port 8188
+2025-08-03 22:55:47,084 - src.image_preview.utils - INFO - ensure_comfyui_running:238 - ComfyUI started successfully on http://127.0.0.1:8188
+2025-08-03 22:55:47,090 - src.image_preview.model_manager - INFO - _get_effective_preset:102 - Custom preset 'SX1' detected, using base preset 'SDXLCheckpoint' for model type detection
+2025-08-03 22:55:47,090 - src.image_preview.model_manager - INFO - copy_model_to_comfyui:144 - Copying model to ComfyUI: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/model/m14w00dh4ll_SX1_c39a3289.safetensors -> /home/eqx/ComfyUI/models/checkpoints/m14w00dh4ll_SX1_c39a3289.safetensors
+2025-08-03 22:55:56,933 - src.image_preview.workflow_handler - INFO - _get_base_preset:70 - Custom preset 'SX1' detected, using base preset 'SDXLCheckpoint' for workflow
+2025-08-03 22:55:56,933 - src.image_preview.workflow_handler - INFO - load_workflow:120 - Loaded and validated workflow: SDXLCheckpoint.json for SX1
+2025-08-03 22:55:56,933 - src.image_preview.preview_pipeline - INFO - generate_previews:118 - Generating preview 1/3
+2025-08-03 22:55:56,933 - src.image_preview.workflow_customizer - INFO - customize_workflow:79 - Customizing workflow for SX1 - Preview 1
+2025-08-03 22:55:56,937 - src.image_preview.workflow_customizer - INFO - _get_effective_preset:53 - Custom preset 'SX1' detected, using base preset 'SDXLCheckpoint' for customization
+2025-08-03 22:55:56,937 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:201 - Updated CheckpointLoaderSimple: m14w00dh4ll_SX1_c39a3289.safetensors
+2025-08-03 22:55:56,938 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:208 - Randomized seed in Seed Everywhere: 3675739753
+2025-08-03 22:55:56,938 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:217 - Randomized seed in Load Prompt From File - EQX: 3998040899
+2025-08-03 22:55:56,938 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:239 - Updated prompt file path: /home/eqx/AutoTrainX/ComfyUI_workflow_utils/txt/stand1.txt
+2025-08-03 22:55:56,938 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:293 - Updated SaveImage_EQX filename: m14w00dh4ll_SX1_01
+2025-08-03 22:55:56,938 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:208 - Randomized seed in Seed Everywhere: 552793204
+2025-08-03 22:55:56,938 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:280 - Updated output path: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/Preview
+2025-08-03 22:55:56,941 - src.image_preview.comfyui_client - INFO - execute_workflow:80 - Submitted workflow with job ID: e8a8963e-184e-46f8-90a1-9b552a293f4b
+2025-08-03 22:56:31,792 - src.image_preview.preview_pipeline - INFO - generate_previews:204 - Found generated image: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/Preview/m14w00dh4ll_SX1_01_0001.png
+2025-08-03 22:56:31,792 - src.image_preview.preview_pipeline - INFO - generate_previews:118 - Generating preview 2/3
+2025-08-03 22:56:31,792 - src.image_preview.workflow_customizer - INFO - customize_workflow:79 - Customizing workflow for SX1 - Preview 2
+2025-08-03 22:56:31,796 - src.image_preview.workflow_customizer - INFO - _get_effective_preset:53 - Custom preset 'SX1' detected, using base preset 'SDXLCheckpoint' for customization
+2025-08-03 22:56:31,796 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:201 - Updated CheckpointLoaderSimple: m14w00dh4ll_SX1_c39a3289.safetensors
+2025-08-03 22:56:31,796 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:208 - Randomized seed in Seed Everywhere: 236745560
+2025-08-03 22:56:31,796 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:217 - Randomized seed in Load Prompt From File - EQX: 1476324837
+2025-08-03 22:56:31,796 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:239 - Updated prompt file path: /home/eqx/AutoTrainX/ComfyUI_workflow_utils/txt/stand1.txt
+2025-08-03 22:56:31,796 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:293 - Updated SaveImage_EQX filename: m14w00dh4ll_SX1_02
+2025-08-03 22:56:31,796 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:208 - Randomized seed in Seed Everywhere: 1493166832
+2025-08-03 22:56:31,796 - src.image_preview.workflow_customizer - INFO - _customize_sdxl_checkpoint_workflow:280 - Updated output path: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/Preview
+2025-08-03 22:56:31,799 - src.image_preview.comfyui_client - INFO - execute_workflow:80 - Submitted workflow with job ID: 8158251d-adb2-4ca0-bc24-518abc08a38c
+2025-08-03 22:56:55,026 - src.image_preview.model_manager - INFO - remove_model_from_comfyui:157 - Removing temporary model: /home/eqx/ComfyUI/models/checkpoints/m14w00dh4ll_SX1_c39a3289.safetensors

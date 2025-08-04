@@ -1,0 +1,252 @@
+# AutoTrainX Training Log
+# Dataset: m14w00dh4ll
+# Preset: SX1
+# Job ID: a5ac5578
+# Start Time: 2025-08-03T22:12:41.615039
+# Mode: single
+# Command: /home/eqx/AutoTrainX/venv/bin/python /home/eqx/AutoTrainX/sd-scripts/sdxl_train.py --config_file /home/eqx/AutoTrainX/workspace/Presets/m14w00dh4ll_SX1_a5ac5578.toml --max_grad_norm=0.0 --no_half_vae --train_text_encoder --learning_rate_te2=0
+================================================================================
+
+2025-08-03 22:12:46 INFO     Loading settings from                                        train_util.py:4651
+                             /home/eqx/AutoTrainX/workspace/Presets/m14w00dh4ll_SX1_a5ac5                   
+                             578.toml...                                                                    
+                    WARNING  clip_skip will be unexpected /                           sdxl_train_util.py:349
+                             SDXL学習ではclip_skipは動作しません                                            
+2025-08-03 22:12:46 INFO     Using DreamBooth method.                                      sdxl_train.py:153
+                    INFO     prepare images.                                              train_util.py:2072
+                    INFO     get image size from name of cache files                      train_util.py:1965
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 112347.43it/s]
+                    INFO     set image size from cache files: 0/3                         train_util.py:1995
+                    INFO     found directory                                              train_util.py:2019
+                             /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/img/30_m14                   
+                             w00dh4ll person contains 3 image files                                         
+
+read caption:   0%|          | 0/3 [00:00<?, ?it/s]
+read caption: 100%|██████████| 3/3 [00:00<00:00, 30690.03it/s]
+                    INFO     90 train images with repeats.                                train_util.py:2116
+                    INFO     0 reg images with repeats.                                   train_util.py:2120
+                    WARNING  no regularization images / 正則化画像が見つかりませんでした  train_util.py:2125
+                    INFO     [Dataset 0]                                                  config_util.py:580
+                               batch_size: 2                                                                
+                               resolution: (1024, 1280)                                                     
+                               resize_interpolation: None                                                   
+                               enable_bucket: False                                                         
+                                                                                                            
+                               [Subset 0 of Dataset 0]                                                      
+                                 image_dir:                                                                 
+                             "/home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/img/30_m1                   
+                             4w00dh4ll person"                                                              
+                                 image_count: 3                                                             
+                                 num_repeats: 30                                                            
+                                 shuffle_caption: False                                                     
+                                 keep_tokens: 0                                                             
+                                 caption_dropout_rate: 0                                                    
+                                 caption_dropout_every_n_epochs: 0                                          
+                                 caption_tag_dropout_rate: 0.0                                              
+                                 caption_prefix: None                                                       
+                                 caption_suffix: None                                                       
+                                 color_aug: False                                                           
+                                 flip_aug: False                                                            
+                                 face_crop_aug_range: None                                                  
+                                 random_crop: False                                                         
+                                 token_warmup_min: 1,                                                       
+                                 token_warmup_step: 0,                                                      
+                                 alpha_mask: False                                                          
+                                 resize_interpolation: None                                                 
+                                 custom_attributes: {}                                                      
+                                 is_reg: False                                                              
+                                 class_tokens: m14w00dh4ll person                                           
+                                 caption_extension: .txt                                                    
+                                                                                                            
+                                                                                                            
+                    INFO     [Prepare dataset 0]                                          config_util.py:592
+                    INFO     loading image sizes.                                          train_util.py:987
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 42366.71it/s]
+                    INFO     prepare dataset                                              train_util.py:1012
+                    INFO     prepare accelerator                                           sdxl_train.py:211
+                    INFO     loading model for process 0/1                             sdxl_train_util.py:32
+                    INFO     load StableDiffusion checkpoint:                          sdxl_train_util.py:73
+                             /home/eqx/AutoTrainX/models/SDXLModel.safetensors                              
+2025-08-03 22:12:47 INFO     building U-Net                                           sdxl_model_util.py:198
+                    INFO     loading U-Net from checkpoint                            sdxl_model_util.py:202
+2025-08-03 22:12:49 INFO     U-Net: <All keys matched successfully>                   sdxl_model_util.py:208
+                    INFO     building text encoders                                   sdxl_model_util.py:211
+                    INFO     loading text encoders from checkpoint                    sdxl_model_util.py:264
+                    INFO     text encoder 1: <All keys matched successfully>          sdxl_model_util.py:278
+2025-08-03 22:12:50 INFO     text encoder 2: <All keys matched successfully>          sdxl_model_util.py:282
+                    INFO     building VAE                                             sdxl_model_util.py:285
+                    INFO     loading VAE from checkpoint                              sdxl_model_util.py:290
+                    INFO     VAE: <All keys matched successfully>                     sdxl_model_util.py:293
+                    INFO     load VAE: stabilityai/sdxl-vae                               model_util.py:1267
+2025-08-03 22:12:51 INFO     additional VAE loaded                                    sdxl_train_util.py:131
+                    INFO     [Dataset 0]                                                  train_util.py:2613
+                    INFO     caching latents with caching strategy.                       train_util.py:1115
+                    INFO     caching latents...                                           train_util.py:1164
+accelerator device: cuda
+Disable Diffusers' xformers
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+ 67%|██████▋   | 2/3 [00:00<00:00,  2.62it/s]
+100%|██████████| 3/3 [00:00<00:00,  3.93it/s]
+2025-08-03 22:12:53 INFO     use Adafactor optimizer | {'scale_parameter': False,         train_util.py:4963
+                             'relative_step': False, 'warmup_init': False,                                  
+                             'weight_decay': 0.01}                                                          
+                    WARNING  constant_with_warmup will be good /                          train_util.py:4995
+                             スケジューラはconstant_with_warmupが良いかもしれません                         
+enable text encoder training
+train unet: True, text_encoder1: True, text_encoder2: False
+number of models: 2
+number of trainable parameters: 2690524164
+prepare optimizer, data loader etc.
+override steps. steps for 2 epochs is / 指定エポックまでのステップ数: 90
+enable full bf16 training.
+running training / 学習開始
+  num examples / サンプル数: 90
+  num batches per epoch / 1epochのバッチ数: 45
+  num epochs / epoch数: 2
+  batch size per device / バッチサイズ: 2
+  gradient accumulation steps / 勾配を合計するステップ数 = 1
+  total optimization steps / 学習ステップ数: 90
+
+steps:   0%|          | 0/90 [00:00<?, ?it/s]2025-08-03 22:12:54 INFO     epoch is incremented. current_epoch: 0, epoch: 1              train_util.py:779
+
+steps:   1%|          | 1/90 [00:04<07:14,  4.88s/it]
+steps:   1%|          | 1/90 [00:04<07:14,  4.88s/it, avr_loss=0.084]
+steps:   2%|▏         | 2/90 [00:06<04:50,  3.30s/it, avr_loss=0.084]
+steps:   2%|▏         | 2/90 [00:06<04:50,  3.30s/it, avr_loss=0.111]
+steps:   3%|▎         | 3/90 [00:08<03:58,  2.74s/it, avr_loss=0.111]
+steps:   3%|▎         | 3/90 [00:08<03:58,  2.74s/it, avr_loss=0.181]
+steps:   4%|▍         | 4/90 [00:10<03:35,  2.50s/it, avr_loss=0.181]
+steps:   4%|▍         | 4/90 [00:10<03:35,  2.50s/it, avr_loss=0.143]
+steps:   6%|▌         | 5/90 [00:11<03:21,  2.37s/it, avr_loss=0.143]
+steps:   6%|▌         | 5/90 [00:11<03:21,  2.37s/it, avr_loss=0.179]
+steps:   7%|▋         | 6/90 [00:13<03:09,  2.25s/it, avr_loss=0.179]
+steps:   7%|▋         | 6/90 [00:13<03:09,  2.25s/it, avr_loss=0.178]
+steps:   8%|▊         | 7/90 [00:15<03:00,  2.17s/it, avr_loss=0.178]
+steps:   8%|▊         | 7/90 [00:15<03:00,  2.17s/it, avr_loss=0.175]
+steps:   9%|▉         | 8/90 [00:17<02:55,  2.14s/it, avr_loss=0.175]
+steps:   9%|▉         | 8/90 [00:17<02:55,  2.14s/it, avr_loss=0.158]
+steps:  10%|█         | 9/90 [00:18<02:49,  2.09s/it, avr_loss=0.158]
+steps:  10%|█         | 9/90 [00:18<02:49,  2.09s/it, avr_loss=0.149]
+steps:  11%|█         | 10/90 [00:20<02:44,  2.06s/it, avr_loss=0.149]
+steps:  11%|█         | 10/90 [00:20<02:44,  2.06s/it, avr_loss=0.15] 
+steps:  12%|█▏        | 11/90 [00:22<02:40,  2.03s/it, avr_loss=0.15]
+steps:  12%|█▏        | 11/90 [00:22<02:40,  2.03s/it, avr_loss=0.162]
+steps:  13%|█▎        | 12/90 [00:23<02:34,  1.98s/it, avr_loss=0.162]
+steps:  13%|█▎        | 12/90 [00:23<02:34,  1.98s/it, avr_loss=0.152]
+steps:  14%|█▍        | 13/90 [00:25<02:30,  1.95s/it, avr_loss=0.152]
+steps:  14%|█▍        | 13/90 [00:25<02:30,  1.95s/it, avr_loss=0.159]
+steps:  16%|█▌        | 14/90 [00:27<02:26,  1.93s/it, avr_loss=0.159]
+steps:  16%|█▌        | 14/90 [00:27<02:26,  1.93s/it, avr_loss=0.154]
+steps:  17%|█▋        | 15/90 [00:28<02:22,  1.90s/it, avr_loss=0.154]
+steps:  17%|█▋        | 15/90 [00:28<02:22,  1.90s/it, avr_loss=0.156]
+steps:  18%|█▊        | 16/90 [00:30<02:19,  1.89s/it, avr_loss=0.156]
+steps:  18%|█▊        | 16/90 [00:30<02:19,  1.89s/it, avr_loss=0.156]
+steps:  19%|█▉        | 17/90 [00:31<02:16,  1.88s/it, avr_loss=0.156]
+steps:  19%|█▉        | 17/90 [00:31<02:16,  1.88s/it, avr_loss=0.163]
+steps:  20%|██        | 18/90 [00:34<02:16,  1.90s/it, avr_loss=0.163]
+steps:  20%|██        | 18/90 [00:34<02:16,  1.90s/it, avr_loss=0.159]
+steps:  21%|██        | 19/90 [00:36<02:16,  1.92s/it, avr_loss=0.159]
+steps:  21%|██        | 19/90 [00:36<02:16,  1.92s/it, avr_loss=0.161]
+steps:  22%|██▏       | 20/90 [00:40<02:22,  2.03s/it, avr_loss=0.161]
+steps:  22%|██▏       | 20/90 [00:40<02:22,  2.03s/it, avr_loss=0.159]
+steps:  23%|██▎       | 21/90 [00:42<02:19,  2.02s/it, avr_loss=0.159]
+steps:  23%|██▎       | 21/90 [00:42<02:19,  2.02s/it, avr_loss=0.154]
+steps:  24%|██▍       | 22/90 [00:44<02:16,  2.01s/it, avr_loss=0.154]
+steps:  24%|██▍       | 22/90 [00:44<02:16,  2.01s/it, avr_loss=0.176]
+steps:  26%|██▌       | 23/90 [00:45<02:13,  1.99s/it, avr_loss=0.176]
+steps:  26%|██▌       | 23/90 [00:45<02:13,  1.99s/it, avr_loss=0.179]
+steps:  27%|██▋       | 24/90 [00:47<02:10,  1.98s/it, avr_loss=0.179]
+steps:  27%|██▋       | 24/90 [00:47<02:10,  1.98s/it, avr_loss=0.177]
+steps:  28%|██▊       | 25/90 [00:49<02:07,  1.97s/it, avr_loss=0.177]
+steps:  28%|██▊       | 25/90 [00:49<02:07,  1.97s/it, avr_loss=0.179]
+steps:  29%|██▉       | 26/90 [00:50<02:04,  1.95s/it, avr_loss=0.179]
+steps:  29%|██▉       | 26/90 [00:50<02:04,  1.95s/it, avr_loss=0.182]
+steps:  30%|███       | 27/90 [00:52<02:02,  1.94s/it, avr_loss=0.182]
+steps:  30%|███       | 27/90 [00:52<02:02,  1.94s/it, avr_loss=0.183]
+steps:  31%|███       | 28/90 [00:54<01:59,  1.93s/it, avr_loss=0.183]
+steps:  31%|███       | 28/90 [00:54<01:59,  1.93s/it, avr_loss=0.184]
+steps:  32%|███▏      | 29/90 [00:55<01:57,  1.92s/it, avr_loss=0.184]
+steps:  32%|███▏      | 29/90 [00:55<01:57,  1.92s/it, avr_loss=0.18] 
+steps:  33%|███▎      | 30/90 [00:57<01:54,  1.91s/it, avr_loss=0.18]
+steps:  33%|███▎      | 30/90 [00:57<01:54,  1.91s/it, avr_loss=0.18]
+steps:  34%|███▍      | 31/90 [00:58<01:52,  1.90s/it, avr_loss=0.18]
+steps:  34%|███▍      | 31/90 [00:58<01:52,  1.90s/it, avr_loss=0.175]
+steps:  36%|███▌      | 32/90 [01:00<01:49,  1.89s/it, avr_loss=0.175]
+steps:  36%|███▌      | 32/90 [01:00<01:49,  1.89s/it, avr_loss=0.176]
+steps:  37%|███▋      | 33/90 [01:02<01:47,  1.88s/it, avr_loss=0.176]
+steps:  37%|███▋      | 33/90 [01:02<01:47,  1.88s/it, avr_loss=0.18] 
+steps:  38%|███▊      | 34/90 [01:03<01:45,  1.88s/it, avr_loss=0.18]
+steps:  38%|███▊      | 34/90 [01:03<01:45,  1.88s/it, avr_loss=0.181]
+steps:  39%|███▉      | 35/90 [01:05<01:43,  1.87s/it, avr_loss=0.181]
+steps:  39%|███▉      | 35/90 [01:05<01:43,  1.87s/it, avr_loss=0.181]
+steps:  40%|████      | 36/90 [01:07<01:40,  1.87s/it, avr_loss=0.181]
+steps:  40%|████      | 36/90 [01:07<01:40,  1.87s/it, avr_loss=0.18] 
+steps:  41%|████      | 37/90 [01:09<01:38,  1.87s/it, avr_loss=0.18]
+steps:  41%|████      | 37/90 [01:09<01:38,  1.87s/it, avr_loss=0.179]
+steps:  42%|████▏     | 38/90 [01:10<01:36,  1.86s/it, avr_loss=0.179]
+steps:  42%|████▏     | 38/90 [01:10<01:36,  1.86s/it, avr_loss=0.178]
+steps:  43%|████▎     | 39/90 [01:15<01:38,  1.93s/it, avr_loss=0.178]
+steps:  43%|████▎     | 39/90 [01:15<01:38,  1.93s/it, avr_loss=0.174]
+steps:  44%|████▍     | 40/90 [01:16<01:36,  1.92s/it, avr_loss=0.174]
+steps:  44%|████▍     | 40/90 [01:16<01:36,  1.92s/it, avr_loss=0.174]
+steps:  46%|████▌     | 41/90 [01:18<01:34,  1.92s/it, avr_loss=0.174]
+steps:  46%|████▌     | 41/90 [01:18<01:34,  1.92s/it, avr_loss=0.171]
+steps:  47%|████▋     | 42/90 [01:20<01:31,  1.92s/it, avr_loss=0.171]
+steps:  47%|████▋     | 42/90 [01:20<01:31,  1.92s/it, avr_loss=0.171]
+steps:  48%|████▊     | 43/90 [01:22<01:29,  1.91s/it, avr_loss=0.171]
+steps:  48%|████▊     | 43/90 [01:22<01:29,  1.91s/it, avr_loss=0.17] 
+steps:  49%|████▉     | 44/90 [01:23<01:27,  1.90s/it, avr_loss=0.17]
+steps:  49%|████▉     | 44/90 [01:23<01:27,  1.90s/it, avr_loss=0.166]
+steps:  50%|█████     | 45/90 [01:25<01:25,  1.90s/it, avr_loss=0.166]
+steps:  50%|█████     | 45/90 [01:25<01:25,  1.90s/it, avr_loss=0.168]2025-08-03 22:14:19 INFO     epoch is incremented. current_epoch: 1, epoch: 2              train_util.py:779
+
+steps:  51%|█████     | 46/90 [01:27<01:23,  1.90s/it, avr_loss=0.168]
+steps:  51%|█████     | 46/90 [01:27<01:23,  1.90s/it, avr_loss=0.168]
+steps:  52%|█████▏    | 47/90 [01:28<01:21,  1.89s/it, avr_loss=0.168]
+steps:  52%|█████▏    | 47/90 [01:28<01:21,  1.89s/it, avr_loss=0.165]
+steps:  53%|█████▎    | 48/90 [01:30<01:19,  1.88s/it, avr_loss=0.165]
+steps:  53%|█████▎    | 48/90 [01:30<01:19,  1.88s/it, avr_loss=0.162]
+steps:  54%|█████▍    | 49/90 [01:31<01:16,  1.88s/it, avr_loss=0.162]
+steps:  54%|█████▍    | 49/90 [01:31<01:16,  1.88s/it, avr_loss=0.167]
+steps:  56%|█████▌    | 50/90 [01:33<01:14,  1.87s/it, avr_loss=0.167]
+steps:  56%|█████▌    | 50/90 [01:33<01:14,  1.87s/it, avr_loss=0.165]
+steps:  57%|█████▋    | 51/90 [01:35<01:12,  1.87s/it, avr_loss=0.165]
+steps:  57%|█████▋    | 51/90 [01:35<01:12,  1.87s/it, avr_loss=0.169]
+steps:  58%|█████▊    | 52/90 [01:36<01:10,  1.86s/it, avr_loss=0.169]
+steps:  58%|█████▊    | 52/90 [01:36<01:10,  1.86s/it, avr_loss=0.166]
+steps:  59%|█████▉    | 53/90 [01:38<01:08,  1.86s/it, avr_loss=0.166]
+steps:  59%|█████▉    | 53/90 [01:38<01:08,  1.86s/it, avr_loss=0.167]
+steps:  60%|██████    | 54/90 [01:40<01:06,  1.86s/it, avr_loss=0.167]
+steps:  60%|██████    | 54/90 [01:40<01:06,  1.86s/it, avr_loss=0.166]
+steps:  61%|██████    | 55/90 [01:42<01:04,  1.86s/it, avr_loss=0.166]
+steps:  61%|██████    | 55/90 [01:42<01:04,  1.86s/it, avr_loss=0.164]
+steps:  62%|██████▏   | 56/90 [01:43<01:02,  1.85s/it, avr_loss=0.164]
+steps:  62%|██████▏   | 56/90 [01:43<01:02,  1.85s/it, avr_loss=0.158]
+steps:  63%|██████▎   | 57/90 [01:45<01:01,  1.85s/it, avr_loss=0.158]
+steps:  63%|██████▎   | 57/90 [01:45<01:01,  1.85s/it, avr_loss=0.159]
+steps:  64%|██████▍   | 58/90 [01:50<01:00,  1.90s/it, avr_loss=0.159]
+steps:  64%|██████▍   | 58/90 [01:50<01:00,  1.90s/it, avr_loss=0.155]
+steps:  66%|██████▌   | 59/90 [01:51<00:58,  1.90s/it, avr_loss=0.155]
+steps:  66%|██████▌   | 59/90 [01:51<00:58,  1.90s/it, avr_loss=0.157]
+steps:  67%|██████▋   | 60/90 [01:53<00:56,  1.89s/it, avr_loss=0.157]
+steps:  67%|██████▋   | 60/90 [01:53<00:56,  1.89s/it, avr_loss=0.156]
+steps:  68%|██████▊   | 61/90 [01:55<00:54,  1.89s/it, avr_loss=0.156]
+steps:  68%|██████▊   | 61/90 [01:55<00:54,  1.89s/it, avr_loss=0.153]
+steps:  69%|██████▉   | 62/90 [01:57<00:52,  1.89s/it, avr_loss=0.153]
+steps:  69%|██████▉   | 62/90 [01:57<00:52,  1.89s/it, avr_loss=0.151]
+steps:  70%|███████   | 63/90 [01:58<00:50,  1.89s/it, avr_loss=0.151]
+steps:  70%|███████   | 63/90 [01:58<00:50,  1.89s/it, avr_loss=0.153]
+steps:  71%|███████   | 64/90 [02:00<00:48,  1.88s/it, avr_loss=0.153]
+steps:  71%|███████   | 64/90 [02:00<00:48,  1.88s/it, avr_loss=0.153]
+steps:  72%|███████▏  | 65/90 [02:01<00:46,  1.88s/it, avr_loss=0.153]
+steps:  72%|███████▏  | 65/90 [02:01<00:46,  1.88s/it, avr_loss=0.153]
+steps:  73%|███████▎  | 66/90 [02:03<00:44,  1.87s/it, avr_loss=0.153]
+steps:  73%|███████▎  | 66/90 [02:03<00:44,  1.87s/it, avr_loss=0.154]
+steps:  74%|███████▍  | 67/90 [02:05<00:42,  1.87s/it, avr_loss=0.154]
+steps:  74%|███████▍  | 67/90 [02:05<00:42,  1.87s/it, avr_loss=0.141]
+steps:  76%|███████▌  | 68/90 [02:06<00:41,  1.87s/it, avr_loss=0.141]

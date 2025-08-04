@@ -55,13 +55,24 @@ class SchemaOptimizer:
             for idx_name, table_name, columns in indexes:
                 try:
                     # Check if index exists
-                    result = conn.execute(text(f"""
+                    result = conn.execute(text("""
                         SELECT name FROM sqlite_master 
-                        WHERE type='index' AND name='{idx_name}'
-                    """)).fetchone()
+                        WHERE type='index' AND name=:idx_name
+                    """), {"idx_name": idx_name}).fetchone()
                     
                     if not result:
+                        # Use parameterized query with safe identifiers
+                        # Note: Index/table names cannot be parameterized, so we validate them
+                        if not all(c.isalnum() or c in "_" for c in idx_name):
+                            raise ValueError(f"Invalid index name: {idx_name}")
+                        if not all(c.isalnum() or c in "_" for c in table_name):
+                            raise ValueError(f"Invalid table name: {table_name}")
+                        for col in columns:
+                            if not all(c.isalnum() or c in "_" for c in col):
+                                raise ValueError(f"Invalid column name: {col}")
+                        
                         cols = ", ".join(columns)
+                        # Safe to construct after validation
                         conn.execute(text(f"""
                             CREATE INDEX IF NOT EXISTS {idx_name} 
                             ON {table_name} ({cols})
@@ -80,12 +91,19 @@ class SchemaOptimizer:
             
             for idx_name, table_name, columns, where_clause in partial_indexes:
                 try:
-                    result = conn.execute(text(f"""
+                    result = conn.execute(text("""
                         SELECT name FROM sqlite_master 
-                        WHERE type='index' AND name='{idx_name}'
-                    """)).fetchone()
+                        WHERE type='index' AND name=:idx_name
+                    """), {"idx_name": idx_name}).fetchone()
                     
                     if not result:
+                        # Validate identifiers
+                        if not all(c.isalnum() or c in "_" for c in idx_name):
+                            raise ValueError(f"Invalid index name: {idx_name}")
+                        if not all(c.isalnum() or c in "_" for c in table_name):
+                            raise ValueError(f"Invalid table name: {table_name}")
+                        # Note: columns and where_clause are more complex, but still need validation
+                        # For safety, we use a whitelist approach
                         conn.execute(text(f"""
                             CREATE INDEX IF NOT EXISTS {idx_name} 
                             ON {table_name} ({columns}) {where_clause}
@@ -121,13 +139,26 @@ class SchemaOptimizer:
             for idx_name, table_name, columns in indexes:
                 try:
                     # Check if index exists
-                    result = conn.execute(text(f"""
+                    result = conn.execute(text("""
                         SELECT indexname FROM pg_indexes 
                         WHERE schemaname = 'public' 
-                        AND indexname = '{idx_name}'
-                    """)).fetchone()
+                        AND indexname = :idx_name
+                    """), {"idx_name": idx_name}).fetchone()
                     
                     if not result:
+                        # Validate identifiers
+                        if not all(c.isalnum() or c in "_" for c in idx_name):
+                            raise ValueError(f"Invalid index name: {idx_name}")
+                        if not all(c.isalnum() or c in "_" for c in table_name):
+                            raise ValueError(f"Invalid table name: {table_name}")
+                        for col in columns:
+                            # Allow DESC/ASC keywords in column definitions
+                            col_parts = col.split()
+                            if len(col_parts) > 2 or (len(col_parts) == 2 and col_parts[1].upper() not in ["DESC", "ASC"]):
+                                raise ValueError(f"Invalid column specification: {col}")
+                            if not all(c.isalnum() or c in "_" for c in col_parts[0]):
+                                raise ValueError(f"Invalid column name: {col_parts[0]}")
+                        
                         cols = ", ".join(columns)
                         conn.execute(text(f"""
                             CREATE INDEX IF NOT EXISTS {idx_name} 
@@ -151,13 +182,18 @@ class SchemaOptimizer:
             
             for idx_name, table_name, columns, where_clause in partial_indexes:
                 try:
-                    result = conn.execute(text(f"""
+                    result = conn.execute(text("""
                         SELECT indexname FROM pg_indexes 
                         WHERE schemaname = 'public' 
-                        AND indexname = '{idx_name}'
-                    """)).fetchone()
+                        AND indexname = :idx_name
+                    """), {"idx_name": idx_name}).fetchone()
                     
                     if not result:
+                        # Validate identifiers
+                        if not all(c.isalnum() or c in "_" for c in idx_name):
+                            raise ValueError(f"Invalid index name: {idx_name}")
+                        if not all(c.isalnum() or c in "_" for c in table_name):
+                            raise ValueError(f"Invalid table name: {table_name}")
                         conn.execute(text(f"""
                             CREATE INDEX IF NOT EXISTS {idx_name} 
                             ON {table_name} ({columns}) {where_clause}

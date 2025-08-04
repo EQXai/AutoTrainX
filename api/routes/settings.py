@@ -66,7 +66,7 @@ class SaveProfileRequest(BaseModel):
 # Helper functions
 def get_config_path(pipeline) -> Path:
     """Get the config file path."""
-    return Path(pipeline.base_path) / "config.json"
+    return Path(pipeline.base_path) / "settings" / "config.json"
 
 
 def get_profiles_path(pipeline) -> Path:

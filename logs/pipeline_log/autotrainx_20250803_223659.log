@@ -1,0 +1,19 @@
+2025-08-03 22:36:59,172 - src.database.connection_pool - ERROR - _monitor_loop:198 - Monitor error: '>=' not supported between instances of 'method' and 'method'
+2025-08-03 22:36:59,172 - src.database.enhanced_manager_v2 - INFO - __init__:85 - Enhanced database manager initialized with postgresql
+2025-08-03 22:36:59,178 - src.utils.job_tracker - ERROR - create_execution:78 - Failed to create execution record: Can't operate on closed transaction inside context manager.  Please complete the context manager before emitting further commands.
+2025-08-03 22:36:59,187 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: (builtins.NoneType) None
+[SQL: Optimistic lock failure: Record was modified by another process]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-08-03 22:37:01,017 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: (builtins.NoneType) None
+[SQL: Optimistic lock failure: Record was modified by another process]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-08-03 22:37:01,029 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: (builtins.NoneType) None
+[SQL: Optimistic lock failure: Record was modified by another process]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-08-03 22:37:01,030 - src.utils.job_tracker - ERROR - set_output_path:132 - Failed to set output path: 'EnhancedDatabaseManager' object has no attribute 'set_execution_output'
+2025-08-03 22:37:01,036 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: (builtins.NoneType) None
+[SQL: Optimistic lock failure: Record was modified by another process]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-08-03 22:37:09,667 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: (builtins.NoneType) None
+[SQL: Optimistic lock failure: Record was modified by another process]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)

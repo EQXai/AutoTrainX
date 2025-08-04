@@ -1,0 +1,2 @@
+2025-08-03 22:42:02,449 - src.database.connection_pool - ERROR - _monitor_loop:198 - Monitor error: 'stats'
+2025-08-03 22:42:02,449 - src.database.enhanced_manager_v2 - INFO - __init__:85 - Enhanced database manager initialized with postgresql

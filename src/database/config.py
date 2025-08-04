@@ -5,8 +5,30 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import json
 import logging
+import sys
 
 logger = logging.getLogger(__name__)
+
+# Add parent directory to path to import secure_config
+sys.path.insert(0, str(Path(__file__).parent.parent))
+try:
+    from configuration.secure_config import secure_config
+except ImportError as e:
+    logger.warning(f"Failed to import secure_config: {e}")
+    # Fallback if secure_config is not available
+    class SecureConfigFallback:
+        @property
+        def database_config(self):
+            return {
+                'host': os.getenv('DATABASE_HOST', 'localhost'),
+                'port': int(os.getenv('DATABASE_PORT', '5432')),
+                'name': os.getenv('DATABASE_NAME', 'autotrainx'),
+                'user': os.getenv('DATABASE_USER', 'autotrainx'),
+                'password': os.getenv('DATABASE_PASSWORD'),  # No default password for security
+                'echo': os.getenv('DATABASE_ECHO', 'false').lower() == 'true',
+                'pool_size': int(os.getenv('DATABASE_POOL_SIZE', '10'))
+            }
+    secure_config = SecureConfigFallback()
 
 
 class DatabaseSettings:
@@ -76,7 +98,22 @@ class DatabaseSettings:
     
     def _load_env_overrides(self) -> None:
         """Override configuration with environment variables."""
-        # Map of environment variables to config keys
+        # Use secure config for database settings
+        logger.debug(f"secure_config type: {type(secure_config).__name__}")
+        db_config = secure_config.database_config
+        logger.debug(f"db_config from secure_config: {db_config}")
+        
+        # Apply secure configuration
+        if self.db_type == 'postgresql':
+            self._config['host'] = db_config['host']
+            self._config['port'] = db_config['port']
+            self._config['database'] = db_config['name']
+            self._config['username'] = db_config['user']
+            self._config['password'] = db_config['password']
+            self._config['echo'] = db_config['echo']
+            self._config['pool']['size'] = db_config['pool_size']
+        
+        # Map of environment variables to config keys (for legacy support)
         env_mapping = {
             'AUTOTRAINX_DB_PATH': 'path',
             'AUTOTRAINX_DB_HOST': 'host',
@@ -140,8 +177,33 @@ class DatabaseSettings:
             return base_url
     
     def get_pool_config(self) -> Dict[str, Any]:
-        """Get connection pool configuration."""
-        return self._config.get('pool', {})
+        """Get optimized connection pool configuration."""
+        pool_config = self._config.get('pool', {})
+        
+        # Apply optimized defaults based on database type
+        if self.db_type == 'sqlite':
+            defaults = {
+                'size': 1,  # SQLite is single-threaded
+                'timeout': 30,
+                'recycle': -1,  # Disable recycling
+                'max_overflow': 0,
+            }
+        else:  # PostgreSQL
+            defaults = {
+                'size': 20,  # Increased for better concurrency
+                'timeout': 30,
+                'recycle': 3600,  # 1 hour
+                'max_overflow': 30,  # Allow more overflow connections
+                'pool_pre_ping': True,  # Validate connections
+                'echo_pool': False,  # Disable pool echo by default
+            }
+        
+        # Merge with user config
+        for key, value in defaults.items():
+            if key not in pool_config:
+                pool_config[key] = value
+        
+        return pool_config
     
     def is_echo_enabled(self) -> bool:
         """Check if SQL echo is enabled."""
@@ -153,4 +215,12 @@ class DatabaseSettings:
 
 
 # Global settings instance
+# This will be initialized when the module is imported
 db_settings = DatabaseSettings()
+
+# Function to reinitialize settings after environment changes
+def reload_db_settings():
+    """Reload database settings after environment variables change."""
+    global db_settings
+    db_settings = DatabaseSettings()
+    return db_settings

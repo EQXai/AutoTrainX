@@ -1,0 +1,24 @@
+2025-08-03 22:38:47,203 - src.database.connection_pool - ERROR - _monitor_loop:198 - Monitor error: '>=' not supported between instances of 'method' and 'method'
+2025-08-03 22:38:47,203 - src.database.enhanced_manager_v2 - INFO - __init__:85 - Enhanced database manager initialized with postgresql
+2025-08-03 22:38:47,213 - src.utils.job_tracker - ERROR - create_execution:78 - Failed to create execution record: Can't operate on closed transaction inside context manager.  Please complete the context manager before emitting further commands.
+2025-08-03 22:38:47,221 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: (builtins.NoneType) None
+[SQL: Optimistic lock failure: Record was modified by another process]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-08-03 22:39:29,003 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: (builtins.NoneType) None
+[SQL: Optimistic lock failure: Record was modified by another process]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-08-03 22:39:29,012 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: (builtins.NoneType) None
+[SQL: Optimistic lock failure: Record was modified by another process]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-08-03 22:39:29,014 - src.utils.job_tracker - ERROR - set_output_path:132 - Failed to set output path: Can't operate on closed transaction inside context manager.  Please complete the context manager before emitting further commands.
+2025-08-03 22:39:29,019 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: (builtins.NoneType) None
+[SQL: Optimistic lock failure: Record was modified by another process]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-08-03 22:39:52,572 - src.database.connection_pool - ERROR - _monitor_loop:198 - Monitor error: '>=' not supported between instances of 'method' and 'method'
+2025-08-03 22:40:57,900 - src.database.connection_pool - ERROR - _monitor_loop:198 - Monitor error: '>=' not supported between instances of 'method' and 'method'
+2025-08-03 22:41:01,140 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: (builtins.NoneType) None
+[SQL: Optimistic lock failure: Record was modified by another process]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2025-08-03 22:41:01,146 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: (builtins.NoneType) None
+[SQL: Optimistic lock failure: Record was modified by another process]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)

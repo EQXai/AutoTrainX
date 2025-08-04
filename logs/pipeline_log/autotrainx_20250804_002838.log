@@ -1,0 +1,18 @@
+2025-08-04 00:28:38,432 - src.database.connection_pool - ERROR - _check_pool_health:258 - Health check failed: Textual SQL expression '\n                        ...' should be explicitly declared as text('\n                        ...')
+2025-08-04 00:28:38,432 - src.database.connection_pool - INFO - start_monitoring:204 - Connection monitoring started (interval: 60s)
+2025-08-04 00:28:38,433 - src.database.manager - INFO - __init__:92 - Enhanced database manager initialized with postgresql
+2025-08-04 00:28:51,040 - src.database.connection_pool - ERROR - _check_pool_health:258 - Health check failed: Textual SQL expression '\n                        ...' should be explicitly declared as text('\n                        ...')
+2025-08-04 00:28:51,040 - src.database.connection_pool - INFO - start_monitoring:204 - Connection monitoring started (interval: 60s)
+2025-08-04 00:28:51,041 - src.database.manager - INFO - __init__:92 - Enhanced database manager initialized with postgresql
+2025-08-04 00:28:52,091 - src.database.connection_pool - ERROR - _check_pool_health:258 - Health check failed: Textual SQL expression '\n                        ...' should be explicitly declared as text('\n                        ...')
+2025-08-04 00:28:52,091 - src.database.connection_pool - INFO - start_monitoring:204 - Connection monitoring started (interval: 60s)
+2025-08-04 00:28:52,092 - src.database.manager - INFO - __init__:92 - Enhanced database manager initialized with postgresql
+2025-08-04 00:28:52,138 - src.database.connection_pool - ERROR - _check_pool_health:258 - Health check failed: Textual SQL expression '\n                        ...' should be explicitly declared as text('\n                        ...')
+2025-08-04 00:28:52,138 - src.database.connection_pool - INFO - start_monitoring:204 - Connection monitoring started (interval: 60s)
+2025-08-04 00:28:52,139 - src.database.manager - INFO - __init__:92 - Enhanced database manager initialized with postgresql
+2025-08-04 00:28:52,186 - src.database.connection_pool - ERROR - _check_pool_health:258 - Health check failed: Textual SQL expression '\n                        ...' should be explicitly declared as text('\n                        ...')
+2025-08-04 00:28:52,186 - src.database.connection_pool - INFO - start_monitoring:204 - Connection monitoring started (interval: 60s)
+2025-08-04 00:28:52,186 - src.database.manager - INFO - __init__:92 - Enhanced database manager initialized with postgresql
+2025-08-04 00:28:52,231 - src.database.connection_pool - ERROR - _check_pool_health:258 - Health check failed: Textual SQL expression '\n                        ...' should be explicitly declared as text('\n                        ...')
+2025-08-04 00:28:52,231 - src.database.connection_pool - INFO - start_monitoring:204 - Connection monitoring started (interval: 60s)
+2025-08-04 00:28:52,232 - src.database.manager - INFO - __init__:92 - Enhanced database manager initialized with postgresql

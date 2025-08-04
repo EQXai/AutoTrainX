@@ -1,104 +1,107 @@
-"""Enhanced connection pooling for AutoTrainX database."""
+"""Connection pool manager with multi-database support."""
 
-from typing import Optional, Dict, Any
-from pathlib import Path
-from contextlib import contextmanager
+import logging
 import threading
 import time
-import logging
+from typing import Dict, Any, Optional
+from contextlib import contextmanager
+from datetime import datetime
 
-from sqlalchemy import create_engine, event, pool
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.engine import Engine
+from sqlalchemy import create_engine, Engine, event, pool
+from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.pool import QueuePool, NullPool
+
+from .factory import DatabaseFactory, DatabaseConfig
+from .config import db_settings
+from .utils.singleton_logger import singleton_logger
 
 logger = logging.getLogger(__name__)
 
 
 class PooledDatabaseManager:
-    """Enhanced database manager with connection pooling and monitoring."""
+    """Database manager with advanced connection pooling."""
     
-    def __init__(self, db_path: Path, pool_config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: Optional[DatabaseConfig] = None, 
+                 pool_config: Optional[Dict[str, Any]] = None):
         """Initialize pooled database manager.
         
         Args:
-            db_path: Path to SQLite database
-            pool_config: Optional pool configuration
+            config: Database configuration
+            pool_config: Override pool configuration
         """
-        self.db_path = db_path
+        if config is None:
+            # Create config from environment/settings
+            if db_settings.db_type == 'sqlite':
+                db_path = db_settings.get_connection_url().replace('sqlite:///', '')
+                config = DatabaseConfig(
+                    db_type='sqlite',
+                    db_path=db_path,
+                    echo=db_settings.is_echo_enabled()
+                )
+            else:
+                config = DatabaseConfig(
+                    db_type='postgresql',
+                    db_url=db_settings.get_connection_url(),
+                    echo=db_settings.is_echo_enabled()
+                )
         
-        # Default pool configuration
-        default_config = {
-            'pool_size': 5,  # Number of connections to maintain
-            'max_overflow': 10,  # Maximum overflow connections
-            'pool_timeout': 30,  # Timeout for getting connection from pool
-            'pool_recycle': 3600,  # Recycle connections after 1 hour
-            'pool_pre_ping': True,  # Test connections before using
-        }
+        self.config = config
+        self.dialect = DatabaseFactory.get_dialect(config.db_type)
         
+        # Override pool config if provided
         if pool_config:
-            default_config.update(pool_config)
+            config.options['pool_config'] = pool_config
         
-        # Create engine with pooling
-        self.engine = create_engine(
-            f"sqlite:///{db_path}",
-            connect_args={'check_same_thread': False},
-            poolclass=pool.QueuePool,
-            **default_config
-        )
-        
-        # Apply connection optimizations
-        self._setup_connection_events()
+        # Create engine with factory
+        self.engine = DatabaseFactory.create_engine(config)
         
         # Create session factory
         self.SessionLocal = sessionmaker(bind=self.engine)
         
-        # Connection statistics
-        self._stats = {
+        # Track pool statistics
+        self._pool_stats = {
             'connections_created': 0,
-            'connections_closed': 0,
-            'active_connections': 0,
+            'connections_recycled': 0,
+            'connections_invalidated': 0,
             'connection_errors': 0,
-            'last_error': None
         }
-        self._stats_lock = threading.Lock()
+        
+        # Register pool event listeners
+        self._register_pool_events()
+        
+        singleton_logger.debug_once(f"Pooled database manager initialized with {config.db_type}")
     
-    def _setup_connection_events(self):
-        """Setup SQLAlchemy event handlers for connection lifecycle."""
-        
+    def _register_pool_events(self):
+        """Register event listeners for pool monitoring."""
         @event.listens_for(self.engine, "connect")
-        def on_connect(dbapi_conn, connection_record):
-            """Configure each new connection."""
-            # Enable WAL mode for better concurrency
-            dbapi_conn.execute("PRAGMA journal_mode=WAL")
-            dbapi_conn.execute("PRAGMA busy_timeout=10000")  # 10 second timeout
-            dbapi_conn.execute("PRAGMA synchronous=NORMAL")  # Faster writes
-            dbapi_conn.execute("PRAGMA cache_size=-64000")  # 64MB cache
-            dbapi_conn.execute("PRAGMA temp_store=MEMORY")  # Use memory for temp tables
-            
-            with self._stats_lock:
-                self._stats['connections_created'] += 1
-                self._stats['active_connections'] += 1
-        
-        @event.listens_for(self.engine, "close")
-        def on_close(dbapi_conn, connection_record):
-            """Track connection closure."""
-            with self._stats_lock:
-                self._stats['connections_closed'] += 1
-                self._stats['active_connections'] -= 1
+        def receive_connect(dbapi_conn, connection_record):
+            """Track new connections."""
+            self._pool_stats['connections_created'] += 1
+            connection_record.info['connect_time'] = time.time()
+            logger.debug(f"New connection created: {id(dbapi_conn)}")
         
         @event.listens_for(self.engine, "checkout")
-        def on_checkout(dbapi_conn, connection_record, connection_proxy):
-            """Validate connection on checkout from pool."""
-            # Test connection is alive
-            try:
-                dbapi_conn.execute("SELECT 1")
-            except Exception as e:
-                # Connection is dead, invalidate it
-                connection_proxy._pool.dispose()
-                with self._stats_lock:
-                    self._stats['connection_errors'] += 1
-                    self._stats['last_error'] = str(e)
-                raise
+        def receive_checkout(dbapi_conn, connection_record, connection_proxy):
+            """Track connection checkouts."""
+            checkout_time = time.time()
+            connection_record.info['checkout_time'] = checkout_time
+            logger.debug(f"Connection checked out: {id(dbapi_conn)}")
+        
+        @event.listens_for(self.engine, "checkin")
+        def receive_checkin(dbapi_conn, connection_record):
+            """Track connection checkins."""
+            if 'checkout_time' in connection_record.info:
+                duration = time.time() - connection_record.info['checkout_time']
+                logger.debug(f"Connection checked in after {duration:.3f}s: {id(dbapi_conn)}")
+                del connection_record.info['checkout_time']
+        
+        @event.listens_for(self.engine, "invalidate")
+        def receive_invalidate(dbapi_conn, connection_record, exception):
+            """Track connection invalidations."""
+            self._pool_stats['connections_invalidated'] += 1
+            if exception:
+                self._pool_stats['connection_errors'] += 1
+                logger.warning(f"Connection invalidated due to error: {exception}")
     
     @contextmanager
     def get_session(self) -> Session:
@@ -106,14 +109,6 @@ class PooledDatabaseManager:
         session = self.SessionLocal()
         try:
             yield session
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            logger.error(f"Database error: {e}")
-            with self._stats_lock:
-                self._stats['connection_errors'] += 1
-                self._stats['last_error'] = str(e)
-            raise
         finally:
             session.close()
     
@@ -121,45 +116,85 @@ class PooledDatabaseManager:
     def bulk_session(self) -> Session:
         """Get a session optimized for bulk operations."""
         session = self.SessionLocal()
-        # Disable autoflush for bulk operations
-        session.autoflush = False
         try:
+            # Disable autoflush for bulk operations
+            session.autoflush = False
+            # Use bulk operations
+            session.bulk_insert_mappings = True
+            session.bulk_update_mappings = True
             yield session
-            session.commit()
-        except Exception as e:
-            session.rollback()
-            raise
         finally:
             session.close()
     
     def get_pool_status(self) -> Dict[str, Any]:
-        """Get connection pool status."""
+        """Get detailed pool status."""
         pool = self.engine.pool
-        with self._stats_lock:
-            return {
+        
+        status = {
+            'type': type(pool).__name__,
+            'database_type': self.config.db_type,
+        }
+        
+        # Pool statistics (available for QueuePool)
+        if hasattr(pool, 'size'):
+            status.update({
                 'size': pool.size(),
+                'checked_in': pool.checkedin(),
                 'checked_out': pool.checkedout(),
                 'overflow': pool.overflow(),
-                'total': pool.size() + pool.overflow(),
-                'stats': self._stats.copy()
-            }
+                'total': pool.total(),
+            })
+        
+        # Add our custom statistics
+        status.update(self._pool_stats)
+        
+        # Also add stats under 'stats' key for backward compatibility
+        status['stats'] = self._pool_stats.copy()
+        
+        return status
     
-    def dispose_pool(self):
-        """Dispose of the connection pool."""
+    def reset_pool(self):
+        """Reset the connection pool."""
+        logger.info("Resetting connection pool")
         self.engine.dispose()
-        logger.info("Connection pool disposed")
+        self._pool_stats['connections_recycled'] += self._pool_stats.get('connections_created', 0)
+        logger.info("Connection pool reset complete")
+    
+    def close(self):
+        """Close the database manager and cleanup resources."""
+        logger.info("Closing pooled database manager")
+        self.engine.dispose()
 
 
 class ConnectionMonitor:
     """Monitor database connections and performance."""
     
     def __init__(self, manager: PooledDatabaseManager):
+        """Initialize connection monitor.
+        
+        Args:
+            manager: The database manager to monitor
+        """
         self.manager = manager
         self._monitoring = False
         self._monitor_thread = None
+        self._metrics = {
+            'total_queries': 0,
+            'slow_queries': 0,
+            'errors': 0,
+            'last_check': None,
+        }
     
     def start_monitoring(self, interval: int = 60):
-        """Start monitoring connections."""
+        """Start monitoring in a background thread.
+        
+        Args:
+            interval: Check interval in seconds
+        """
+        if self._monitoring:
+            logger.warning("Monitoring already started")
+            return
+        
         self._monitoring = True
         self._monitor_thread = threading.Thread(
             target=self._monitor_loop,
@@ -167,34 +202,67 @@ class ConnectionMonitor:
             daemon=True
         )
         self._monitor_thread.start()
+        singleton_logger.info_once(f"Connection monitoring started (interval: {interval}s)")
     
     def stop_monitoring(self):
-        """Stop monitoring connections."""
+        """Stop monitoring."""
         self._monitoring = False
         if self._monitor_thread:
             self._monitor_thread.join(timeout=5)
+        logger.info("Connection monitoring stopped")
     
     def _monitor_loop(self, interval: int):
-        """Monitor loop that logs connection statistics."""
+        """Main monitoring loop."""
         while self._monitoring:
             try:
-                status = self.manager.get_pool_status()
-                
-                # Log if connections are exhausted
-                if status['checked_out'] >= status['size']:
-                    logger.warning(
-                        f"Connection pool exhausted: {status['checked_out']}/{status['size']} "
-                        f"(+{status['overflow']} overflow)"
-                    )
-                
-                # Log periodic stats
-                logger.debug(
-                    f"DB Pool: {status['checked_out']}/{status['size']} active, "
-                    f"{status['stats']['connections_created']} created, "
-                    f"{status['stats']['connection_errors']} errors"
-                )
-                
+                self._check_pool_health()
+                self._metrics['last_check'] = datetime.utcnow()
+                time.sleep(interval)
             except Exception as e:
-                logger.error(f"Monitor error: {e}")
-            
-            time.sleep(interval)
+                logger.error(f"Error in monitoring loop: {e}")
+                self._metrics['errors'] += 1
+    
+    def _check_pool_health(self):
+        """Check connection pool health."""
+        status = self.manager.get_pool_status()
+        
+        # Log pool status
+        logger.debug(f"Pool status: {status}")
+        
+        # Check for potential issues
+        if status.get('checked_out', 0) > status.get('size', 0) * 0.8:
+            logger.warning("Connection pool usage high: %d/%d connections in use",
+                         status['checked_out'], status['size'])
+        
+        if status.get('connection_errors', 0) > 10:
+            logger.error("High number of connection errors: %d",
+                        status['connection_errors'])
+        
+        # Check database-specific health
+        try:
+            with self.manager.get_session() as session:
+                if self.manager.config.db_type == 'sqlite':
+                    # Check WAL size for SQLite
+                    from sqlalchemy import text
+                    result = session.execute(text("PRAGMA wal_checkpoint(PASSIVE)")).fetchone()
+                    if result and result[1] > 1000:  # More than 1000 pages
+                        logger.warning(f"SQLite WAL size large: {result[1]} pages")
+                else:
+                    # PostgreSQL health check
+                    from sqlalchemy import text
+                    result = session.execute(text("""
+                        SELECT count(*) 
+                        FROM pg_stat_activity 
+                        WHERE state = 'active'
+                    """)).scalar()
+                    if result > 50:
+                        logger.warning(f"High number of active PostgreSQL connections: {result}")
+        except Exception as e:
+            logger.error(f"Health check failed: {e}")
+            self._metrics['errors'] += 1
+    
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get monitoring metrics."""
+        metrics = self._metrics.copy()
+        metrics['pool_status'] = self.manager.get_pool_status()
+        return metrics

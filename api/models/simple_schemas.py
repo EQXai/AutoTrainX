@@ -41,9 +41,11 @@ class BatchTrainingRequest(BaseModel):
 
 class VariationsTrainingRequest(BaseModel):
     """Request for variations mode training."""
-    dataset_name: str = Field(..., description="Dataset name")
-    base_preset: str = Field(..., description="Base preset name")
+    source_path: str = Field(..., description="Path to source dataset")
+    preset: str = Field(..., description="Base preset name")
     variations: Dict[str, List[Any]] = Field(..., description="Parameter variations")
+    dataset_name: Optional[str] = Field(None, description="Optional custom dataset name")
+    preview_count: int = Field(default=0, description="Number of preview images")
     auto_clean: bool = Field(default=True, description="Auto-clean existing datasets")
 
 

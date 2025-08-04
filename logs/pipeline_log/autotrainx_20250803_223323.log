@@ -1,0 +1,8 @@
+2025-08-03 22:33:23,250 - src.database.connection_pool - ERROR - _monitor_loop:198 - Monitor error: '>=' not supported between instances of 'method' and 'method'
+2025-08-03 22:33:23,250 - src.database.enhanced_manager_v2 - INFO - __init__:85 - Enhanced database manager initialized with postgresql
+2025-08-03 22:33:23,251 - src.utils.job_tracker - ERROR - create_execution:78 - Failed to create execution record: Textual SQL expression 'BEGIN IMMEDIATE' should be explicitly declared as text('BEGIN IMMEDIATE')
+2025-08-03 22:33:23,251 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: 'EnhancedDatabaseManager' object has no attribute 'get_variation'
+2025-08-03 22:34:09,269 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: 'EnhancedDatabaseManager' object has no attribute 'get_variation'
+2025-08-03 22:34:09,273 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: 'EnhancedDatabaseManager' object has no attribute 'get_variation'
+2025-08-03 22:34:09,273 - src.utils.job_tracker - ERROR - set_output_path:132 - Failed to set output path: 'EnhancedDatabaseManager' object has no attribute 'get_variation'
+2025-08-03 22:34:09,274 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: 'EnhancedDatabaseManager' object has no attribute 'get_variation'

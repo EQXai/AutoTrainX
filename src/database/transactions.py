@@ -1,230 +1,306 @@
-"""Transaction management utilities for AutoTrainX."""
+"""Transaction management with multi-database support."""
 
-from typing import Optional, Callable, Any, TypeVar, List
+import logging
+import time
+from typing import Callable, Any, Optional, Dict
+from datetime import datetime
 from contextlib import contextmanager
 from functools import wraps
-import time
-import logging
-from datetime import datetime
 
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import OperationalError, IntegrityError
+from sqlalchemy import text
+
+from .factory import DatabaseFactory
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
-
 
 class TransactionManager:
-    """Advanced transaction management with retry logic and deadlock handling."""
+    """Manage database transactions with retry logic and optimizations."""
     
     @staticmethod
     @contextmanager
-    def atomic_transaction(session: Session, read_only: bool = False):
-        """Create an atomic transaction block with automatic rollback on failure.
+    def atomic_transaction(session: Session):
+        """Create an atomic transaction context.
         
         Args:
             session: Database session
-            read_only: If True, sets transaction to read-only mode
+            
+        Yields:
+            The session within a transaction
         """
-        # Set transaction isolation level
-        if read_only:
-            session.execute("BEGIN DEFERRED")  # Read-only transaction
+        if not session.in_transaction():
+            with session.begin():
+                yield session
         else:
-            session.execute("BEGIN IMMEDIATE")  # Write transaction
-        
-        try:
             yield session
-            if not read_only:
-                session.commit()
-        except Exception as e:
-            session.rollback()
-            logger.error(f"Transaction failed: {e}")
-            raise
-        finally:
-            if read_only:
-                session.rollback()  # Always rollback read-only transactions
     
     @staticmethod
-    def with_retry(max_attempts: int = 3, delay: float = 0.1, backoff: float = 2.0):
-        """Decorator for retrying database operations on transient failures.
+    def with_retry(max_attempts: int = 3, delay: float = 0.1, 
+                   backoff_factor: float = 2.0):
+        """Decorator to retry database operations on lock/concurrency errors.
         
         Args:
             max_attempts: Maximum number of retry attempts
             delay: Initial delay between retries in seconds
-            backoff: Backoff multiplier for exponential backoff
+            backoff_factor: Factor to multiply delay by after each retry
         """
-        def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        def decorator(func: Callable) -> Callable:
             @wraps(func)
-            def wrapper(*args, **kwargs) -> T:
+            def wrapper(*args, **kwargs) -> Any:
                 last_exception = None
                 current_delay = delay
+                
+                # Get database type from the first session argument if available
+                db_type = None
+                for arg in args:
+                    if hasattr(arg, 'bind') and hasattr(arg.bind, 'dialect'):
+                        db_type = arg.bind.dialect.name
+                        break
+                
+                # Get appropriate dialect for error handling
+                dialect = None
+                if db_type:
+                    try:
+                        dialect = DatabaseFactory.get_dialect(db_type)
+                    except:
+                        pass
                 
                 for attempt in range(max_attempts):
                     try:
                         return func(*args, **kwargs)
                     except OperationalError as e:
                         last_exception = e
-                        if "database is locked" in str(e) and attempt < max_attempts - 1:
-                            logger.warning(
-                                f"Database locked, retrying in {current_delay}s "
-                                f"(attempt {attempt + 1}/{max_attempts})"
-                            )
-                            time.sleep(current_delay)
-                            current_delay *= backoff
-                        else:
-                            raise
+                        
+                        # Check if this is a retryable error
+                        if dialect and dialect.handle_concurrent_access_error(e):
+                            if attempt < max_attempts - 1:
+                                logger.warning(
+                                    f"Retryable database error on attempt {attempt + 1}/{max_attempts}: {e}"
+                                )
+                                time.sleep(current_delay)
+                                current_delay *= backoff_factor
+                                continue
+                        
+                        # Not retryable, raise immediately
+                        raise
                     except Exception as e:
-                        # Don't retry on non-transient errors
+                        # Other exceptions are not retried
                         raise
                 
-                if last_exception:
-                    raise last_exception
+                # Max attempts reached
+                logger.error(f"Max retry attempts reached. Last error: {last_exception}")
+                raise last_exception
             
             return wrapper
         return decorator
     
     @staticmethod
-    def batch_operation(session: Session, items: List[Any], 
-                       batch_size: int = 100, operation: str = 'insert'):
-        """Perform batch database operations efficiently.
+    def read_only_transaction(session: Session):
+        """Mark a transaction as read-only for optimization.
         
         Args:
             session: Database session
-            items: Items to process
-            batch_size: Size of each batch
-            operation: Type of operation ('insert', 'update', 'delete')
         """
-        total_items = len(items)
-        processed = 0
+        db_type = session.bind.dialect.name
         
-        for i in range(0, total_items, batch_size):
-            batch = items[i:i + batch_size]
-            
-            try:
-                if operation == 'insert':
-                    session.bulk_insert_mappings(type(batch[0]), batch)
-                elif operation == 'update':
-                    session.bulk_update_mappings(type(batch[0]), batch)
-                elif operation == 'delete':
-                    for item in batch:
-                        session.delete(item)
-                
-                session.flush()  # Flush after each batch
-                processed += len(batch)
-                
-                # Log progress for large batches
-                if total_items > 1000:
-                    logger.info(f"Processed {processed}/{total_items} items")
-                    
-            except Exception as e:
-                logger.error(f"Batch operation failed at batch {i//batch_size}: {e}")
-                session.rollback()
-                raise
-        
-        session.commit()
-        return processed
+        if db_type == 'postgresql':
+            session.execute(text("SET TRANSACTION READ ONLY"))
+        elif db_type == 'sqlite':
+            # SQLite doesn't have explicit read-only transactions
+            # but we can use deferred transaction mode
+            session.execute(text("BEGIN DEFERRED"))
 
 
 class OptimisticLock:
-    """Implement optimistic locking for concurrent updates."""
+    """Context manager for optimistic locking based on version/timestamp."""
     
-    @staticmethod
-    def update_with_version_check(session: Session, model_class, 
-                                 job_id: str, updates: dict) -> bool:
-        """Update a record with optimistic locking using version/timestamp.
+    def __init__(self, model_instance: Any, version_field: str = 'updated_at'):
+        """Initialize optimistic lock.
         
         Args:
-            session: Database session
-            model_class: Model class (Execution or Variation)
-            job_id: Job identifier
-            updates: Dictionary of updates to apply
-            
-        Returns:
-            True if update successful, False if version conflict
+            model_instance: SQLAlchemy model instance
+            version_field: Field to use for version checking
         """
-        # Get current record with version
-        record = session.query(model_class).filter_by(job_id=job_id).first()
-        if not record:
-            return False
-        
-        # Store current version
-        current_version = record.updated_at
-        
-        # Apply updates
-        for key, value in updates.items():
-            setattr(record, key, value)
-        
-        # Update timestamp
-        record.updated_at = datetime.utcnow()
-        
-        # Try to commit with version check
-        try:
-            # Use SQL to ensure atomic version check
-            result = session.query(model_class).filter(
-                model_class.job_id == job_id,
-                model_class.updated_at == current_version
-            ).update(updates)
-            
-            session.commit()
-            return result > 0  # True if row was updated
-            
-        except Exception as e:
-            session.rollback()
-            logger.error(f"Optimistic lock update failed: {e}")
-            return False
+        self.model = model_instance
+        self.version_field = version_field
+        self.original_version = getattr(model_instance, version_field)
+    
+    def __enter__(self):
+        """Enter context and record version."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Check version on exit."""
+        if exc_type is None:  # No exception
+            current_version = getattr(self.model, self.version_field)
+            if current_version != self.original_version:
+                raise IntegrityError(
+                    "Optimistic lock failure: Record was modified by another process",
+                    None, None
+                )
 
 
 class TransactionMetrics:
-    """Track transaction performance metrics."""
+    """Collect metrics about transaction performance."""
     
     def __init__(self):
-        self.metrics = {
-            'total_transactions': 0,
-            'successful_transactions': 0,
-            'failed_transactions': 0,
-            'retry_count': 0,
-            'total_duration': 0.0,
-            'lock_timeouts': 0
-        }
+        """Initialize metrics collector."""
+        self.metrics: Dict[str, Dict[str, Any]] = {}
     
     @contextmanager
-    def track_transaction(self, operation_name: str):
-        """Track a transaction's performance."""
+    def track_transaction(self, operation: str):
+        """Track a transaction's performance.
+        
+        Args:
+            operation: Name of the operation being tracked
+        """
         start_time = time.time()
         
         try:
-            self.metrics['total_transactions'] += 1
             yield
-            self.metrics['successful_transactions'] += 1
-        except OperationalError as e:
-            self.metrics['failed_transactions'] += 1
-            if "database is locked" in str(e):
-                self.metrics['lock_timeouts'] += 1
+            # Success
+            self._record_metric(operation, time.time() - start_time, success=True)
+        except Exception as e:
+            # Failure
+            self._record_metric(operation, time.time() - start_time, success=False)
             raise
-        except Exception:
-            self.metrics['failed_transactions'] += 1
-            raise
-        finally:
-            duration = time.time() - start_time
-            self.metrics['total_duration'] += duration
-            
-            if duration > 1.0:  # Log slow transactions
-                logger.warning(f"Slow transaction '{operation_name}': {duration:.2f}s")
     
-    def get_metrics(self) -> dict:
-        """Get transaction metrics."""
-        metrics = self.metrics.copy()
+    def _record_metric(self, operation: str, duration: float, success: bool):
+        """Record a metric for an operation.
         
-        if metrics['total_transactions'] > 0:
-            metrics['average_duration'] = (
-                metrics['total_duration'] / metrics['total_transactions']
-            )
-            metrics['success_rate'] = (
-                metrics['successful_transactions'] / metrics['total_transactions']
-            )
+        Args:
+            operation: Operation name
+            duration: Duration in seconds
+            success: Whether the operation succeeded
+        """
+        if operation not in self.metrics:
+            self.metrics[operation] = {
+                'count': 0,
+                'success_count': 0,
+                'total_duration': 0.0,
+                'min_duration': float('inf'),
+                'max_duration': 0.0,
+                'last_duration': 0.0,
+                'last_success': None,
+                'last_timestamp': None,
+            }
+        
+        stats = self.metrics[operation]
+        stats['count'] += 1
+        stats['total_duration'] += duration
+        stats['min_duration'] = min(stats['min_duration'], duration)
+        stats['max_duration'] = max(stats['max_duration'], duration)
+        stats['last_duration'] = duration
+        stats['last_success'] = success
+        stats['last_timestamp'] = datetime.utcnow()
+        
+        if success:
+            stats['success_count'] += 1
+    
+    def get_stats(self, operation: Optional[str] = None) -> Dict[str, Any]:
+        """Get statistics for operations.
+        
+        Args:
+            operation: Specific operation to get stats for, or None for all
+            
+        Returns:
+            Dictionary of statistics
+        """
+        if operation:
+            stats = self.metrics.get(operation, {})
+            if stats and stats['count'] > 0:
+                stats['avg_duration'] = stats['total_duration'] / stats['count']
+                stats['success_rate'] = stats['success_count'] / stats['count']
+            return stats
         else:
-            metrics['average_duration'] = 0.0
-            metrics['success_rate'] = 0.0
+            # Return all stats
+            all_stats = {}
+            for op, stats in self.metrics.items():
+                if stats['count'] > 0:
+                    stats_copy = stats.copy()
+                    stats_copy['avg_duration'] = stats['total_duration'] / stats['count']
+                    stats_copy['success_rate'] = stats['success_count'] / stats['count']
+                    all_stats[op] = stats_copy
+            return all_stats
+    
+    def reset(self):
+        """Reset all metrics."""
+        self.metrics.clear()
+
+
+class DatabaseLockManager:
+    """Manage database-level locks for different database types."""
+    
+    @staticmethod
+    def acquire_advisory_lock(session: Session, lock_id: int, timeout: Optional[int] = None) -> bool:
+        """Acquire an advisory lock (PostgreSQL only).
         
-        return metrics
+        Args:
+            session: Database session
+            lock_id: Numeric lock identifier
+            timeout: Timeout in milliseconds (PostgreSQL only)
+            
+        Returns:
+            True if lock acquired, False otherwise
+        """
+        db_type = session.bind.dialect.name
+        
+        if db_type == 'postgresql':
+            if timeout:
+                # Set lock timeout for this session
+                session.execute(text(f"SET lock_timeout = {timeout}"))
+            
+            try:
+                # Try to acquire advisory lock
+                result = session.execute(text(f"SELECT pg_try_advisory_lock({lock_id})")).scalar()
+                return bool(result)
+            except OperationalError:
+                return False
+        else:
+            # SQLite doesn't have advisory locks
+            logger.warning("Advisory locks not supported on SQLite")
+            return True
+    
+    @staticmethod
+    def release_advisory_lock(session: Session, lock_id: int) -> bool:
+        """Release an advisory lock (PostgreSQL only).
+        
+        Args:
+            session: Database session
+            lock_id: Numeric lock identifier
+            
+        Returns:
+            True if lock released, False otherwise
+        """
+        db_type = session.bind.dialect.name
+        
+        if db_type == 'postgresql':
+            result = session.execute(text(f"SELECT pg_advisory_unlock({lock_id})")).scalar()
+            return bool(result)
+        else:
+            # SQLite doesn't have advisory locks
+            return True
+    
+    @staticmethod
+    @contextmanager
+    def with_advisory_lock(session: Session, lock_id: int, timeout: Optional[int] = None):
+        """Context manager for advisory locks.
+        
+        Args:
+            session: Database session
+            lock_id: Numeric lock identifier
+            timeout: Timeout in milliseconds
+            
+        Raises:
+            OperationalError: If lock cannot be acquired
+        """
+        acquired = DatabaseLockManager.acquire_advisory_lock(session, lock_id, timeout)
+        if not acquired:
+            raise OperationalError("Could not acquire advisory lock", None, None)
+        
+        try:
+            yield
+        finally:
+            DatabaseLockManager.release_advisory_lock(session, lock_id)

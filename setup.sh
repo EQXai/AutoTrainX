@@ -1,988 +1,741 @@
 #!/bin/bash
 #
-# Interactive AutoTrainV2 Installation Script
+# AutoTrainX Unified Setup Script
+# 
+# This script provides a streamlined installation experience with multiple
+# installation profiles tailored for different environments and use cases.
 #
-# This script provides an interactive installation process with debugging options.
 # Features:
-# - Interactive prompts for each step
-# - Detailed error handling and debugging
-# - Option to skip failed steps
-# - Rollback capabilities
-# - Progress tracking
-# - System requirements checking
+# - Multiple installation profiles (Docker, WSL, Linux, Development, Minimal)
+# - Upfront configuration with all questions at the beginning
+# - All Python dependencies installed within virtual environment
+# - Automatic environment detection
+# - Configuration saving for future updates
 #
 # Usage:
-#   bash install.sh [--auto] [--debug] [--skip-checks]
+#   bash setup.sh [--profile PROFILE] [--auto] [--config FILE]
 #
 # Options:
-#   --auto        Run in automatic mode (no prompts)
-#   --debug       Enable verbose debugging output
-#   --skip-checks Skip system requirement checks
+#   --profile    Specify installation profile (docker|wsl|linux|dev|minimal)
+#   --auto       Run in automatic mode using saved config or defaults
+#   --config     Load configuration from file
+#   --help       Show this help message
 #
 
-set -e # Exit immediately if a command exits with a non-zero status.
+set -e
 
-# Global variables
+# ============================================================================
+# Global Variables and Configuration
+# ============================================================================
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_PATH="$SCRIPT_DIR/venv"
-LOG_FILE="$SCRIPT_DIR/install.log"
+LOG_FILE="$SCRIPT_DIR/logs/setup_$(date +%Y%m%d_%H%M%S).log"
+CONFIG_FILE="$SCRIPT_DIR/.setup_config.json"
+
+# Installation profiles
+declare -A PROFILES
+PROFILES["docker"]="Docker-based installation with minimal host dependencies"
+PROFILES["wsl"]="WSL2-optimized installation with Windows integration"
+PROFILES["linux"]="Standard Linux installation with full features"
+PROFILES["dev"]="Development installation with all tools and extras"
+PROFILES["minimal"]="Minimal installation with core features only"
+
+# Default values
+SELECTED_PROFILE=""
 AUTO_MODE=false
-DEBUG_MODE=false
-SKIP_CHECKS=false
-INSTALLATION_STEPS=()
-FAILED_STEPS=()
+INSTALL_CONFIG=""
+ENVIRONMENT_TYPE=""
 
-# Parse command line arguments
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --auto)
-            AUTO_MODE=true
-            shift
-            ;;
-        --debug)
-            DEBUG_MODE=true
-            shift
-            ;;
-        --skip-checks)
-            SKIP_CHECKS=true
-            shift
-            ;;
-        -h|--help)
-            echo "Usage: $0 [--auto] [--debug] [--skip-checks]"
-            echo "  --auto        Run in automatic mode (no prompts)"
-            echo "  --debug       Enable verbose debugging output"
-            echo "  --skip-checks Skip system requirement checks"
-            exit 0
-            ;;
-        *)
-            echo "Unknown option: $1"
-            exit 1
-            ;;
-    esac
-done
+# Component flags
+INSTALL_POSTGRESQL=false
+INSTALL_NODEJS=false
+INSTALL_DOCKER=false
+INSTALL_GOOGLE_SHEETS=false
+INSTALL_MODELS=false
+INSTALL_DEV_TOOLS=false
+CUDA_VERSION="12.8"
+SKIP_SYSTEM_DEPS=false
 
-# Function to print colored messages
+# Color codes
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+# ============================================================================
+# Utility Functions
+# ============================================================================
+
+print_header() {
+    echo -e "\n${CYAN}${BOLD}=================================================================================${NC}"
+    echo -e "${CYAN}${BOLD}  $1${NC}"
+    echo -e "${CYAN}${BOLD}=================================================================================${NC}\n"
+}
+
 print_info() {
-    echo -e "\n\e[34m\e[1m[INFO]\e[0m $1\e[0m" | tee -a "$LOG_FILE"
+    echo -e "${BLUE}[INFO]${NC} $1" | tee -a "$LOG_FILE"
 }
 
 print_success() {
-    echo -e "\e[32m\e[1m[SUCCESS]\e[0m $1\e[0m" | tee -a "$LOG_FILE"
+    echo -e "${GREEN}[SUCCESS]${NC} $1" | tee -a "$LOG_FILE"
 }
 
 print_warning() {
-    echo -e "\e[33m\e[1m[WARNING]\e[0m $1\e[0m" | tee -a "$LOG_FILE"
+    echo -e "${YELLOW}[WARNING]${NC} $1" | tee -a "$LOG_FILE"
 }
 
 print_error() {
-    echo -e "\e[31m\e[1m[ERROR]\e[0m $1\e[0m" | tee -a "$LOG_FILE"
-}
-
-print_debug() {
-    if [ "$DEBUG_MODE" = true ]; then
-        echo -e "\e[35m\e[1m[DEBUG]\e[0m $1\e[0m" | tee -a "$LOG_FILE"
-    fi
+    echo -e "${RED}[ERROR]${NC} $1" | tee -a "$LOG_FILE"
 }
 
 print_step() {
-    echo -e "\n\e[36m\e[1m[STEP $1]\e[0m $2\e[0m" | tee -a "$LOG_FILE"
+    echo -e "\n${MAGENTA}[STEP $1/${2}]${NC} $3" | tee -a "$LOG_FILE"
 }
 
-# Function to ask user for confirmation
-ask_confirmation() {
-    if [ "$AUTO_MODE" = true ]; then
+# Create log directory if it doesn't exist
+mkdir -p "$(dirname "$LOG_FILE")"
+
+# ============================================================================
+# Environment Detection
+# ============================================================================
+
+detect_environment() {
+    print_info "Detecting environment..."
+    
+    # Check if running in Docker
+    if [ -f /.dockerenv ]; then
+        ENVIRONMENT_TYPE="docker"
+        print_info "Detected: Running inside Docker container"
+        return
+    fi
+    
+    # Check if running in WSL
+    if grep -qi microsoft /proc/version 2>/dev/null; then
+        ENVIRONMENT_TYPE="wsl"
+        print_info "Detected: Windows Subsystem for Linux (WSL2)"
+        return
+    fi
+    
+    # Check OS type
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        ENVIRONMENT_TYPE="linux"
+        print_info "Detected: $NAME $VERSION"
+    else
+        ENVIRONMENT_TYPE="unknown"
+        print_warning "Could not detect environment type"
+    fi
+}
+
+# ============================================================================
+# Configuration Management
+# ============================================================================
+
+save_configuration() {
+    cat > "$CONFIG_FILE" << EOF
+{
+    "profile": "$SELECTED_PROFILE",
+    "environment": "$ENVIRONMENT_TYPE",
+    "components": {
+        "postgresql": $INSTALL_POSTGRESQL,
+        "nodejs": $INSTALL_NODEJS,
+        "docker": $INSTALL_DOCKER,
+        "google_sheets": $INSTALL_GOOGLE_SHEETS,
+        "models": $INSTALL_MODELS,
+        "dev_tools": $INSTALL_DEV_TOOLS
+    },
+    "cuda_version": "$CUDA_VERSION",
+    "skip_system_deps": $SKIP_SYSTEM_DEPS,
+    "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+}
+EOF
+    print_info "Configuration saved to $CONFIG_FILE"
+}
+
+load_configuration() {
+    if [ -f "$1" ]; then
+        print_info "Loading configuration from $1"
+        # Parse JSON configuration (basic parsing)
+        SELECTED_PROFILE=$(grep '"profile"' "$1" | cut -d'"' -f4)
+        INSTALL_POSTGRESQL=$(grep '"postgresql"' "$1" | grep -o 'true\|false')
+        INSTALL_NODEJS=$(grep '"nodejs"' "$1" | grep -o 'true\|false')
+        INSTALL_DOCKER=$(grep '"docker"' "$1" | grep -o 'true\|false')
+        INSTALL_GOOGLE_SHEETS=$(grep '"google_sheets"' "$1" | grep -o 'true\|false')
+        INSTALL_MODELS=$(grep '"models"' "$1" | grep -o 'true\|false')
+        INSTALL_DEV_TOOLS=$(grep '"dev_tools"' "$1" | grep -o 'true\|false')
+        CUDA_VERSION=$(grep '"cuda_version"' "$1" | cut -d'"' -f4)
+        SKIP_SYSTEM_DEPS=$(grep '"skip_system_deps"' "$1" | grep -o 'true\|false')
         return 0
+    else
+        print_error "Configuration file not found: $1"
+        return 1
     fi
-    
-    local message="$1"
-    local default="${2:-y}"
-    
-    while true; do
-        read -p "$message (y/n, default: $default): " yn
-        yn=${yn:-$default}
-        case $yn in
-            [Yy]* ) return 0;;
-            [Nn]* ) return 1;;
-            * ) echo "Please answer yes or no.";;
-        esac
-    done
 }
 
-# Function to handle step failure
-handle_step_failure() {
-    local step_name="$1"
-    local error_message="$2"
+# ============================================================================
+# Profile Selection and Configuration
+# ============================================================================
+
+show_profile_menu() {
+    print_header "Installation Profile Selection"
     
-    FAILED_STEPS+=("$step_name")
-    print_error "Step '$step_name' failed: $error_message"
+    echo "Available installation profiles:"
+    echo ""
+    echo "  1) Docker    - ${PROFILES["docker"]}"
+    echo "  2) WSL       - ${PROFILES["wsl"]}"
+    echo "  3) Linux     - ${PROFILES["linux"]}"
+    echo "  4) Dev       - ${PROFILES["dev"]}"
+    echo "  5) Minimal   - ${PROFILES["minimal"]}"
+    echo ""
     
-    if [ "$DEBUG_MODE" = true ]; then
-        print_debug "Last 10 lines of log:"
-        tail -n 10 "$LOG_FILE"
-    fi
+    # Show recommendation based on detected environment
+    case "$ENVIRONMENT_TYPE" in
+        docker)
+            echo -e "${GREEN}Recommended: Docker profile${NC}"
+            ;;
+        wsl)
+            echo -e "${GREEN}Recommended: WSL profile${NC}"
+            ;;
+        linux)
+            echo -e "${GREEN}Recommended: Linux profile${NC}"
+            ;;
+    esac
     
     echo ""
-    echo "Options:"
-    echo "1. Retry this step"
-    echo "2. Skip this step (may cause issues later)"
-    echo "3. Debug this step"
-    echo "4. Abort installation"
+    read -p "Select installation profile (1-5): " choice
     
-    if [ "$AUTO_MODE" = true ]; then
-        print_warning "Auto mode: Skipping failed step '$step_name'"
-        return 1
-    fi
+    case $choice in
+        1) SELECTED_PROFILE="docker" ;;
+        2) SELECTED_PROFILE="wsl" ;;
+        3) SELECTED_PROFILE="linux" ;;
+        4) SELECTED_PROFILE="dev" ;;
+        5) SELECTED_PROFILE="minimal" ;;
+        *) 
+            print_error "Invalid selection"
+            exit 1
+            ;;
+    esac
     
-    while true; do
-        read -p "Choose an option (1-4): " choice
-        case $choice in
-            1) return 0;; # Retry
-            2) return 1;; # Skip
-            3) debug_step "$step_name"; continue;;
-            4) cleanup_and_exit;;
-            *) echo "Invalid choice. Please select 1-4.";;
-        esac
-    done
+    print_success "Selected profile: $SELECTED_PROFILE"
 }
 
-# Function to debug a specific step
-debug_step() {
-    local step_name="$1"
-    
-    print_info "Debugging step: $step_name"
-    echo "Available debug options:"
-    echo "1. Show detailed logs"
-    echo "2. Check system requirements"
-    echo "3. Check disk space"
-    echo "4. Check network connectivity"
-    echo "5. Check Python environment"
-    echo "6. Return to main menu"
-    
-    while true; do
-        read -p "Choose debug option (1-6): " choice
-        case $choice in
-            1) show_detailed_logs;;
-            2) check_system_requirements;;
-            3) check_disk_space;;
-            4) check_network_connectivity;;
-            5) check_python_environment;;
-            6) return;;
-            *) echo "Invalid choice. Please select 1-6.";;
-        esac
-    done
+configure_profile_defaults() {
+    # Set default component selections based on profile
+    case "$SELECTED_PROFILE" in
+        docker)
+            INSTALL_POSTGRESQL=false  # Use containerized
+            INSTALL_NODEJS=false      # Use containerized
+            INSTALL_DOCKER=true
+            INSTALL_GOOGLE_SHEETS=true
+            INSTALL_MODELS=false      # Mount from host
+            INSTALL_DEV_TOOLS=false
+            ;;
+        wsl)
+            INSTALL_POSTGRESQL=true
+            INSTALL_NODEJS=true
+            INSTALL_DOCKER=false      # Usually use Windows Docker Desktop
+            INSTALL_GOOGLE_SHEETS=true
+            INSTALL_MODELS=true
+            INSTALL_DEV_TOOLS=false
+            ;;
+        linux)
+            INSTALL_POSTGRESQL=true
+            INSTALL_NODEJS=true
+            INSTALL_DOCKER=false
+            INSTALL_GOOGLE_SHEETS=true
+            INSTALL_MODELS=true
+            INSTALL_DEV_TOOLS=false
+            ;;
+        dev)
+            INSTALL_POSTGRESQL=true
+            INSTALL_NODEJS=true
+            INSTALL_DOCKER=true
+            INSTALL_GOOGLE_SHEETS=true
+            INSTALL_MODELS=true
+            INSTALL_DEV_TOOLS=true
+            ;;
+        minimal)
+            INSTALL_POSTGRESQL=false
+            INSTALL_NODEJS=false
+            INSTALL_DOCKER=false
+            INSTALL_GOOGLE_SHEETS=false
+            INSTALL_MODELS=false
+            INSTALL_DEV_TOOLS=false
+            ;;
+    esac
 }
 
-# Debug helper functions
-show_detailed_logs() {
-    print_info "Showing last 50 lines of installation log:"
-    tail -n 50 "$LOG_FILE" | less
-}
-
-check_system_requirements() {
-    print_info "Checking system requirements..."
+customize_components() {
+    print_header "Component Customization"
     
-    # Check OS
-    echo "OS: $(uname -s)"
-    echo "Architecture: $(uname -m)"
+    echo "The following components are selected based on your profile ($SELECTED_PROFILE):"
+    echo ""
+    echo "  PostgreSQL Database : $([ "$INSTALL_POSTGRESQL" = true ] && echo "Yes" || echo "No")"
+    echo "  Node.js/Web UI     : $([ "$INSTALL_NODEJS" = true ] && echo "Yes" || echo "No")"
+    echo "  Docker Runtime     : $([ "$INSTALL_DOCKER" = true ] && echo "Yes" || echo "No")"
+    echo "  Google Sheets Sync : $([ "$INSTALL_GOOGLE_SHEETS" = true ] && echo "Yes" || echo "No")"
+    echo "  Pre-trained Models : $([ "$INSTALL_MODELS" = true ] && echo "Yes" || echo "No")"
+    echo "  Dev Tools          : $([ "$INSTALL_DEV_TOOLS" = true ] && echo "Yes" || echo "No")"
+    echo ""
     
-    # Check Python
-    if command -v python3 &> /dev/null; then
-        echo "Python3: $(python3 --version)"
-    else
-        print_error "Python3 not found!"
-    fi
+    read -p "Do you want to customize these selections? (y/N): " customize
     
-    # Check pip
-    if command -v pip3 &> /dev/null; then
-        echo "pip3: $(pip3 --version)"
-    else
-        print_error "pip3 not found!"
-    fi
-    
-    # Check git
-    if command -v git &> /dev/null; then
-        echo "Git: $(git --version)"
-    else
-        print_warning "Git not found (may be needed for some dependencies)"
-    fi
-    
-    # Check CUDA
-    if command -v nvidia-smi &> /dev/null; then
-        echo "NVIDIA Driver: $(nvidia-smi --query-gpu=driver_version --format=csv,noheader,nounits | head -1)"
-        echo "CUDA Version: $(nvidia-smi --query-gpu=cuda_version --format=csv,noheader,nounits | head -1)"
-    else
-        print_warning "NVIDIA drivers not found or nvidia-smi not available"
-    fi
-}
-
-check_disk_space() {
-    print_info "Checking disk space..."
-    df -h "$SCRIPT_DIR"
-    
-    # Check if we have at least 10GB free
-    available_space=$(df "$SCRIPT_DIR" | awk 'NR==2 {print $4}')
-    if [ "$available_space" -lt 10485760 ]; then # 10GB in KB
-        print_warning "Less than 10GB available space. Installation may fail."
-    fi
-}
-
-check_network_connectivity() {
-    print_info "Checking network connectivity..."
-    
-    # Check general internet connectivity
-    if ping -c 1 google.com &> /dev/null; then
-        print_success "Internet connectivity: OK"
-    else
-        print_error "No internet connectivity!"
-        return 1
-    fi
-    
-    # Check PyPI
-    if curl -s --head https://pypi.org/ | head -n 1 | grep -q "200 OK"; then
-        print_success "PyPI accessibility: OK"
-    else
-        print_warning "PyPI may not be accessible"
-    fi
-    
-    # Check Hugging Face
-    if curl -s --head https://huggingface.co/ | head -n 1 | grep -q "200 OK"; then
-        print_success "Hugging Face accessibility: OK"
-    else
-        print_warning "Hugging Face may not be accessible"
-    fi
-}
-
-check_python_environment() {
-    print_info "Checking Python environment..."
-    
-    if [ -d "$VENV_PATH" ]; then
-        print_info "Virtual environment exists at: $VENV_PATH"
-        if [ -f "$VENV_PATH/bin/activate" ]; then
-            print_success "Virtual environment appears to be valid"
-            
-            # Check if we can activate it
-            if source "$VENV_PATH/bin/activate" 2>/dev/null; then
-                print_success "Virtual environment can be activated"
-                echo "Python in venv: $(which python)"
-                echo "Python version: $(python --version)"
-                deactivate
-            else
-                print_error "Cannot activate virtual environment"
-            fi
-        else
-            print_error "Virtual environment is corrupted"
-        fi
-    else
-        print_info "Virtual environment does not exist yet"
-    fi
-}
-
-# Function to cleanup and exit
-cleanup_and_exit() {
-    print_info "Cleaning up..."
-    
-    if ask_confirmation "Remove incomplete virtual environment?"; then
-        if [ -d "$VENV_PATH" ]; then
-            rm -rf "$VENV_PATH"
-            print_success "Virtual environment removed"
-        fi
-    fi
-    
-    if [ ${#FAILED_STEPS[@]} -gt 0 ]; then
-        print_error "Installation failed. Failed steps: ${FAILED_STEPS[*]}"
-    fi
-    
-    print_info "Installation log saved to: $LOG_FILE"
-    exit 1
-}
-
-# Function to execute a step with error handling
-execute_step() {
-    local step_number="$1"
-    local step_name="$2"
-    local step_function="$3"
-    
-    print_step "$step_number" "$step_name"
-    INSTALLATION_STEPS+=("$step_name")
-    
-    while true; do
-        print_debug "Executing function: $step_function"
+    if [[ $customize =~ ^[Yy]$ ]]; then
+        # PostgreSQL
+        read -p "Install PostgreSQL database? (y/n) [$([ "$INSTALL_POSTGRESQL" = true ] && echo "y" || echo "n")]: " response
+        [[ $response =~ ^[Yy]$ ]] && INSTALL_POSTGRESQL=true || INSTALL_POSTGRESQL=false
         
-        # Ensure virtual environment is activated for each step (except creation/activation steps)
-        if [ "$step_number" -gt 3 ] && [ -f "$VENV_PATH/bin/activate" ]; then
-            if source "$VENV_PATH/bin/activate" 2>/dev/null && $step_function 2>&1 | tee -a "$LOG_FILE"; then
-                print_success "Step '$step_name' completed successfully"
-                return 0
-            else
-                if handle_step_failure "$step_name" "Function $step_function failed"; then
-                    continue # Retry
-                else
-                    return 1 # Skip
-                fi
-            fi
-        else
-            if $step_function 2>&1 | tee -a "$LOG_FILE"; then
-                print_success "Step '$step_name' completed successfully"
-                return 0
-            else
-                if handle_step_failure "$step_name" "Function $step_function failed"; then
-                    continue # Retry
-                else
-                    return 1 # Skip
-                fi
-            fi
+        # Node.js
+        read -p "Install Node.js and web interface? (y/n) [$([ "$INSTALL_NODEJS" = true ] && echo "y" || echo "n")]: " response
+        [[ $response =~ ^[Yy]$ ]] && INSTALL_NODEJS=true || INSTALL_NODEJS=false
+        
+        # Docker
+        if [ "$SELECTED_PROFILE" != "docker" ]; then
+            read -p "Install Docker runtime? (y/n) [$([ "$INSTALL_DOCKER" = true ] && echo "y" || echo "n")]: " response
+            [[ $response =~ ^[Yy]$ ]] && INSTALL_DOCKER=true || INSTALL_DOCKER=false
         fi
-    done
-}
-
-# Installation step functions
-step_check_prerequisites() {
-    print_info "Checking prerequisites..."
-    
-    # Check if running from correct directory
-    if [ ! -f "$SCRIPT_DIR/install.sh" ]; then
-        print_error "Please run this script from the project root directory"
-        return 1
+        
+        # Google Sheets
+        read -p "Install Google Sheets sync? (y/n) [$([ "$INSTALL_GOOGLE_SHEETS" = true ] && echo "y" || echo "n")]: " response
+        [[ $response =~ ^[Yy]$ ]] && INSTALL_GOOGLE_SHEETS=true || INSTALL_GOOGLE_SHEETS=false
+        
+        # Models
+        read -p "Download pre-trained models? (y/n) [$([ "$INSTALL_MODELS" = true ] && echo "y" || echo "n")]: " response
+        [[ $response =~ ^[Yy]$ ]] && INSTALL_MODELS=true || INSTALL_MODELS=false
+        
+        # Dev Tools
+        read -p "Install development tools? (y/n) [$([ "$INSTALL_DEV_TOOLS" = true ] && echo "y" || echo "n")]: " response
+        [[ $response =~ ^[Yy]$ ]] && INSTALL_DEV_TOOLS=true || INSTALL_DEV_TOOLS=false
     fi
     
-    # Check current user
-    current_user=$(whoami)
-    print_info "Running as user: $current_user"
+    # Advanced options
+    echo ""
+    read -p "Configure advanced options? (y/N): " advanced
     
-    if [ "$current_user" = "root" ]; then
-        print_warning "Running as root user."
-        print_info "The installation will proceed with root privileges."
-        print_info "Virtual environment will be created with appropriate permissions."
+    if [[ $advanced =~ ^[Yy]$ ]]; then
+        read -p "CUDA version (11.8/12.1/12.8) [$CUDA_VERSION]: " cuda_input
+        [ -n "$cuda_input" ] && CUDA_VERSION=$cuda_input
         
-        # Set a flag for root installation
+        read -p "Skip system dependency installation? (y/N): " skip_sys
+        [[ $skip_sys =~ ^[Yy]$ ]] && SKIP_SYSTEM_DEPS=true || SKIP_SYSTEM_DEPS=false
+    fi
+}
+
+show_installation_summary() {
+    print_header "Installation Summary"
+    
+    echo "Profile: $SELECTED_PROFILE"
+    echo "Environment: $ENVIRONMENT_TYPE"
+    echo ""
+    echo "Components to install:"
+    [ "$INSTALL_POSTGRESQL" = true ] && echo "  ✓ PostgreSQL Database"
+    [ "$INSTALL_NODEJS" = true ] && echo "  ✓ Node.js and Web Interface"
+    [ "$INSTALL_DOCKER" = true ] && echo "  ✓ Docker Runtime"
+    [ "$INSTALL_GOOGLE_SHEETS" = true ] && echo "  ✓ Google Sheets Sync"
+    [ "$INSTALL_MODELS" = true ] && echo "  ✓ Pre-trained Models"
+    [ "$INSTALL_DEV_TOOLS" = true ] && echo "  ✓ Development Tools"
+    echo ""
+    echo "Python packages will be installed in: $VENV_PATH"
+    echo "CUDA version: $CUDA_VERSION"
+    [ "$SKIP_SYSTEM_DEPS" = true ] && echo "System dependencies: SKIPPED"
+    echo ""
+    
+    read -p "Proceed with installation? (Y/n): " proceed
+    if [[ ! $proceed =~ ^[Yy]?$ ]]; then
+        print_info "Installation cancelled"
+        exit 0
+    fi
+}
+
+# ============================================================================
+# Installation Functions
+# ============================================================================
+
+# Check if running as root
+check_root_permissions() {
+    if [ "$EUID" -eq 0 ]; then
         export RUNNING_AS_ROOT=true
-        
-        if ! ask_confirmation "Continue installation as root?"; then
-            print_info "Installation cancelled."
-            return 1
-        fi
+        print_warning "Running as root user"
     else
         export RUNNING_AS_ROOT=false
-        
-        # Check if sudo is available for non-root users
-        if ! command -v sudo &> /dev/null; then
-            print_error "sudo is not installed and you're not running as root"
-            print_info "You have two options:"
-            print_info "  1. Install sudo and run the script again"
-            print_info "  2. Run the script as root: su root -c './setup.sh'"
-            return 1
-        fi
-        
-        # Test if user has sudo privileges
-        if ! sudo -n true 2>/dev/null; then
-            print_info "Testing sudo access..."
-            if ! sudo true; then
-                print_error "Failed to obtain sudo privileges"
-                print_info "Please ensure your user has sudo access or run as root"
-                return 1
-            fi
+        # Check sudo availability for non-root users
+        if ! command -v sudo &> /dev/null && [ "$SKIP_SYSTEM_DEPS" = false ]; then
+            print_error "sudo is required for system dependency installation"
+            print_info "Run as root or install sudo first"
+            exit 1
         fi
     fi
-    
-    # Check Python 3
-    if ! command -v python3 &> /dev/null; then
-        print_error "Python 3 is required but not installed"
-        return 1
-    fi
-    
-    # Check pip
-    if ! command -v pip3 &> /dev/null; then
-        print_error "pip3 is required but not installed"
-        return 1
-    fi
-    
-    # Check minimum Python version (3.8+)
-    python_version=$(python3 -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')")
-    python_major=$(python3 -c "import sys; print(sys.version_info.major)")
-    python_minor=$(python3 -c "import sys; print(sys.version_info.minor)")
-    
-    # Check if Python version is 3.8 or higher
-    if [ "$python_major" -lt 3 ] || ([ "$python_major" -eq 3 ] && [ "$python_minor" -lt 8 ]); then
-        print_error "Python 3.8 or higher is required (found: $python_version)"
-        return 1
-    fi
-    
-    # Check CUDA availability
-    if command -v nvidia-smi &> /dev/null; then
-        print_info "NVIDIA GPU detected: $(nvidia-smi --query-gpu=name --format=csv,noheader,nounits | head -1)"
-        print_info "CUDA Version: $(nvidia-smi --query-gpu=cuda_version --format=csv,noheader,nounits | head -1)"
-    else
-        print_warning "NVIDIA drivers not found. CUDA acceleration may not be available."
-    fi
-    
-    print_success "Prerequisites check passed"
-    return 0
 }
 
-step_create_venv() {
-    print_info "Creating Python virtual environment in '$VENV_PATH'..."
-    
-    # Remove existing venv if it exists and is corrupted
-    if [ -d "$VENV_PATH" ]; then
-        if ! [ -f "$VENV_PATH/bin/activate" ]; then
-            print_warning "Removing corrupted virtual environment..."
-            rm -rf "$VENV_PATH"
-        elif ask_confirmation "Virtual environment already exists. Recreate it?"; then
-            rm -rf "$VENV_PATH"
-        else
-            print_info "Using existing virtual environment"
-            return 0
-        fi
-    fi
-    
-    # Create virtual environment with special handling for root
+# Run commands with appropriate privileges
+run_privileged() {
     if [ "$RUNNING_AS_ROOT" = true ]; then
-        print_info "Creating virtual environment as root with --system-site-packages..."
-        python3 -m venv "$VENV_PATH" --system-site-packages
-        
-        # Set more permissive permissions for root-created venv
-        chmod -R 755 "$VENV_PATH"
+        "$@"
     else
-        python3 -m venv "$VENV_PATH"
+        sudo "$@"
     fi
-    
-    # Verify venv creation
-    if [ ! -f "$VENV_PATH/bin/activate" ]; then
-        print_error "Failed to create virtual environment"
-        return 1
-    fi
-    
-    print_success "Virtual environment created successfully"
-    return 0
 }
 
-step_activate_venv() {
-    print_info "Activating virtual environment..."
-    
-    if [ ! -f "$VENV_PATH/bin/activate" ]; then
-        print_error "Virtual environment not found at $VENV_PATH"
-        return 1
+# Step 1: System Dependencies
+install_system_dependencies() {
+    if [ "$SKIP_SYSTEM_DEPS" = true ]; then
+        print_info "Skipping system dependencies"
+        return 0
     fi
     
-    # Source the activation script
+    print_step 1 12 "Installing System Dependencies"
+    
+    # Update package list
+    print_info "Updating package list..."
+    run_privileged apt-get update
+    
+    # Base dependencies for all profiles
+    local base_deps="python3 python3-pip python3-venv git curl wget build-essential"
+    
+    # Profile-specific dependencies
+    case "$SELECTED_PROFILE" in
+        docker)
+            base_deps="$base_deps apt-transport-https ca-certificates gnupg lsb-release"
+            ;;
+        wsl)
+            base_deps="$base_deps wslu"  # WSL utilities
+            ;;
+        dev)
+            base_deps="$base_deps htop ncdu tree jq make vim"
+            ;;
+    esac
+    
+    print_info "Installing base dependencies..."
+    run_privileged apt-get install -y $base_deps
+    
+    # Install PostgreSQL if selected
+    if [ "$INSTALL_POSTGRESQL" = true ]; then
+        print_info "Installing PostgreSQL..."
+        run_privileged apt-get install -y postgresql postgresql-contrib
+    fi
+    
+    # Install Docker if selected
+    if [ "$INSTALL_DOCKER" = true ]; then
+        install_docker
+    fi
+    
+    # Install Node.js if selected
+    if [ "$INSTALL_NODEJS" = true ]; then
+        install_nodejs
+    fi
+    
+    print_success "System dependencies installed"
+}
+
+install_docker() {
+    print_info "Installing Docker..."
+    
+    # Remove old versions
+    run_privileged apt-get remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
+    
+    # Add Docker's official GPG key
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | run_privileged gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    
+    # Add Docker repository
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | run_privileged tee /etc/apt/sources.list.d/docker.list > /dev/null
+    
+    # Install Docker
+    run_privileged apt-get update
+    run_privileged apt-get install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+    
+    # Add user to docker group
+    if [ "$RUNNING_AS_ROOT" = false ]; then
+        run_privileged usermod -aG docker $USER
+        print_warning "You'll need to log out and back in for docker group changes to take effect"
+    fi
+    
+    # WSL-specific Docker configuration
+    if [ "$ENVIRONMENT_TYPE" = "wsl" ]; then
+        configure_docker_wsl
+    fi
+}
+
+configure_docker_wsl() {
+    print_info "Configuring Docker for WSL2..."
+    
+    # Create Docker daemon configuration
+    run_privileged tee /etc/docker/daemon.json > /dev/null <<EOF
+{
+    "hosts": ["unix:///var/run/docker.sock"],
+    "log-driver": "json-file",
+    "log-opts": {
+        "max-size": "10m",
+        "max-file": "3"
+    },
+    "storage-driver": "overlay2"
+}
+EOF
+    
+    # Start Docker service
+    run_privileged service docker start || true
+}
+
+install_nodejs() {
+    print_info "Installing Node.js..."
+    
+    # Install NodeSource repository
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | run_privileged -E bash -
+    run_privileged apt-get install -y nodejs
+    
+    print_success "Node.js $(node --version) installed"
+}
+
+# Step 2: Python Virtual Environment
+create_virtual_environment() {
+    print_step 2 12 "Creating Python Virtual Environment"
+    
+    # Remove existing venv if corrupted
+    if [ -d "$VENV_PATH" ] && [ ! -f "$VENV_PATH/bin/activate" ]; then
+        print_warning "Removing corrupted virtual environment..."
+        rm -rf "$VENV_PATH"
+    fi
+    
+    # Create new venv
+    if [ ! -d "$VENV_PATH" ]; then
+        print_info "Creating virtual environment at $VENV_PATH..."
+        python3 -m venv "$VENV_PATH"
+    else
+        print_info "Using existing virtual environment"
+    fi
+    
+    # Activate venv
     source "$VENV_PATH/bin/activate"
     
-    # Verify activation
-    if [ "$VIRTUAL_ENV" != "$VENV_PATH" ]; then
-        print_error "Failed to activate virtual environment"
-        return 1
-    fi
+    # Upgrade pip
+    print_info "Upgrading pip..."
+    pip install --upgrade pip wheel setuptools
     
-    print_success "Virtual environment activated"
-    print_debug "Python path: $(which python)"
-    print_debug "Python version: $(python --version)"
-    return 0
+    print_success "Virtual environment ready"
 }
 
-step_upgrade_pip() {
-    print_info "Upgrading pip to latest version..."
+# Step 3: PyTorch Installation
+install_pytorch() {
+    print_step 3 12 "Installing PyTorch"
     
-    # Ensure we're in the virtual environment
-    if [ -z "$VIRTUAL_ENV" ]; then
-        source "$VENV_PATH/bin/activate"
-    fi
+    source "$VENV_PATH/bin/activate"
     
-    print_debug "Pip path: $(which pip)"
+    # Clean previous installations
+    pip uninstall -y torch torchvision torchaudio xformers 2>/dev/null || true
     
-    pip install --upgrade pip
-    
-    print_success "pip upgraded successfully"
-    print_debug "pip version: $(pip --version)"
-    return 0
-}
-
-step_install_xformers() {
-    print_info "Installing xformers..."
-    
-    # Ensure we're in the virtual environment
-    if [ -z "$VIRTUAL_ENV" ]; then
-        source "$VENV_PATH/bin/activate"
-    fi
-    
-    print_debug "Python path: $(which python)"
-    print_debug "Pip path: $(which pip)"
-    
-    # Uninstall any existing xformers installation
-    print_info "Cleaning up any existing xformers installation..."
-    pip uninstall -y xformers 2>/dev/null || true
-    
-    # Install build dependencies first
-    print_info "Installing build dependencies..."
-    pip install wheel setuptools ninja
-    
-    # Try to install pre-built xformers first (faster and more reliable)
-    print_info "Attempting to install pre-built xformers..."
-    if pip install xformers --index-url https://download.pytorch.org/whl/cu128 2>/dev/null; then
-        print_success "Pre-built xformers installed successfully"
-    else
-        print_warning "Pre-built xformers failed, trying source installation..."
-        print_info "This may take 15-30 minutes depending on your system..."
-        
-        # Fallback to source installation
-        if pip install xformers --no-binary xformers -v; then
-            print_success "xformers installed successfully from source"
-        else
-            print_error "Both pre-built and source xformers installation failed"
-            print_warning "Continuing without xformers - you may need to install it manually later"
-            return 0  # Don't fail the entire installation
-        fi
-    fi
+    # Install PyTorch based on CUDA version
+    case "$CUDA_VERSION" in
+        "11.8")
+            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+            ;;
+        "12.1")
+            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+            ;;
+        "12.8")
+            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+            ;;
+        *)
+            print_error "Unsupported CUDA version: $CUDA_VERSION"
+            exit 1
+            ;;
+    esac
     
     # Verify installation
-    print_info "Verifying xformers installation..."
-    if python -c "import xformers; print(f'xformers {xformers.__version__} installed successfully'); print(f'Location: {xformers.__file__}')" 2>/dev/null; then
-        print_success "xformers verification passed"
-        return 0
+    if python -c "import torch; print(f'PyTorch {torch.__version__} installed')" 2>/dev/null; then
+        print_success "PyTorch installed successfully"
     else
-        print_error "xformers installation verification failed"
-        print_warning "xformers may not be working properly, but continuing installation..."
-        return 0  # Don't fail the entire installation for xformers issues
+        print_error "PyTorch installation failed"
+        exit 1
     fi
 }
 
-step_install_sd_scripts_requirements() {
-    print_info "Installing dependencies from sd-scripts/requirements.txt..."
+# Step 4: xformers Installation
+install_xformers() {
+    print_step 4 12 "Installing xformers"
     
-    # Ensure we're in the virtual environment
-    if [ -z "$VIRTUAL_ENV" ]; then
-        source "$VENV_PATH/bin/activate"
-    fi
+    source "$VENV_PATH/bin/activate"
     
-    if [ ! -f "sd-scripts/requirements.txt" ]; then
-        print_warning "sd-scripts/requirements.txt not found. Skipping this step."
-        return 0
-    fi
+    # Install build dependencies
+    pip install wheel ninja
     
-    # Change to sd-scripts directory and install requirements
-    (cd sd-scripts && source "$VENV_PATH/bin/activate" && pip install -r requirements.txt)
-    
-    print_success "Dependencies from sd-scripts/requirements.txt installed"
-    return 0
-}
-
-step_install_main_requirements() {
-    print_info "Installing dependencies from requirements.txt..."
-    
-    # Ensure we're in the virtual environment
-    if [ -z "$VIRTUAL_ENV" ]; then
-        source "$VENV_PATH/bin/activate"
-    fi
-    
-    if [ ! -f "requirements.txt" ]; then
-        print_warning "requirements.txt not found. Skipping this step."
-        return 0
-    fi
-    
-    # Install requirements with dependency resolution
-    print_info "Installing requirements with dependency resolution..."
-    pip install -r requirements.txt --upgrade
-    
-    # Try to resolve any dependency conflicts
-    print_info "Checking for dependency conflicts..."
-    if pip check 2>/dev/null; then
-        print_success "No dependency conflicts found"
+    # Try pre-built wheel first
+    if pip install xformers --index-url https://download.pytorch.org/whl/cu${CUDA_VERSION//./} 2>/dev/null; then
+        print_success "xformers installed from pre-built wheel"
     else
-        print_warning "Some dependency conflicts exist, but continuing..."
-        pip check || true  # Show conflicts but don't fail
+        print_warning "Installing xformers from source (this may take a while)..."
+        pip install xformers --no-binary xformers
     fi
-    
-    print_success "Dependencies from requirements.txt installed"
-    return 0
 }
 
-step_install_api_requirements() {
-    print_info "Installing API dependencies from api/requirements.txt..."
+# Step 5: Core Dependencies
+install_core_dependencies() {
+    print_step 5 12 "Installing Core Dependencies"
     
-    # Ensure we're in the virtual environment
-    if [ -z "$VIRTUAL_ENV" ]; then
-        source "$VENV_PATH/bin/activate"
+    source "$VENV_PATH/bin/activate"
+    
+    # Install sd-scripts requirements
+    if [ -f "sd-scripts/requirements.txt" ]; then
+        print_info "Installing sd-scripts dependencies..."
+        pip install -r sd-scripts/requirements.txt
     fi
     
-    if [ ! -f "api/requirements.txt" ]; then
-        print_warning "api/requirements.txt not found. Skipping this step."
-        return 0
+    # Install main requirements
+    if [ -f "requirements.txt" ]; then
+        print_info "Installing main dependencies..."
+        pip install -r requirements.txt
     fi
     
     # Install API requirements
-    print_info "Installing FastAPI and related dependencies..."
-    pip install -r api/requirements.txt --upgrade
+    if [ -f "api/requirements.txt" ]; then
+        print_info "Installing API dependencies..."
+        pip install -r api/requirements.txt
+    fi
     
-    print_success "API dependencies installed"
-    return 0
+    print_success "Core dependencies installed"
 }
 
-step_install_sheets_sync_requirements() {
-    print_info "Installing Google Sheets sync dependencies..."
+# Step 6: Optional Components
+install_optional_components() {
+    print_step 6 12 "Installing Optional Components"
     
-    # Ensure we're in the virtual environment
-    if [ -z "$VIRTUAL_ENV" ]; then
-        source "$VENV_PATH/bin/activate"
-    fi
+    source "$VENV_PATH/bin/activate"
     
-    if [ ! -f "src/sheets_sync/requirements.txt" ]; then
-        print_warning "src/sheets_sync/requirements.txt not found. Skipping this step."
-        return 0
-    fi
-    
-    # Install Google Sheets dependencies
-    print_info "Installing Google Sheets API dependencies..."
-    pip install -r src/sheets_sync/requirements.txt --upgrade
-    
-    print_success "Google Sheets sync dependencies installed"
-    return 0
-}
-
-step_install_menu_requirements() {
-    print_info "Installing interactive menu dependencies..."
-    
-    # Ensure we're in the virtual environment
-    if [ -z "$VIRTUAL_ENV" ]; then
-        source "$VENV_PATH/bin/activate"
-    fi
-    
-    if [ ! -f "src/menu/interactive_menu_requirements.txt" ]; then
-        print_warning "src/menu/interactive_menu_requirements.txt not found. Skipping this step."
-        return 0
-    fi
-    
-    # Install menu requirements
-    pip install -r src/menu/interactive_menu_requirements.txt --upgrade
-    
-    print_success "Interactive menu dependencies installed"
-    return 0
-}
-
-step_install_system_dependencies() {
-    print_info "Checking and installing system dependencies..."
-    
-    # Check if running on Linux/Ubuntu/WSL2
-    if [ ! -f /etc/os-release ]; then
-        print_warning "Cannot detect OS. Skipping system dependencies."
-        return 0
-    fi
-    
-    . /etc/os-release
-    
-    if [[ "$ID" != "ubuntu" && "$ID" != "debian" ]]; then
-        print_warning "System dependencies installation is only supported on Ubuntu/Debian. Detected: $ID"
-        return 0
-    fi
-    
-    # Function to run commands with appropriate privileges
-    run_privileged() {
-        if [ "$RUNNING_AS_ROOT" = true ]; then
-            # Running as root, execute directly
-            "$@"
+    # Google Sheets sync
+    if [ "$INSTALL_GOOGLE_SHEETS" = true ]; then
+        print_info "Installing Google Sheets sync dependencies..."
+        if [ -f "src/sheets_sync/requirements.txt" ]; then
+            pip install -r src/sheets_sync/requirements.txt
         else
-            # Not root, check if sudo is available
-            if command -v sudo &> /dev/null; then
-                sudo "$@"
-            else
-                print_error "This command requires root privileges but sudo is not available"
-                print_info "Please run the script as root or install sudo"
-                return 1
-            fi
+            # Fallback to direct installation
+            pip install google-api-python-client>=2.100.0 \
+                       google-auth>=2.20.0 \
+                       google-auth-oauthlib>=1.0.0 \
+                       google-auth-httplib2>=0.1.0
         fi
-    }
+    fi
     
-    # Check if PostgreSQL is already installed
-    if command -v psql &> /dev/null; then
-        print_info "PostgreSQL is already installed"
+    # Interactive menu
+    if [ -f "src/menu/interactive_menu_requirements.txt" ]; then
+        print_info "Installing menu dependencies..."
+        pip install -r src/menu/interactive_menu_requirements.txt
+    fi
+    
+    # Development tools
+    if [ "$INSTALL_DEV_TOOLS" = true ]; then
+        print_info "Installing development tools..."
+        pip install black ruff mypy pytest pytest-cov ipython jupyter
+    fi
+    
+    print_success "Optional components installed"
+}
+
+# Step 7: PostgreSQL Setup
+setup_postgresql() {
+    if [ "$INSTALL_POSTGRESQL" != true ]; then
+        return 0
+    fi
+    
+    print_step 7 12 "Setting up PostgreSQL"
+    
+    # Run PostgreSQL setup script
+    if [ -f "database_utils/setup_postgresql.sh" ]; then
+        bash database_utils/setup_postgresql.sh
     else
-        if ask_confirmation "Install PostgreSQL for database support?"; then
-            print_info "Installing PostgreSQL..."
-            if run_privileged apt-get update && run_privileged apt-get install -y postgresql postgresql-contrib; then
-                print_success "PostgreSQL installed"
-            else
-                print_error "Failed to install PostgreSQL"
-                print_info "You may need to install it manually"
-            fi
-        else
-            print_warning "Skipping PostgreSQL installation. You may need to install it manually for full functionality."
-        fi
+        print_warning "PostgreSQL setup script not found"
     fi
-    
-    # Check for Node.js (needed for web interface)
-    if command -v node &> /dev/null; then
-        print_info "Node.js is already installed: $(node --version)"
-    else
-        if ask_confirmation "Install Node.js for web interface support?"; then
-            print_info "Installing Node.js..."
-            local install_success=false
-            
-            if [ "$RUNNING_AS_ROOT" = true ]; then
-                # Running as root, execute directly
-                if curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && apt-get install -y nodejs; then
-                    install_success=true
-                fi
-            else
-                # Not root, use sudo
-                if command -v sudo &> /dev/null; then
-                    if curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash - && sudo apt-get install -y nodejs; then
-                        install_success=true
-                    fi
-                else
-                    print_error "Node.js installation requires root privileges but sudo is not available"
-                    print_info "Please run the script as root or install sudo"
-                fi
-            fi
-            
-            if [ "$install_success" = true ]; then
-                print_success "Node.js installed"
-            else
-                print_error "Failed to install Node.js"
-                print_info "You may need to install it manually"
-            fi
-        else
-            print_warning "Skipping Node.js installation. Web interface will not be available."
-        fi
-    fi
-    
-    # Install other useful system packages
-    print_info "Installing additional system packages..."
-    run_privileged apt-get install -y \
-        build-essential \
-        git \
-        wget \
-        curl \
-        htop \
-        ncdu \
-        tree \
-        jq \
-        make || print_warning "Some system packages failed to install, but continuing..."
-    
-    print_success "System dependencies check completed"
-    return 0
 }
 
-step_setup_postgresql() {
-    print_info "Setting up PostgreSQL database..."
-    
-    # Check if PostgreSQL is installed
-    if ! command -v psql &> /dev/null; then
-        print_warning "PostgreSQL is not installed. Skipping database setup."
+# Step 8: Web Interface Setup
+setup_web_interface() {
+    if [ "$INSTALL_NODEJS" != true ]; then
         return 0
     fi
     
-    if ask_confirmation "Configure PostgreSQL for AutoTrainX?"; then
-        # Run the PostgreSQL setup script if it exists
-        if [ -f "database_utils/setup_postgresql.sh" ]; then
-            print_info "Running PostgreSQL setup script..."
-            bash database_utils/setup_postgresql.sh
-        else
-            print_warning "PostgreSQL setup script not found. Manual configuration may be required."
-        fi
-    else
-        print_info "Skipping PostgreSQL configuration"
-    fi
+    print_step 8 12 "Setting up Web Interface"
     
-    return 0
-}
-
-step_install_web_dependencies() {
-    print_info "Installing web interface dependencies..."
-    
-    # Check if Node.js is installed
-    if ! command -v node &> /dev/null; then
-        print_warning "Node.js is not installed. Skipping web dependencies."
-        return 0
-    fi
-    
-    # Check if autotrainx-web directory exists
-    if [ ! -d "autotrainx-web" ]; then
-        print_warning "autotrainx-web directory not found. Skipping web dependencies."
-        return 0
-    fi
-    
-    # Check if package.json exists
-    if [ ! -f "autotrainx-web/package.json" ]; then
-        print_warning "autotrainx-web/package.json not found. Skipping web dependencies."
-        return 0
-    fi
-    
-    if ask_confirmation "Install web interface dependencies (Next.js, React, etc.)?"; then
-        print_info "Installing Node.js dependencies..."
+    if [ -d "autotrainx-web" ] && [ -f "autotrainx-web/package.json" ]; then
+        print_info "Installing web dependencies..."
         cd autotrainx-web
-        
-        # Install dependencies
         npm install
         
-        # Return to original directory
-        cd ..
-        
-        print_success "Web interface dependencies installed"
-        
-        # Build the web interface
-        if ask_confirmation "Build the web interface for production?"; then
+        # Build for production if not in dev profile
+        if [ "$SELECTED_PROFILE" != "dev" ]; then
             print_info "Building web interface..."
-            cd autotrainx-web
             npm run build
-            cd ..
-            print_success "Web interface built successfully"
         fi
+        
+        cd ..
+        print_success "Web interface ready"
     else
-        print_info "Skipping web interface dependencies"
+        print_warning "Web interface directory not found"
     fi
-    
-    return 0
 }
 
-step_install_pytorch() {
-    print_info "Installing PyTorch for CUDA 12.8..."
-    
-    # Ensure we're in the virtual environment
-    if [ -z "$VIRTUAL_ENV" ]; then
-        source "$VENV_PATH/bin/activate"
-    fi
-    
-    # Check current Python and pip paths
-    print_debug "Python path: $(which python)"
-    print_debug "Pip path: $(which pip)"
-    print_debug "Virtual env: $VIRTUAL_ENV"
-    print_debug "Current user: $(whoami)"
-    
-    # Handle root installation
-    if [ "$RUNNING_AS_ROOT" = true ]; then
-        print_info "Installing PyTorch as root user."
-    fi
-    
-    # Uninstall any existing PyTorch installations to avoid conflicts
-    print_info "Cleaning up any existing PyTorch installations..."
-    pip uninstall -y torch torchvision torchaudio xformers 2>/dev/null || true
-    
-    # Install latest PyTorch with CUDA 12.8 support (exact command as requested)
-    print_info "Installing latest PyTorch with CUDA 12.8 support..."
-    print_info "Using command: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128"
-    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
-    
-    # Install opencv-python to resolve dependency conflicts
-    print_info "Installing opencv-python to resolve dependency conflicts..."
-    pip install opencv-python>=4.6.0
-    
-    # Verify PyTorch installation in virtual environment
-    print_info "Verifying PyTorch installation..."
-    if ! python -c "import torch; print(f'PyTorch {torch.__version__} installed'); print(f'Location: {torch.__file__}')" 2>/dev/null; then
-        print_error "PyTorch installation verification failed"
-        return 1
-    fi
-    
-    # Verify CUDA availability
-    if ! python -c "import torch; assert torch.cuda.is_available(), 'CUDA not available'; print(f'CUDA {torch.version.cuda} available with {torch.cuda.device_count()} GPU(s)')" 2>/dev/null; then
-        print_warning "CUDA is not available or not working properly"
-    fi
-    
-    # Verify it's installed in the virtual environment (if using venv)
-    if [ -n "$VIRTUAL_ENV" ]; then
-        pytorch_location=$(python -c "import torch; print(torch.__file__)")
-        if [[ "$pytorch_location" == *"$VENV_PATH"* ]]; then
-            print_success "PyTorch is correctly installed in virtual environment"
-        else
-            print_warning "PyTorch location: $pytorch_location (may not be in venv due to root execution)"
-        fi
-    fi
-    
-    print_success "PyTorch for CUDA 12.8 installed successfully"
-    return 0
-}
-
-step_install_huggingface_hub() {
-    print_info "Installing huggingface_hub for model downloads..."
-    
-    # Ensure we're in the virtual environment
-    if [ -z "$VIRTUAL_ENV" ]; then
-        source "$VENV_PATH/bin/activate"
-    fi
-    
-    pip install huggingface_hub
-    
-    print_success "huggingface_hub installed successfully"
-    return 0
-}
-
-step_download_models() {
-    print_info "Model Download Configuration"
-    print_warning "The models from 'EQX55/trainX' are large files and may take significant time to download."
-    print_info "You can skip this step now and download the models later using:"
-    print_info "  huggingface-cli download EQX55/trainX --repo-type model --local-dir models/trainX"
-    
-    if ! ask_confirmation "Do you want to download the models now?"; then
-        print_info "Skipping model download. You can download them later."
+# Step 9: Model Downloads
+download_models() {
+    if [ "$INSTALL_MODELS" != true ]; then
         return 0
     fi
     
-    print_info "Downloading models from Hugging Face repository 'EQX55/trainX'..."
+    print_step 9 12 "Downloading Models"
     
-    # Ensure we're in the virtual environment
-    if [ -z "$VIRTUAL_ENV" ]; then
-        source "$VENV_PATH/bin/activate"
-    fi
+    source "$VENV_PATH/bin/activate"
     
-    local models_dir="$SCRIPT_DIR/models/trainX"
+    # Install huggingface-cli
+    pip install huggingface_hub
     
-    # Create models directory if it doesn't exist
-    mkdir -p "$(dirname "$models_dir")"
+    # Download models
+    local models_dir="$SCRIPT_DIR/models"
+    mkdir -p "$models_dir"
     
-    # Check if models already exist
-    if [ -d "$models_dir" ] && [ "$(ls -A "$models_dir")" ]; then
-        if ask_confirmation "Models directory already exists and is not empty. Re-download?"; then
-            rm -rf "$models_dir"
-        else
-            print_info "Using existing models"
-            return 0
-        fi
-    fi
+    print_info "Downloading models from Hugging Face..."
+    print_warning "This may take a while depending on your connection speed"
     
-    # Download models with progress indication
-    huggingface-cli download EQX55/trainX --repo-type model --local-dir "$models_dir" --local-dir-use-symlinks False
-    
-    # Verify download
-    if [ ! -d "$models_dir" ] || [ ! "$(ls -A "$models_dir")" ]; then
-        print_error "Model download failed or directory is empty"
-        return 1
-    fi
-    
-    print_success "Models downloaded successfully to '$models_dir'"
-    return 0
+    # Download specific models based on profile
+    case "$SELECTED_PROFILE" in
+        minimal)
+            print_info "Skipping model downloads for minimal profile"
+            ;;
+        *)
+            # Check for existing models
+            if [ -d "$models_dir" ] && [ "$(ls -A "$models_dir" 2>/dev/null)" ]; then
+                print_warning "Models directory already contains files"
+                read -p "Re-download models? (y/N): " redownload
+                [[ ! $redownload =~ ^[Yy]$ ]] && return 0
+            fi
+            
+            # Download models from your repository
+            if command -v huggingface-cli &> /dev/null; then
+                # Copy models if they exist in the current directory
+                for model_file in flux1-dev-fp8.safetensors t5xxl_fp8_e4m3fn.safetensors ae.safetensors clip_l.safetensors; do
+                    if [ -f "$SCRIPT_DIR/models/$model_file" ]; then
+                        print_info "Model $model_file already exists"
+                    else
+                        print_warning "Model $model_file not found - you may need to download it manually"
+                    fi
+                done
+            fi
+            ;;
+    esac
 }
 
-step_final_fixes() {
-    print_info "Applying final fixes..."
+# Step 10: Environment Configuration
+setup_environment() {
+    print_step 10 12 "Setting up Environment Configuration"
     
-    # Ensure we're in the virtual environment
-    if [ -z "$VIRTUAL_ENV" ]; then
-        source "$VENV_PATH/bin/activate"
-    fi
-    
-    # Upgrade diffusers to latest version
-    print_info "Upgrading diffusers to latest version..."
-    pip install --upgrade diffusers
-    
-    # Install GPUtil for GPU monitoring
-    print_info "Installing GPUtil for GPU monitoring..."
-    pip install GPUtil
-    
-    # Uninstall bitsandbytes (known to cause issues in some configurations)
-    print_info "Uninstalling bitsandbytes..."
-    pip uninstall -y bitsandbytes 2>/dev/null || true
-    
-    print_success "Final fixes completed successfully"
-    return 0
-}
-
-step_setup_environment_variables() {
-    print_info "Setting up environment variables..."
-    
-    # Create a .env file for the project if it doesn't exist
-    if [ ! -f "$SCRIPT_DIR/.env" ]; then
-        print_info "Creating .env file with default configuration..."
-        cat > "$SCRIPT_DIR/.env" << EOF
+    # Create .env file
+    mkdir -p "$SCRIPT_DIR/settings"
+    cat > "$SCRIPT_DIR/settings/.env" << EOF
 # AutoTrainX Environment Configuration
 # Generated by setup.sh on $(date)
+
+# Profile Configuration
+AUTOTRAINX_PROFILE=$SELECTED_PROFILE
+AUTOTRAINX_ENVIRONMENT=$ENVIRONMENT_TYPE
 
 # Database Configuration
 AUTOTRAINX_DB_TYPE=postgresql
@@ -999,321 +752,320 @@ API_PORT=8000
 # Paths
 AUTOTRAINX_ROOT=$SCRIPT_DIR
 MODELS_PATH=$SCRIPT_DIR/models
+VENV_PATH=$VENV_PATH
 
-# Python Virtual Environment
-VIRTUAL_ENV_PATH=$VENV_PATH
+# CUDA Configuration
+CUDA_VERSION=$CUDA_VERSION
+
+# Component Flags
+POSTGRESQL_ENABLED=$INSTALL_POSTGRESQL
+NODEJS_ENABLED=$INSTALL_NODEJS
+DOCKER_ENABLED=$INSTALL_DOCKER
+GOOGLE_SHEETS_ENABLED=$INSTALL_GOOGLE_SHEETS
 EOF
-        print_success ".env file created"
-    else
-        print_info ".env file already exists"
-    fi
-    
-    # Add activation script
-    if [ ! -f "$SCRIPT_DIR/activate.sh" ]; then
-        print_info "Creating activation script..."
-        cat > "$SCRIPT_DIR/activate.sh" << EOF
+
+    # Create activation script
+    cat > "$SCRIPT_DIR/activate.sh" << 'EOF'
 #!/bin/bash
-# AutoTrainX Activation Script
-# Source this file to activate the virtual environment and set environment variables
+# AutoTrainX Environment Activation Script
 
-# Get the directory of this script
-SCRIPT_DIR="\$(cd "\$(dirname "\${BASH_SOURCE[0]}")" && pwd)"
-VENV_PATH="\$SCRIPT_DIR/venv"
-
-# Check if running as root
-if [ "\$(whoami)" = "root" ]; then
-    echo "Note: Running as root user"
-fi
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Activate virtual environment
-if [ -f "\$VENV_PATH/bin/activate" ]; then
-    source "\$VENV_PATH/bin/activate"
+if [ -f "$SCRIPT_DIR/venv/bin/activate" ]; then
+    source "$SCRIPT_DIR/venv/bin/activate"
     echo "Virtual environment activated"
 else
-    echo "Virtual environment not found at \$VENV_PATH"
+    echo "Virtual environment not found"
     exit 1
 fi
 
 # Load environment variables
-if [ -f "\$SCRIPT_DIR/.env" ]; then
-    export \$(grep -v '^#' "\$SCRIPT_DIR/.env" | xargs)
+if [ -f "$SCRIPT_DIR/settings/.env" ]; then
+    set -a
+    source "$SCRIPT_DIR/settings/.env"
+    set +a
     echo "Environment variables loaded"
-else
-    echo "Warning: .env file not found"
 fi
 
-echo "AutoTrainX environment is ready!"
-echo "Python: \$(which python)"
-echo "Python version: \$(python --version)"
-echo "User: \$(whoami)"
+# Show status
+echo "AutoTrainX environment ready!"
+echo "Profile: $AUTOTRAINX_PROFILE"
+echo "Python: $(which python)"
+echo "Version: $(python --version)"
 EOF
-        chmod +x "$SCRIPT_DIR/activate.sh"
-        print_success "Activation script created"
-    fi
-    
-    print_info "To activate the AutoTrainX environment in the future, run:"
-    print_info "  source $SCRIPT_DIR/activate.sh"
-    
-    return 0
+
+    chmod +x "$SCRIPT_DIR/activate.sh"
+    print_success "Environment configuration completed"
 }
 
-step_verify_installation() {
-    print_info "Running comprehensive verification checks..."
+# Step 11: Final Optimizations
+apply_final_optimizations() {
+    print_step 11 12 "Applying Final Optimizations"
     
-    # Ensure we're in the virtual environment
-    if [ -z "$VIRTUAL_ENV" ]; then
-        source "$VENV_PATH/bin/activate"
-    fi
+    source "$VENV_PATH/bin/activate"
     
-    local verification_failed=false
-    
-    # Check Python version and location
-    print_info "Python version: $(python --version)"
-    print_info "Python location: $(which python)"
-    print_info "Virtual environment: $VIRTUAL_ENV"
-    
-    # Check PyTorch and CUDA
-    if python -c "import torch; print(f'PyTorch version: {torch.__version__}'); print(f'PyTorch location: {torch.__file__}'); assert torch.cuda.is_available(), 'CUDA not available'" 2>/dev/null; then
-        pytorch_version=$(python -c "import torch; print(torch.__version__)")
-        pytorch_location=$(python -c "import torch; print(torch.__file__)")
-        cuda_version=$(python -c "import torch; print(torch.version.cuda)")
-        gpu_count=$(python -c "import torch; print(torch.cuda.device_count())")
-        print_success "PyTorch ($pytorch_version) with CUDA ($cuda_version) - $gpu_count GPU(s) available"
-        print_info "PyTorch location: $pytorch_location"
-        
-        # Verify PyTorch is in virtual environment
-        if [[ "$pytorch_location" == *"$VENV_PATH"* ]]; then
-            print_success "PyTorch is correctly installed in virtual environment"
-        else
-            print_warning "PyTorch may not be installed in virtual environment"
-        fi
-    else
-        print_error "PyTorch is not correctly installed or CUDA is not available"
-        verification_failed=true
-    fi
-    
-    # Check xformers
-    if python -c "import xformers; print(f'xformers version: {xformers.__version__}'); print(f'xformers location: {xformers.__file__}')" 2>/dev/null; then
-        xformers_version=$(python -c "import xformers; print(xformers.__version__)")
-        xformers_location=$(python -c "import xformers; print(xformers.__file__)")
-        print_success "xformers ($xformers_version) is installed and working"
-        print_info "xformers location: $xformers_location"
-    else
-        print_error "xformers is not installed or not working"
-        verification_failed=true
-    fi
-    
-    # Check diffusers
-    if python -c "import diffusers; print(f'diffusers version: {diffusers.__version__}')" 2>/dev/null; then
-        diffusers_version=$(python -c "import diffusers; print(diffusers.__version__)")
-        print_success "diffusers ($diffusers_version) is installed and working"
-    else
-        print_warning "diffusers is not installed or not working"
-    fi
-    
-    # Check Gradio
-    if python -c "import gradio; print(f'Gradio version: {gradio.__version__}')" 2>/dev/null; then
-        gradio_version=$(python -c "import gradio; print(gradio.__version__)")
-        print_success "Gradio ($gradio_version) is installed"
-    else
-        print_warning "Gradio is not installed"
-    fi
-    
-    # Check FastAPI
-    if python -c "import fastapi; print(f'FastAPI version: {fastapi.__version__}')" 2>/dev/null; then
-        fastapi_version=$(python -c "import fastapi; print(fastapi.__version__)")
-        print_success "FastAPI ($fastapi_version) is installed"
-    else
-        print_warning "FastAPI is not installed"
-    fi
-    
-    # Check SQLAlchemy
-    if python -c "import sqlalchemy; print(f'SQLAlchemy version: {sqlalchemy.__version__}')" 2>/dev/null; then
-        sqlalchemy_version=$(python -c "import sqlalchemy; print(sqlalchemy.__version__)")
-        print_success "SQLAlchemy ($sqlalchemy_version) is installed"
-    else
-        print_warning "SQLAlchemy is not installed"
-    fi
-    
-    # Check PostgreSQL
-    if command -v psql &> /dev/null; then
-        psql_version=$(psql --version | awk '{print $3}')
-        print_success "PostgreSQL ($psql_version) is installed"
-        
-        # Check if AutoTrainX database exists
-        if [ "$RUNNING_AS_ROOT" = true ]; then
-            if su - postgres -c "psql -lqt" | cut -d \| -f 1 | grep -qw autotrainx; then
-                print_success "AutoTrainX database exists"
-            else
-                print_warning "AutoTrainX database not configured"
+    # Profile-specific optimizations
+    case "$SELECTED_PROFILE" in
+        docker)
+            # Docker-specific optimizations
+            print_info "Applying Docker optimizations..."
+            # Create docker-compose override for development
+            if [ ! -f "docker-compose.override.yml" ]; then
+                cat > "docker-compose.override.yml" << EOF
+version: '3.8'
+services:
+  app:
+    volumes:
+      - ./models:/app/models
+      - ./workspace:/app/workspace
+EOF
             fi
-        else
-            if sudo -u postgres psql -lqt | cut -d \| -f 1 | grep -qw autotrainx; then
-                print_success "AutoTrainX database exists"
-            else
-                print_warning "AutoTrainX database not configured"
+            ;;
+        wsl)
+            # WSL-specific optimizations
+            print_info "Applying WSL optimizations..."
+            # Create .wslconfig recommendations
+            cat > "$SCRIPT_DIR/wsl-recommendations.txt" << EOF
+# Add to ~/.wslconfig on Windows:
+[wsl2]
+memory=8GB
+processors=4
+localhostForwarding=true
+EOF
+            ;;
+        dev)
+            # Development optimizations
+            print_info "Setting up development environment..."
+            # Install pre-commit hooks if available
+            if [ -f ".pre-commit-config.yaml" ]; then
+                pip install pre-commit
+                pre-commit install
             fi
-        fi
-    else
-        print_warning "PostgreSQL is not installed"
+            ;;
+    esac
+    
+    # Common optimizations
+    pip install --upgrade diffusers transformers accelerate
+    
+    # Clean up
+    pip cache purge
+    
+    print_success "Optimizations applied"
+}
+
+# Step 12: Verification
+verify_installation() {
+    print_step 12 12 "Verifying Installation"
+    
+    source "$VENV_PATH/bin/activate"
+    
+    local errors=0
+    
+    # Check Python environment
+    print_info "Checking Python environment..."
+    python --version || ((errors++))
+    
+    # Check PyTorch
+    print_info "Checking PyTorch..."
+    python -c "import torch; print(f'PyTorch {torch.__version__}')" || ((errors++))
+    
+    # Check CUDA if not minimal
+    if [ "$SELECTED_PROFILE" != "minimal" ]; then
+        python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')" || print_warning "CUDA not available"
     fi
     
-    # Check Node.js and npm
-    if command -v node &> /dev/null; then
-        node_version=$(node --version)
-        print_success "Node.js ($node_version) is installed"
-        
-        if command -v npm &> /dev/null; then
-            npm_version=$(npm --version)
-            print_success "npm ($npm_version) is installed"
-        else
-            print_warning "npm is not installed"
-        fi
-        
-        # Check if web dependencies are installed
-        if [ -d "autotrainx-web/node_modules" ]; then
-            print_success "Web interface dependencies are installed"
-        else
-            print_warning "Web interface dependencies not installed"
-        fi
-    else
-        print_warning "Node.js is not installed"
+    # Check optional components
+    if [ "$INSTALL_POSTGRESQL" = true ]; then
+        command -v psql &> /dev/null && print_success "PostgreSQL installed" || print_warning "PostgreSQL not found"
     fi
     
-    # Check models
-    if [ -d "$SCRIPT_DIR/models/trainX" ] && [ "$(ls -A "$SCRIPT_DIR/models/trainX")" ]; then
-        model_count=$(find "$SCRIPT_DIR/models/trainX" -type f | wc -l)
-        print_success "Models directory exists with $model_count files"
-    else
-        print_warning "Models directory is missing or empty"
-        print_info "You can download models later with:"
-        print_info "  huggingface-cli download EQX55/trainX --repo-type model --local-dir models/trainX"
-        # Don't mark as failed since models can be downloaded later
+    if [ "$INSTALL_NODEJS" = true ]; then
+        command -v node &> /dev/null && print_success "Node.js installed" || print_warning "Node.js not found"
     fi
     
-    # Summary of optional components
-    print_info "\nOptional Components Status:"
-    print_info "- PostgreSQL: $(command -v psql &> /dev/null && echo "Installed" || echo "Not installed")"
-    print_info "- Node.js: $(command -v node &> /dev/null && echo "Installed" || echo "Not installed")"
-    print_info "- Web Interface: $([ -d "autotrainx-web/node_modules" ] && echo "Ready" || echo "Not ready")"
-    print_info "- API Server: $(python -c "import fastapi" 2>/dev/null && echo "Ready" || echo "Not ready")"
+    if [ "$INSTALL_DOCKER" = true ]; then
+        command -v docker &> /dev/null && print_success "Docker installed" || print_warning "Docker not found"
+    fi
     
-    if [ "$verification_failed" = true ]; then
-        print_error "Some core verification checks failed"
-        return 1
-    else
-        print_success "All core verification checks passed!"
+    if [ $errors -eq 0 ]; then
+        print_success "All core components verified successfully!"
         return 0
+    else
+        print_error "Some components failed verification"
+        return 1
     fi
 }
 
-# Main installation function
+# ============================================================================
+# Main Installation Flow
+# ============================================================================
+
+show_banner() {
+    clear
+    echo -e "${CYAN}${BOLD}"
+    echo "╔═══════════════════════════════════════════════════════════════════════╗"
+    echo "║                                                                       ║"
+    echo "║                    AutoTrainX Unified Setup Script                    ║"
+    echo "║                           Version 2.0                                 ║"
+    echo "║                                                                       ║"
+    echo "╚═══════════════════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+}
+
 main() {
-    # Initialize log file
-    echo "AutoTrainV2 Installation Log - $(date)" > "$LOG_FILE"
+    show_banner
     
-    print_info "Starting AutoTrainV2 Interactive Installation"
-    print_info "Script directory: $SCRIPT_DIR"
-    print_info "Log file: $LOG_FILE"
+    # Parse command line arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --profile)
+                SELECTED_PROFILE="$2"
+                shift 2
+                ;;
+            --auto)
+                AUTO_MODE=true
+                shift
+                ;;
+            --config)
+                INSTALL_CONFIG="$2"
+                shift 2
+                ;;
+            --help|-h)
+                show_help
+                exit 0
+                ;;
+            *)
+                print_error "Unknown option: $1"
+                exit 1
+                ;;
+        esac
+    done
     
-    if [ "$AUTO_MODE" = true ]; then
-        print_info "Running in automatic mode"
+    # Initialize log
+    print_info "Starting AutoTrainX installation - $(date)"
+    print_info "Installation log: $LOG_FILE"
+    
+    # Detect environment
+    detect_environment
+    
+    # Check permissions
+    check_root_permissions
+    
+    # Load configuration if specified
+    if [ -n "$INSTALL_CONFIG" ]; then
+        load_configuration "$INSTALL_CONFIG" || exit 1
+    elif [ "$AUTO_MODE" = true ] && [ -f "$CONFIG_FILE" ]; then
+        load_configuration "$CONFIG_FILE"
     fi
     
-    if [ "$DEBUG_MODE" = true ]; then
-        print_info "Debug mode enabled"
+    # Interactive configuration if not in auto mode
+    if [ "$AUTO_MODE" != true ]; then
+        # Select profile if not already set
+        if [ -z "$SELECTED_PROFILE" ]; then
+            show_profile_menu
+        fi
+        
+        # Configure components
+        configure_profile_defaults
+        customize_components
+        
+        # Save configuration
+        save_configuration
+    else
+        # Validate profile if set via command line
+        if [ -n "$SELECTED_PROFILE" ]; then
+            if [[ ! " docker wsl linux dev minimal " =~ " $SELECTED_PROFILE " ]]; then
+                print_error "Invalid profile: $SELECTED_PROFILE"
+                exit 1
+            fi
+            configure_profile_defaults
+        else
+            print_error "No profile selected and no configuration found"
+            exit 1
+        fi
     fi
     
-    # Show installation summary
-    echo ""
-    echo "Installation Steps:"
-    echo "1. Check Prerequisites"
-    echo "2. Install System Dependencies"
-    echo "3. Create Virtual Environment"
-    echo "4. Activate Virtual Environment"
-    echo "5. Upgrade pip"
-    echo "6. Install PyTorch for CUDA 12.8"
-    echo "7. Install xformers"
-    echo "8. Install sd-scripts requirements"
-    echo "9. Install main requirements"
-    echo "10. Install API requirements"
-    echo "11. Install Google Sheets sync requirements"
-    echo "12. Install menu requirements"
-    echo "13. Install Hugging Face Hub"
-    echo "14. Download Models"
-    echo "15. Setup PostgreSQL Database"
-    echo "16. Install Web Interface Dependencies"
-    echo "17. Final Fixes"
-    echo "18. Setup Environment Variables"
-    echo "19. Verify Installation"
-    echo ""
-    
-    if ! ask_confirmation "Proceed with installation?"; then
-        print_info "Installation cancelled by user"
-        exit 0
+    # Show summary and confirm
+    if [ "$AUTO_MODE" != true ]; then
+        show_installation_summary
     fi
     
     # Execute installation steps
-    execute_step 1 "Check Prerequisites" step_check_prerequisites || true
-    execute_step 2 "Install System Dependencies" step_install_system_dependencies || true
-    execute_step 3 "Create Virtual Environment" step_create_venv || true
-    execute_step 4 "Activate Virtual Environment" step_activate_venv || true
-    execute_step 5 "Upgrade pip" step_upgrade_pip || true
-    execute_step 6 "Install PyTorch for CUDA 12.8" step_install_pytorch || true
-    execute_step 7 "Install xformers" step_install_xformers || true
-    execute_step 8 "Install sd-scripts requirements" step_install_sd_scripts_requirements || true
-    execute_step 9 "Install main requirements" step_install_main_requirements || true
-    execute_step 10 "Install API requirements" step_install_api_requirements || true
-    execute_step 11 "Install Google Sheets sync requirements" step_install_sheets_sync_requirements || true
-    execute_step 12 "Install menu requirements" step_install_menu_requirements || true
-    execute_step 13 "Install Hugging Face Hub" step_install_huggingface_hub || true
-    execute_step 14 "Download Models" step_download_models || true
-    execute_step 15 "Setup PostgreSQL Database" step_setup_postgresql || true
-    execute_step 16 "Install Web Interface Dependencies" step_install_web_dependencies || true
-    execute_step 17 "Final Fixes" step_final_fixes || true
-    execute_step 18 "Setup Environment Variables" step_setup_environment_variables || true
-    execute_step 19 "Verify Installation" step_verify_installation || true
+    install_system_dependencies
+    create_virtual_environment
+    install_pytorch
+    install_xformers
+    install_core_dependencies
+    install_optional_components
+    setup_postgresql
+    setup_web_interface
+    download_models
+    setup_environment
+    apply_final_optimizations
+    verify_installation
     
-    # Final summary
+    # Show completion message
+    print_header "Installation Complete!"
+    
+    echo "Profile: $SELECTED_PROFILE"
+    echo "Configuration saved to: $CONFIG_FILE"
     echo ""
-    print_info "Installation Summary:"
-    print_info "Completed steps: ${#INSTALLATION_STEPS[@]}"
+    echo "Next steps:"
+    echo "1. Activate environment: source activate.sh"
+    echo "2. Start services based on your profile:"
     
-    if [ ${#FAILED_STEPS[@]} -gt 0 ]; then
-        print_warning "Failed steps: ${FAILED_STEPS[*]}"
-    else
-        print_success "All steps completed successfully!"
-    fi
+    case "$SELECTED_PROFILE" in
+        docker)
+            echo "   - Start containers: docker-compose up -d"
+            ;;
+        minimal)
+            echo "   - Run training: python main.py --train ..."
+            ;;
+        *)
+            echo "   - Start API: python api_server.py"
+            [ "$INSTALL_NODEJS" = true ] && echo "   - Start web UI: cd autotrainx-web && npm run dev"
+            ;;
+    esac
     
-    print_info ""
-    print_info "Installation log saved to: $LOG_FILE"
-    
-    if [ ${#FAILED_STEPS[@]} -eq 0 ]; then
-        print_success "AutoTrainX installation completed successfully!"
-        print_info ""
-        print_info "To start using AutoTrainX:"
-        print_info "  1. Activate the environment: source $SCRIPT_DIR/activate.sh"
-        print_info "  2. Start the API server: python api/main.py"
-        print_info "  3. Start the web interface: cd autotrainx-web && npm run dev"
-        print_info "  4. Or use the interactive menu: python src/menu/interactive_menu.py"
-        print_info ""
-        print_info "Quick start commands:"
-        print_info "  - Activate environment: source activate.sh"
-        print_info "  - Start all services: ./start_dev.sh"
-        print_info "  - Stop all services: ./stop_dev.sh"
-        exit 0
-    else
-        print_error "Installation completed with some failures. Check the log for details."
-        print_warning "Failed steps: ${FAILED_STEPS[*]}"
-        print_info ""
-        print_info "You can try to fix the issues and run the setup again."
-        print_info "To run specific steps, modify the script or install dependencies manually."
-        exit 1
-    fi
+    echo ""
+    print_success "Setup completed successfully!"
 }
 
-# Trap signals for cleanup
-trap cleanup_and_exit SIGINT SIGTERM
+show_help() {
+    echo "AutoTrainX Unified Setup Script"
+    echo ""
+    echo "Usage: $0 [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  --profile PROFILE    Set installation profile (docker|wsl|linux|dev|minimal)"
+    echo "  --auto               Run in automatic mode using saved config or defaults"
+    echo "  --config FILE        Load configuration from specified file"
+    echo "  --help, -h           Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  # Interactive installation"
+    echo "  ./setup.sh"
+    echo ""
+    echo "  # Install with specific profile"
+    echo "  ./setup.sh --profile docker"
+    echo ""
+    echo "  # Automatic installation with saved config"
+    echo "  ./setup.sh --auto"
+    echo ""
+    echo "  # Use custom configuration file"
+    echo "  ./setup.sh --config my-config.json"
+}
 
-# Run main function
+# ============================================================================
+# Script Entry Point
+# ============================================================================
+
+# Ensure we're running from the correct directory
+if [ ! -f "$SCRIPT_DIR/requirements.txt" ]; then
+    print_error "This script must be run from the AutoTrainX root directory"
+    exit 1
+fi
+
+# Run main installation
 main "$@"

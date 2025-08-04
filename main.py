@@ -5,6 +5,9 @@ AutoTrainX Main CLI - Simplified version using unified argument system.
 This script provides a clean, intuitive interface for the AutoTrainX pipeline.
 
 Usage examples:
+    # Launch interactive menu
+    python main.py --menu
+    
     # Train single dataset
     python main.py --train --single --source /home/eqx/datasets/3/dl4r0s4 --preset FluxLORA
     
@@ -22,27 +25,60 @@ Usage examples:
     python main.py --status
 """
 
+# IMPORTANT: Load environment variables FIRST before any other imports
+import os
 import sys
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Try to load .env from various locations (prioritize root .env)
+project_root = Path(__file__).parent
+env_paths = [
+    project_root / '.env',  # Root .env first
+    project_root / 'settings' / '.env',  # Settings .env as fallback
+]
+
+env_loaded = False
+for env_path in env_paths:
+    if env_path.exists():
+        load_dotenv(env_path, override=True)  # Force override existing variables
+        print(f"Loaded environment from: {env_path}")
+        env_loaded = True
+        break
+
+if not env_loaded:
+    print("Warning: No .env file found")
+
+# Set PostgreSQL configuration with defaults (but allow env override)
+if 'AUTOTRAINX_DB_TYPE' not in os.environ:
+    os.environ['AUTOTRAINX_DB_TYPE'] = 'postgresql'
+if 'AUTOTRAINX_DB_HOST' not in os.environ:
+    os.environ['AUTOTRAINX_DB_HOST'] = 'localhost'
+if 'AUTOTRAINX_DB_PORT' not in os.environ:
+    os.environ['AUTOTRAINX_DB_PORT'] = '5432'
+if 'AUTOTRAINX_DB_NAME' not in os.environ:
+    os.environ['AUTOTRAINX_DB_NAME'] = 'autotrainx'
+if 'AUTOTRAINX_DB_USER' not in os.environ:
+    os.environ['AUTOTRAINX_DB_USER'] = 'autotrainx'
+if 'AUTOTRAINX_DB_PASSWORD' not in os.environ:
+    os.environ['AUTOTRAINX_DB_PASSWORD'] = '1234'  # Default only if not set
+
+# Now import other standard library modules
 import json
 import asyncio
-from pathlib import Path
-import os
-
-# Force PostgreSQL configuration
-os.environ['AUTOTRAINX_DB_TYPE'] = 'postgresql'
-os.environ['AUTOTRAINX_DB_HOST'] = 'localhost'
-os.environ['AUTOTRAINX_DB_PORT'] = '5432'
-os.environ['AUTOTRAINX_DB_NAME'] = 'autotrainx'
-os.environ['AUTOTRAINX_DB_USER'] = 'autotrainx'
-os.environ['AUTOTRAINX_DB_PASSWORD'] = '1234'
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
+
+# Reload database settings after environment is loaded
+from src.database.config import reload_db_settings
+reload_db_settings()
 
 from src.pipeline.pipeline import AutoTrainPipeline
 from src.pipeline.base import PipelineConfig
 from src.scripts.models import verify_all_models
 from src.cli import UnifiedArgumentParser, UnifiedCommandHandler, ResultFormatter
+from src.cli.unified_args import Operation
 from src.utils.logging_config import setup_logging, get_logger
 from src.utils.workspace_setup import WorkspaceSetup
 from src.utils.display import DisplayBox
@@ -120,6 +156,58 @@ async def async_main():
         )
     
     try:
+        # Handle menu operation first
+        if args.operation == Operation.MENU:
+            # Launch interactive menu
+            import subprocess
+            menu_script = Path(__file__).parent / "src" / "menu" / "interactive_menu.py"
+            
+            if not menu_script.exists():
+                print("Error: Interactive menu script not found")
+                return 1
+            
+            # Clear screen and show header
+            os.system('cls' if os.name == 'nt' else 'clear')
+            
+            print("\033[1;36m" + "╔" + "═" * 58 + "╗" + "\033[0m")
+            print("\033[1;36m║" + " " * 15 + "AutoTrainX Menu Session" + " " * 20 + "║\033[0m")
+            print("\033[1;36m╚" + "═" * 58 + "╝" + "\033[0m")
+            
+            try:
+                # Try to import questionary to check if it's installed
+                import questionary
+            except ImportError:
+                print("\nInstalling required dependencies...")
+                requirements_file = Path(__file__).parent / "src" / "menu" / "interactive_menu_requirements.txt"
+                if requirements_file.exists():
+                    subprocess.run([sys.executable, "-m", "pip", "install", "-r", str(requirements_file)])
+                else:
+                    subprocess.run([sys.executable, "-m", "pip", "install", "questionary>=2.0.0"])
+            
+            try:
+                # Launch the interactive menu with proper terminal handling
+                result = subprocess.run(
+                    [sys.executable, str(menu_script)],
+                    stdin=sys.stdin,
+                    stdout=sys.stdout,
+                    stderr=sys.stderr
+                )
+                exit_code = result.returncode
+            except KeyboardInterrupt:
+                print("\n\n\033[0;33m✗ Menu session interrupted\033[0m")
+                exit_code = 130
+            except Exception as e:
+                print(f"\n\033[0;31m✗ Error: {e}\033[0m")
+                exit_code = 1
+            
+            # Show return message
+            print("\n\033[1;36m" + "─" * 60 + "\033[0m")
+            print("\033[1;32m✓ Returned to normal terminal\033[0m")
+            print("\033[1;36m" + "═" * 60 + "\033[0m")
+            
+            shutdown_handler.unregister()
+            return exit_code
+        
         # Handle ComfyUI path if provided
         if args.comfyui_path:
             Config.set_comfyui_path(args.comfyui_path, args.base_path)

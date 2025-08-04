@@ -1,97 +1,233 @@
-"""Database manager for AutoTrainX execution tracking."""
+"""Enhanced database manager with multi-database support and optimizations."""
 
 import os
 from pathlib import Path
 from typing import Optional, List, Dict, Any, Union
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import logging
+from contextlib import contextmanager
 
-from sqlalchemy import create_engine, desc, and_, or_
+from sqlalchemy import create_engine, desc, and_, or_, text
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, OperationalError
 
-from .models import Base, Execution, Variation
+from .models import Base, Execution, Variation, JobSummaryCache
 from .enums import ExecutionStatus, PipelineMode
-
+from .connection_pool import ConnectionMonitor
+from .optimizations import QueryOptimizer
+from .schema_improvements import SchemaOptimizer
+from .transactions import TransactionManager, TransactionMetrics, OptimisticLock
+from .factory import DatabaseFactory, DatabaseConfig
+from .config import db_settings
+from .performance_indexes import PerformanceIndexManager
+from .batch_operations import BatchOperationsMixin
+from .query_cache import CacheMixin
+from .optimized_queries import OptimizedQueriesMixin
+from .utils.singleton_logger import singleton_logger
 
 logger = logging.getLogger(__name__)
 
 
-class DatabaseManager:
-    """Manager for database operations."""
+class EnhancedDatabaseManager(BatchOperationsMixin, CacheMixin, OptimizedQueriesMixin):
+    """Enhanced database manager with optimizations and monitoring."""
     
-    def __init__(self, db_path: Optional[Path] = None):
-        """Initialize database manager.
+    def __init__(self, config: Optional[DatabaseConfig] = None, enable_monitoring: bool = True):
+        """Initialize enhanced database manager.
         
         Args:
-            db_path: Path to SQLite database file. If None, uses default location.
+            config: Database configuration. If None, uses environment/default.
+            enable_monitoring: Enable connection and performance monitoring
         """
-        if db_path is None:
-            # Use project directory DB folder
-            db_dir = Path(__file__).parent.parent.parent / "DB"
-            db_dir.mkdir(exist_ok=True)
-            db_path = db_dir / "executions.db"
+        # Initialize parent classes (including CacheMixin)
+        super().__init__()
         
-        self.db_path = db_path
-        self.engine = create_engine(
-            f"sqlite:///{db_path}",
-            connect_args={"check_same_thread": False},  # Allow multi-threading
-            echo=False
-        )
+        if config is None:
+            # Create config from environment/settings
+            if db_settings.db_type == 'sqlite':
+                db_path = Path(db_settings.get_connection_url().replace('sqlite:///', ''))
+                config = DatabaseConfig(
+                    db_type='sqlite',
+                    db_path=db_path,
+                    echo=db_settings.is_echo_enabled(),
+                    pool_config=db_settings.get_pool_config()
+                )
+            else:
+                config = DatabaseConfig(
+                    db_type='postgresql',
+                    db_url=db_settings.get_connection_url(),
+                    echo=db_settings.is_echo_enabled(),
+                    pool_config=db_settings.get_pool_config()
+                )
         
-        # Enable WAL mode for better concurrency
-        from sqlalchemy import text
-        with self.engine.connect() as conn:
-            conn.execute(text("PRAGMA journal_mode=WAL"))
-            conn.execute(text("PRAGMA busy_timeout=5000"))  # 5 second timeout
-            conn.commit()
+        self.config = config
+        self.dialect = DatabaseFactory.get_dialect(config.db_type)
         
-        # Create tables if they don't exist
+        # Create engine using factory
+        self.engine = DatabaseFactory.create_engine(config)
+        
+        # Create tables and apply optimizations
         Base.metadata.create_all(self.engine)
+        
+        # Apply schema optimizations based on database type
+        if config.db_type == 'sqlite':
+            SchemaOptimizer.apply_optimizations(self.engine)
+            SchemaOptimizer.create_materialized_view(self.engine)
+        else:
+            # PostgreSQL-specific optimizations
+            self._apply_postgresql_optimizations()
+        
+        # Apply performance indexes
+        PerformanceIndexManager.create_performance_indexes(self.engine)
         
         # Create session factory
         self.SessionLocal = sessionmaker(bind=self.engine)
+        
+        # Initialize components
+        self.query_optimizer = QueryOptimizer()
+        self.transaction_metrics = TransactionMetrics()
+        
+        # Start monitoring if enabled
+        self.monitor = None
+        if enable_monitoring:
+            self.monitor = ConnectionMonitor(self)
+            self.monitor.start_monitoring(interval=60)
+        
+        singleton_logger.info_once(f"Enhanced database manager initialized with {config.db_type}")
     
+    def _apply_postgresql_optimizations(self):
+        """Apply PostgreSQL-specific optimizations."""
+        with self.engine.connect() as conn:
+            # Create indexes with CONCURRENTLY option (if not exists)
+            # Note: CONCURRENTLY can't be used in a transaction
+            conn.execute(text("COMMIT"))  # End any open transaction
+            
+            # Create GIN index on JSON columns for better performance
+            if self.dialect.supports_json_indexing():
+                try:
+                    conn.execute(text("""
+                        CREATE INDEX CONCURRENTLY IF NOT EXISTS 
+                        idx_variations_varied_params_gin 
+                        ON variations USING gin(varied_parameters)
+                    """))
+                    conn.execute(text("""
+                        CREATE INDEX CONCURRENTLY IF NOT EXISTS 
+                        idx_variations_param_values_gin 
+                        ON variations USING gin(parameter_values)
+                    """))
+                except Exception as e:
+                    logger.warning(f"Could not create GIN indexes: {e}")
+    
+    @contextmanager
     def get_session(self) -> Session:
-        """Get a new database session."""
-        return self.SessionLocal()
+        """Get a database session with automatic cleanup."""
+        session = self.SessionLocal()
+        try:
+            yield session
+        finally:
+            session.close()
     
-    # ===== Execution CRUD Operations =====
+    @contextmanager
+    def bulk_session(self) -> Session:
+        """Get a session optimized for bulk operations."""
+        session = self.SessionLocal()
+        try:
+            # Disable autoflush for bulk operations
+            session.autoflush = False
+            yield session
+        finally:
+            session.close()
+    
+    # ===== Optimized Execution Operations =====
+    
+    def _retry_on_lock(self, func, max_attempts: int = 3, delay: float = 0.1):
+        """Retry function on database lock errors."""
+        for attempt in range(max_attempts):
+            try:
+                return func()
+            except OperationalError as e:
+                if self.dialect.handle_concurrent_access_error(e):
+                    if attempt < max_attempts - 1:
+                        import time
+                        time.sleep(delay * (2 ** attempt))  # Exponential backoff
+                        continue
+                raise
+            except Exception:
+                raise
     
     def create_execution(self, job_id: str, pipeline_mode: str, 
                         dataset_name: str, preset: str,
                         total_steps: Optional[int] = None) -> Execution:
-        """Create a new execution record.
+        """Create execution with retry logic."""
+        def _create():
+            with self.transaction_metrics.track_transaction("create_execution"):
+                with self.get_session() as session:
+                    with TransactionManager.atomic_transaction(session):
+                        execution = Execution(
+                            job_id=job_id,
+                            pipeline_mode=pipeline_mode,
+                            dataset_name=dataset_name,
+                            preset=preset,
+                            total_steps=total_steps,
+                            status=ExecutionStatus.PENDING.value,
+                            start_time=datetime.utcnow()
+                        )
+                        session.add(execution)
+                        session.commit()
+                    
+                    # Update cache outside of transaction
+                    self._update_job_cache(session, execution, 'execution')
+                    
+                    return execution
         
-        Args:
-            job_id: Unique job identifier
-            pipeline_mode: Pipeline mode (single/batch)
-            dataset_name: Name of the dataset
-            preset: Preset name
-            total_steps: Total training steps if known
-            
-        Returns:
-            Created Execution object
-        """
-        with self.get_session() as session:
-            execution = Execution(
-                job_id=job_id,
-                pipeline_mode=pipeline_mode,
-                dataset_name=dataset_name,
-                preset=preset,
-                total_steps=total_steps,
-                status=ExecutionStatus.PENDING.value,
-                start_time=datetime.utcnow()
-            )
-            session.add(execution)
-            session.commit()
-            session.refresh(execution)
-            return execution
+        return self._retry_on_lock(_create)
     
     def update_execution_status(self, job_id: str, status: ExecutionStatus,
+                               error_message: Optional[str] = None,
+                               output_path: Optional[str] = None) -> bool:
+        """Update execution status with optimistic locking."""
+        def _update():
+            with self.transaction_metrics.track_transaction("update_execution_status"):
+                with self.get_session() as session:
+                    with TransactionManager.atomic_transaction(session):
+                        execution = session.query(Execution).filter_by(job_id=job_id).first()
+                        if not execution:
+                            return False
+                        
+                        execution.status = status.value
+                        execution.updated_at = datetime.utcnow()
+                        
+                        if output_path:
+                            execution.output_path = output_path
+                        
+                        if status == ExecutionStatus.FAILED and error_message:
+                            execution.error_message = error_message
+                            execution.success = False
+                            execution.end_time = datetime.utcnow()
+                            if execution.start_time:
+                                execution.duration_seconds = (
+                                    execution.end_time - execution.start_time
+                                ).total_seconds()
+                        elif status == ExecutionStatus.DONE:
+                            execution.success = True
+                            execution.end_time = datetime.utcnow()
+                            if execution.start_time:
+                                execution.duration_seconds = (
+                                    execution.end_time - execution.start_time
+                                ).total_seconds()
+                        
+                        session.commit()
+                    
+                    # Update cache outside of transaction
+                    self._update_job_cache(session, execution, 'execution')
+                    
+                    return True
+        
+        return self._retry_on_lock(_update)
+    
+    def update_variation_status(self, job_id: str, status: ExecutionStatus,
                                error_message: Optional[str] = None) -> bool:
-        """Update execution status.
+        """Update variation status with retry logic.
         
         Args:
             job_id: Job identifier
@@ -101,32 +237,72 @@ class DatabaseManager:
         Returns:
             True if updated successfully
         """
-        with self.get_session() as session:
-            execution = session.query(Execution).filter_by(job_id=job_id).first()
-            if not execution:
-                logger.warning(f"Execution {job_id} not found")
-                return False
-            
-            execution.status = status.value
-            execution.updated_at = datetime.utcnow()
-            
-            if error_message:
-                execution.error_message = error_message
-            
-            # Handle completion
-            if status in [ExecutionStatus.DONE, ExecutionStatus.FAILED, ExecutionStatus.CANCELLED]:
-                execution.end_time = datetime.utcnow()
-                if execution.start_time:
-                    duration = (execution.end_time - execution.start_time).total_seconds()
-                    execution.duration_seconds = duration
+        def _update():
+            with self.get_session() as session:
+                with TransactionManager.atomic_transaction(session):
+                    variation = session.query(Variation).filter_by(job_id=job_id).first()
+                    if not variation:
+                        logger.warning(f"Variation {job_id} not found")
+                        return False
+                    
+                    variation.status = status.value
+                    variation.updated_at = datetime.utcnow()
+                    
+                    if status == ExecutionStatus.FAILED and error_message:
+                        variation.error_message = error_message
+                        variation.success = False
+                        variation.end_time = datetime.utcnow()
+                        if variation.start_time:
+                            variation.duration_seconds = (
+                                variation.end_time - variation.start_time
+                            ).total_seconds()
+                    elif status == ExecutionStatus.DONE:
+                        variation.success = True
+                        variation.end_time = datetime.utcnow()
+                        if variation.start_time:
+                            variation.duration_seconds = (
+                                variation.end_time - variation.start_time
+                            ).total_seconds()
+                    elif status == ExecutionStatus.TRAINING:
+                        variation.start_time = datetime.utcnow()
+                    
+                    session.commit()
                 
-                if status == ExecutionStatus.DONE:
-                    execution.success = True
-                elif status == ExecutionStatus.CANCELLED:
-                    execution.success = False
+                # Update cache outside of transaction
+                self._update_job_cache(session, variation, 'variation')
+                
+                return True
+        
+        return self._retry_on_lock(_update)
+    
+    def set_variation_output(self, job_id: str, output_path: str) -> bool:
+        """Set output path for variation.
+        
+        Args:
+            job_id: Job identifier
+            output_path: Path to output model
             
-            session.commit()
-            return True
+        Returns:
+            True if updated successfully
+        """
+        def _update():
+            with self.get_session() as session:
+                with TransactionManager.atomic_transaction(session):
+                    variation = session.query(Variation).filter_by(job_id=job_id).first()
+                    if not variation:
+                        logger.warning(f"Variation {job_id} not found")
+                        return False
+                    
+                    variation.output_path = output_path
+                    variation.updated_at = datetime.utcnow()
+                    session.commit()
+                
+                # Update cache outside of transaction
+                self._update_job_cache(session, variation, 'variation')
+                
+                return True
+        
+        return self._retry_on_lock(_update)
     
     def set_execution_output(self, job_id: str, output_path: str) -> bool:
         """Set output path for execution.
@@ -138,15 +314,26 @@ class DatabaseManager:
         Returns:
             True if updated successfully
         """
-        with self.get_session() as session:
-            execution = session.query(Execution).filter_by(job_id=job_id).first()
-            if not execution:
-                return False
-            
-            execution.output_path = output_path
-            execution.updated_at = datetime.utcnow()
-            session.commit()
-            return True
+        def _update():
+            with self.get_session() as session:
+                with TransactionManager.atomic_transaction(session):
+                    execution = session.query(Execution).filter_by(job_id=job_id).first()
+                    if not execution:
+                        logger.warning(f"Execution {job_id} not found")
+                        return False
+                    
+                    execution.output_path = output_path
+                    execution.updated_at = datetime.utcnow()
+                    session.commit()
+                
+                # Update cache outside of transaction
+                self._update_job_cache(session, execution, 'execution')
+                
+                return True
+        
+        return self._retry_on_lock(_update)
+    
+    # ===== Query Methods =====
     
     def get_execution(self, job_id: str) -> Optional[Execution]:
         """Get execution by job ID.
@@ -160,135 +347,6 @@ class DatabaseManager:
         with self.get_session() as session:
             return session.query(Execution).filter_by(job_id=job_id).first()
     
-    def get_executions(self, status: Optional[ExecutionStatus] = None,
-                      dataset_name: Optional[str] = None,
-                      limit: int = 100) -> List[Execution]:
-        """Get executions with filters.
-        
-        Args:
-            status: Filter by status
-            dataset_name: Filter by dataset name
-            limit: Maximum results
-            
-        Returns:
-            List of Execution objects
-        """
-        with self.get_session() as session:
-            query = session.query(Execution)
-            
-            if status:
-                query = query.filter_by(status=status.value)
-            
-            if dataset_name:
-                query = query.filter_by(dataset_name=dataset_name)
-            
-            return query.order_by(desc(Execution.created_at)).limit(limit).all()
-    
-    # ===== Variation CRUD Operations =====
-    
-    def create_variation(self, job_id: str, variation_id: str,
-                        experiment_name: str, dataset_name: str,
-                        preset: str, total_combinations: int,
-                        varied_parameters: Dict[str, List[Any]],
-                        parameter_values: Dict[str, Any],
-                        parent_experiment_id: Optional[str] = None,
-                        total_steps: Optional[int] = None) -> Variation:
-        """Create a new variation record.
-        
-        Args:
-            job_id: Unique job identifier
-            variation_id: Variation identifier
-            experiment_name: Experiment name
-            dataset_name: Dataset name
-            preset: Preset name
-            total_combinations: Total number of variations
-            varied_parameters: Parameters being varied
-            parameter_values: Values for this variation
-            parent_experiment_id: Parent experiment ID
-            total_steps: Total training steps if known
-            
-        Returns:
-            Created Variation object
-        """
-        with self.get_session() as session:
-            variation = Variation(
-                job_id=job_id,
-                variation_id=variation_id,
-                experiment_name=experiment_name,
-                dataset_name=dataset_name,
-                preset=preset,
-                total_combinations=total_combinations,
-                varied_parameters=json.dumps(varied_parameters),
-                parameter_values=json.dumps(parameter_values),
-                parent_experiment_id=parent_experiment_id,
-                total_steps=total_steps,
-                status=ExecutionStatus.PENDING.value,
-                start_time=datetime.utcnow()
-            )
-            session.add(variation)
-            session.commit()
-            session.refresh(variation)
-            return variation
-    
-    def update_variation_status(self, job_id: str, status: ExecutionStatus,
-                               error_message: Optional[str] = None) -> bool:
-        """Update variation status.
-        
-        Args:
-            job_id: Job identifier
-            status: New status
-            error_message: Error message if failed
-            
-        Returns:
-            True if updated successfully
-        """
-        with self.get_session() as session:
-            variation = session.query(Variation).filter_by(job_id=job_id).first()
-            if not variation:
-                logger.warning(f"Variation {job_id} not found")
-                return False
-            
-            variation.status = status.value
-            variation.updated_at = datetime.utcnow()
-            
-            if error_message:
-                variation.error_message = error_message
-            
-            # Handle completion
-            if status in [ExecutionStatus.DONE, ExecutionStatus.FAILED, ExecutionStatus.CANCELLED]:
-                variation.end_time = datetime.utcnow()
-                if variation.start_time:
-                    duration = (variation.end_time - variation.start_time).total_seconds()
-                    variation.duration_seconds = duration
-                
-                if status == ExecutionStatus.DONE:
-                    variation.success = True
-                elif status == ExecutionStatus.CANCELLED:
-                    variation.success = False
-            
-            session.commit()
-            return True
-    
-    def set_variation_output(self, job_id: str, output_path: str) -> bool:
-        """Set output path for variation.
-        
-        Args:
-            job_id: Job identifier
-            output_path: Path to output model
-            
-        Returns:
-            True if updated successfully
-        """
-        with self.get_session() as session:
-            variation = session.query(Variation).filter_by(job_id=job_id).first()
-            if not variation:
-                return False
-            
-            variation.output_path = output_path
-            variation.updated_at = datetime.utcnow()
-            session.commit()
-            return True
-    
     def get_variation(self, job_id: str) -> Optional[Variation]:
         """Get variation by job ID.
         
@@ -301,42 +359,166 @@ class DatabaseManager:
         with self.get_session() as session:
             return session.query(Variation).filter_by(job_id=job_id).first()
     
-    def get_variations(self, experiment_name: Optional[str] = None,
-                      parent_experiment_id: Optional[str] = None,
-                      status: Optional[ExecutionStatus] = None,
-                      limit: int = 100) -> List[Variation]:
-        """Get variations with filters.
+    # ===== Cache Management =====
+    
+    def _update_job_cache(self, session: Session, job: Union[Execution, Variation], job_type: str):
+        """Update job summary cache."""
+        cache_entry = session.query(JobSummaryCache).filter_by(job_id=job.job_id).first()
         
-        Args:
-            experiment_name: Filter by experiment name
-            parent_experiment_id: Filter by parent experiment
-            status: Filter by status
-            limit: Maximum results
+        if not cache_entry:
+            cache_entry = JobSummaryCache(
+                job_id=job.job_id,
+                job_type=job_type
+            )
+            session.add(cache_entry)
+        
+        cache_entry.status = job.status
+        cache_entry.dataset_name = job.dataset_name
+        cache_entry.preset = job.preset
+        cache_entry.start_time = job.start_time
+        cache_entry.duration_seconds = getattr(job, 'duration_seconds', None)
+        cache_entry.success = getattr(job, 'success', None)
+        cache_entry.last_updated = datetime.utcnow()
+        
+        session.commit()
+    
+    def refresh_job_cache(self):
+        """Refresh the entire job summary cache."""
+        with self.bulk_session() as session:
+            # Clear existing cache
+            session.query(JobSummaryCache).delete()
             
+            # Add all executions
+            for execution in session.query(Execution).all():
+                self._update_job_cache(session, execution, 'execution')
+            
+            # Add all variations
+            for variation in session.query(Variation).all():
+                self._update_job_cache(session, variation, 'variation')
+            
+            session.commit()
+            logger.info("Job summary cache refreshed")
+    
+    # ===== Performance Queries =====
+    
+    def get_recent_jobs_optimized(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """Get recent jobs using cached data for better performance."""
+        with self.get_session() as session:
+            # Use cache table for better performance
+            cache_entries = session.query(JobSummaryCache) \
+                .order_by(desc(JobSummaryCache.last_updated)) \
+                .limit(limit) \
+                .all()
+            
+            results = []
+            for entry in cache_entries:
+                results.append({
+                    'job_id': entry.job_id,
+                    'job_type': entry.job_type,
+                    'status': entry.status,
+                    'dataset_name': entry.dataset_name,
+                    'preset': entry.preset,
+                    'start_time': entry.start_time.isoformat() if entry.start_time else None,
+                    'duration_seconds': entry.duration_seconds,
+                    'success': entry.success,
+                })
+            
+            return results
+    
+    def get_dataset_stats(self, dataset_name: str) -> Dict[str, Any]:
+        """Get statistics for a specific dataset."""
+        with self.get_session() as session:
+            # Use raw SQL for complex aggregations
+            if self.config.db_type == 'postgresql':
+                query = text("""
+                    SELECT 
+                        COUNT(*) as total,
+                        COUNT(*) FILTER (WHERE success = true) as successful,
+                        COUNT(*) FILTER (WHERE success = false) as failed,
+                        AVG(duration_seconds) as avg_duration,
+                        MIN(start_time) as first_run,
+                        MAX(start_time) as last_run
+                    FROM job_summary_cache
+                    WHERE dataset_name = :dataset_name
+                """)
+            else:  # SQLite
+                query = text("""
+                    SELECT 
+                        COUNT(*) as total,
+                        SUM(CASE WHEN success = 1 THEN 1 ELSE 0 END) as successful,
+                        SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) as failed,
+                        AVG(duration_seconds) as avg_duration,
+                        MIN(start_time) as first_run,
+                        MAX(start_time) as last_run
+                    FROM job_summary_cache
+                    WHERE dataset_name = :dataset_name
+                """)
+            
+            result = session.execute(query, {'dataset_name': dataset_name}).fetchone()
+            
+            return {
+                'dataset_name': dataset_name,
+                'total_jobs': result.total or 0,
+                'successful_jobs': result.successful or 0,
+                'failed_jobs': result.failed or 0,
+                'average_duration': result.avg_duration,
+                'first_run': result.first_run,
+                'last_run': result.last_run,
+            }
+    
+    def get_statistics(self) -> Dict[str, Any]:
+        """Get overall database statistics.
+        
         Returns:
-            List of Variation objects
+            Dictionary with statistics
         """
         with self.get_session() as session:
-            query = session.query(Variation)
+            # Count records
+            total_executions = session.query(Execution).count()
+            total_variations = session.query(Variation).count()
             
-            if experiment_name:
-                query = query.filter_by(experiment_name=experiment_name)
+            # Status breakdown
+            exec_by_status = {}
+            var_by_status = {}
             
-            if parent_experiment_id:
-                query = query.filter_by(parent_experiment_id=parent_experiment_id)
+            for status in ExecutionStatus:
+                exec_count = session.query(Execution).filter_by(status=status.value).count()
+                var_count = session.query(Variation).filter_by(status=status.value).count()
+                
+                if exec_count > 0:
+                    exec_by_status[status.value] = exec_count
+                if var_count > 0:
+                    var_by_status[status.value] = var_count
             
-            if status:
-                query = query.filter_by(status=status.value)
+            # Calculate success rate
+            total_successful = (
+                session.query(Execution).filter_by(success=True).count() +
+                session.query(Variation).filter_by(success=True).count()
+            )
+            total_failed = (
+                session.query(Execution).filter_by(success=False).count() +
+                session.query(Variation).filter_by(success=False).count()
+            )
+            total_completed = total_successful + total_failed
             
-            return query.order_by(desc(Variation.created_at)).limit(limit).all()
-    
-    # ===== General Operations =====
+            success_rate = (total_successful / total_completed * 100) if total_completed > 0 else 0.0
+            
+            return {
+                'total_executions': total_executions,
+                'total_variations': total_variations,
+                'total_jobs': total_executions + total_variations,
+                'executions_by_status': exec_by_status,
+                'variations_by_status': var_by_status,
+                'success_rate': success_rate,
+                'total_successful': total_successful,
+                'total_failed': total_failed,
+            }
     
     def get_all_jobs(self, limit: int = 100) -> List[Dict[str, Any]]:
         """Get all jobs (executions and variations) sorted by creation time.
         
         Args:
-            limit: Maximum results
+            limit: Maximum number of results
             
         Returns:
             List of job dictionaries
@@ -347,7 +529,7 @@ class DatabaseManager:
             # Get executions
             executions = session.query(Execution)\
                 .order_by(desc(Execution.created_at))\
-                .limit(limit).all()
+                .limit(limit // 2).all()
             
             for exec in executions:
                 job = exec.to_dict()
@@ -357,165 +539,99 @@ class DatabaseManager:
             # Get variations
             variations = session.query(Variation)\
                 .order_by(desc(Variation.created_at))\
-                .limit(limit).all()
+                .limit(limit // 2).all()
             
             for var in variations:
                 job = var.to_dict()
                 job['type'] = 'variation'
                 jobs.append(job)
         
-        # Sort by created_at
-        jobs.sort(key=lambda x: x['created_at'] or '', reverse=True)
+        # Sort combined list by creation time
+        jobs.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        
         return jobs[:limit]
     
-    def get_statistics(self) -> Dict[str, Any]:
-        """Get database statistics.
+    # ===== Maintenance Operations =====
+    
+    def perform_maintenance(self):
+        """Perform database maintenance operations."""
+        logger.info("Starting database maintenance")
         
-        Returns:
-            Dictionary with statistics
-        """
-        with self.get_session() as session:
-            stats = {
-                'total_executions': session.query(Execution).count(),
-                'total_variations': session.query(Variation).count(),
-                'executions_by_status': {},
-                'variations_by_status': {},
-                'success_rate': 0.0,
-                'average_duration': 0.0
-            }
+        with self.engine.connect() as conn:
+            if self.config.db_type == 'sqlite':
+                # SQLite maintenance
+                conn.execute(text("VACUUM"))
+                conn.execute(text("ANALYZE"))
+                conn.execute(text("PRAGMA optimize"))
+            else:
+                # PostgreSQL maintenance
+                conn.execute(text("VACUUM ANALYZE"))
+                # Update table statistics
+                conn.execute(text("ANALYZE"))
             
-            # Count by status
-            for status in ExecutionStatus:
-                exec_count = session.query(Execution)\
-                    .filter_by(status=status.value).count()
-                var_count = session.query(Variation)\
-                    .filter_by(status=status.value).count()
-                
-                if exec_count > 0:
-                    stats['executions_by_status'][status.value] = exec_count
-                if var_count > 0:
-                    stats['variations_by_status'][status.value] = var_count
-            
-            # Calculate success rate
-            total_completed = (
-                session.query(Execution).filter_by(success=True).count() +
-                session.query(Variation).filter_by(success=True).count()
-            )
-            total_failed = (
-                session.query(Execution).filter_by(success=False)\
-                    .filter(Execution.end_time != None).count() +
-                session.query(Variation).filter_by(success=False)\
-                    .filter(Variation.end_time != None).count()
-            )
-            
-            if total_completed + total_failed > 0:
-                stats['success_rate'] = total_completed / (total_completed + total_failed)
-            
-            # Calculate average duration
-            exec_durations = [e.duration_seconds for e in 
-                            session.query(Execution).filter(Execution.duration_seconds != None).all()]
-            var_durations = [v.duration_seconds for v in 
-                           session.query(Variation).filter(Variation.duration_seconds != None).all()]
-            
-            all_durations = exec_durations + var_durations
-            if all_durations:
-                stats['average_duration'] = sum(all_durations) / len(all_durations)
-            
-            return stats
+            conn.commit()
+        
+        # Refresh cache
+        self.refresh_job_cache()
+        
+        logger.info("Database maintenance completed")
+    
+    def get_pool_status(self) -> Dict[str, Any]:
+        """Get connection pool status."""
+        pool = self.engine.pool
+        status = {
+            'size': getattr(pool, 'size', lambda: 0)() if hasattr(pool, 'size') else 0,
+            'checked_in': getattr(pool, 'checkedin', lambda: 0)() if hasattr(pool, 'checkedin') else 0,
+            'checked_out': getattr(pool, 'checkedout', lambda: 0)() if hasattr(pool, 'checkedout') else 0,
+            'overflow': getattr(pool, 'overflow', lambda: 0)() if hasattr(pool, 'overflow') else 0,
+            'total': getattr(pool, 'total', lambda: 0)() if hasattr(pool, 'total') else 0,
+        }
+        
+        # Add empty stats dict for compatibility with monitor
+        status['stats'] = {
+            'connections_created': 0,
+            'connections_recycled': 0,
+            'connections_invalidated': 0,
+            'connection_errors': 0,
+        }
+        
+        return status
     
     def clear_all_records(self) -> Dict[str, int]:
         """Clear all records from the database.
         
-        Returns:
-            Dictionary with counts of deleted records by type
-        """
-        with self.get_session() as session:
-            # Count records before deletion
-            exec_count = session.query(Execution).count()
-            var_count = session.query(Variation).count()
-            
-            # Delete all records
-            session.query(Execution).delete()
-            session.query(Variation).delete()
-            session.commit()
-            
-            return {
-                'executions': exec_count,
-                'variations': var_count,
-                'total': exec_count + var_count
-            }
-    
-    def cleanup_old_records(self, days: int = 90) -> int:
-        """Delete records older than specified days.
+        WARNING: This permanently deletes all data!
         
-        Args:
-            days: Number of days to keep
-            
         Returns:
-            Number of records deleted
+            Dictionary with counts of deleted records
         """
-        from datetime import timedelta
-        
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
-        deleted = 0
+        deleted_counts = {
+            'executions': 0,
+            'variations': 0,
+            'cache': 0
+        }
         
         with self.get_session() as session:
-            # Delete old executions
-            exec_deleted = session.query(Execution)\
-                .filter(Execution.created_at < cutoff_date)\
-                .delete()
+            # Delete all executions
+            deleted_counts['executions'] = session.query(Execution).delete()
             
-            # Delete old variations
-            var_deleted = session.query(Variation)\
-                .filter(Variation.created_at < cutoff_date)\
-                .delete()
+            # Delete all variations
+            deleted_counts['variations'] = session.query(Variation).delete()
             
+            # Delete cache entries
+            deleted_counts['cache'] = session.query(JobSummaryCache).delete()
+            
+            # Commit the deletions
             session.commit()
-            deleted = exec_deleted + var_deleted
+            
+        # Invalidate all caches
+        self.invalidate_cache()
         
-        logger.info(f"Deleted {deleted} records older than {days} days")
-        return deleted
-    
-    def cleanup_stale_processes(self) -> int:
-        """Clean up processes that are stuck in active states but no longer running.
+        logger.warning(
+            f"Cleared all database records: "
+            f"{deleted_counts['executions']} executions, "
+            f"{deleted_counts['variations']} variations, "
+            f"{deleted_counts['cache']} cache entries"
+        )
         
-        This method detects and marks as failed any executions or variations that are
-        in active states (training, preparing, etc.) but their associated processes
-        are no longer alive.
-        
-        Returns:
-            Number of stale processes cleaned up
-        """
-        from .process_monitor import ProcessStatusMonitor
-        
-        monitor = ProcessStatusMonitor(self)
-        cleaned_count = monitor.manual_cleanup()
-        
-        if cleaned_count > 0:
-            logger.info(f"Cleaned up {cleaned_count} stale processes")
-        
-        return cleaned_count
-    
-    def start_process_monitoring(self, check_interval: int = 30):
-        """Start automatic process monitoring in background.
-        
-        Args:
-            check_interval: Interval in seconds between checks
-        """
-        from .process_monitor import ProcessStatusMonitor
-        
-        if not hasattr(self, '_process_monitor'):
-            self._process_monitor = ProcessStatusMonitor(self, check_interval)
-            self._process_monitor.start_monitoring()
-            logger.info("Started automatic process monitoring")
-        else:
-            logger.warning("Process monitoring is already running")
-    
-    def stop_process_monitoring(self):
-        """Stop automatic process monitoring."""
-        if hasattr(self, '_process_monitor'):
-            self._process_monitor.stop_monitoring()
-            delattr(self, '_process_monitor')
-            logger.info("Stopped automatic process monitoring")
-        else:
-            logger.warning("Process monitoring is not running")
+        return deleted_counts

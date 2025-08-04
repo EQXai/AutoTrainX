@@ -1,7 +1,6 @@
 {
-  "/page": "app/page.js",
   "/dashboard/jobs/page": "app/dashboard/jobs/page.js",
-  "/dashboard/settings/page": "app/dashboard/settings/page.js",
-  "/dashboard/page": "app/dashboard/page.js",
-  "/docs/page": "app/docs/page.js"
+  "/dashboard/jobs/new/page": "app/dashboard/jobs/new/page.js",
+  "/dashboard/datasets/page": "app/dashboard/datasets/page.js",
+  "/dashboard/database/page": "app/dashboard/database/page.js"
 }

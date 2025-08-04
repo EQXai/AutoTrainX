@@ -1,0 +1,9 @@
+2025-08-03 22:35:47,534 - src.database.connection_pool - ERROR - _monitor_loop:198 - Monitor error: '>=' not supported between instances of 'method' and 'method'
+2025-08-03 22:35:47,534 - src.database.enhanced_manager_v2 - INFO - __init__:85 - Enhanced database manager initialized with postgresql
+2025-08-03 22:35:47,541 - src.utils.job_tracker - ERROR - create_execution:78 - Failed to create execution record: Can't operate on closed transaction inside context manager.  Please complete the context manager before emitting further commands.
+2025-08-03 22:35:47,541 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: 'EnhancedDatabaseManager' object has no attribute 'get_variation'
+2025-08-03 22:35:51,512 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: 'EnhancedDatabaseManager' object has no attribute 'get_variation'
+2025-08-03 22:35:51,516 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: 'EnhancedDatabaseManager' object has no attribute 'get_variation'
+2025-08-03 22:35:51,516 - src.utils.job_tracker - ERROR - set_output_path:132 - Failed to set output path: 'EnhancedDatabaseManager' object has no attribute 'get_variation'
+2025-08-03 22:35:51,517 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: 'EnhancedDatabaseManager' object has no attribute 'get_variation'
+2025-08-03 22:35:53,292 - src.utils.job_tracker - ERROR - update_status:108 - Failed to update status: 'EnhancedDatabaseManager' object has no attribute 'get_variation'

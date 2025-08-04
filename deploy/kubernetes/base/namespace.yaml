@@ -1,8 +1,0 @@
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: autotrainx
-  labels:
-    name: autotrainx
-    app.kubernetes.io/name: autotrainx
-    app.kubernetes.io/component: namespace

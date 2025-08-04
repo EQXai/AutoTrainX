@@ -1,0 +1,2 @@
+2025-08-03 22:21:01,532 - src.utils.job_tracker - WARNING - __init__:39 - Failed to initialize job tracking: (sqlite3.OperationalError) unable to open database file
+(Background on this error at: https://sqlalche.me/e/20/e3q8)

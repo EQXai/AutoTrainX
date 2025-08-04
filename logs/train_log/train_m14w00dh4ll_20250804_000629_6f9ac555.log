@@ -1,0 +1,75 @@
+# AutoTrainX Training Log
+# Dataset: m14w00dh4ll
+# Preset: SX1
+# Job ID: 6f9ac555
+# Start Time: 2025-08-04T00:06:29.568105
+# Mode: single
+# Command: /home/eqx/AutoTrainX/venv/bin/python /home/eqx/AutoTrainX/sd-scripts/sdxl_train.py --config_file /home/eqx/AutoTrainX/workspace/Presets/m14w00dh4ll_SX1_6f9ac555.toml --max_grad_norm=0.0 --no_half_vae --train_text_encoder --learning_rate_te2=0
+================================================================================
+
+2025-08-04 00:06:34 INFO     Loading settings from                                        train_util.py:4651
+                             /home/eqx/AutoTrainX/workspace/Presets/m14w00dh4ll_SX1_6f9ac                   
+                             555.toml...                                                                    
+                    WARNING  clip_skip will be unexpected /                           sdxl_train_util.py:349
+                             SDXL学習ではclip_skipは動作しません                                            
+2025-08-04 00:06:34 INFO     Using DreamBooth method.                                      sdxl_train.py:153
+                    INFO     prepare images.                                              train_util.py:2072
+                    INFO     get image size from name of cache files                      train_util.py:1965
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 123361.88it/s]
+                    INFO     set image size from cache files: 0/3                         train_util.py:1995
+                    INFO     found directory                                              train_util.py:2019
+                             /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/img/30_m14                   
+                             w00dh4ll person contains 3 image files                                         
+
+read caption:   0%|          | 0/3 [00:00<?, ?it/s]
+read caption: 100%|██████████| 3/3 [00:00<00:00, 35645.64it/s]
+                    INFO     90 train images with repeats.                                train_util.py:2116
+                    INFO     0 reg images with repeats.                                   train_util.py:2120
+                    WARNING  no regularization images / 正則化画像が見つかりませんでした  train_util.py:2125
+                    INFO     [Dataset 0]                                                  config_util.py:580
+                               batch_size: 2                                                                
+                               resolution: (1024, 1280)                                                     
+                               resize_interpolation: None                                                   
+                               enable_bucket: False                                                         
+                                                                                                            
+                               [Subset 0 of Dataset 0]                                                      
+                                 image_dir:                                                                 
+                             "/home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/img/30_m1                   
+                             4w00dh4ll person"                                                              
+                                 image_count: 3                                                             
+                                 num_repeats: 30                                                            
+                                 shuffle_caption: False                                                     
+                                 keep_tokens: 0                                                             
+                                 caption_dropout_rate: 0                                                    
+                                 caption_dropout_every_n_epochs: 0                                          
+                                 caption_tag_dropout_rate: 0.0                                              
+                                 caption_prefix: None                                                       
+                                 caption_suffix: None                                                       
+                                 color_aug: False                                                           
+                                 flip_aug: False                                                            
+                                 face_crop_aug_range: None                                                  
+                                 random_crop: False                                                         
+                                 token_warmup_min: 1,                                                       
+                                 token_warmup_step: 0,                                                      
+                                 alpha_mask: False                                                          
+                                 resize_interpolation: None                                                 
+                                 custom_attributes: {}                                                      
+                                 is_reg: False                                                              
+                                 class_tokens: m14w00dh4ll person                                           
+                                 caption_extension: .txt                                                    
+                                                                                                            
+                                                                                                            
+                    INFO     [Prepare dataset 0]                                          config_util.py:592
+                    INFO     loading image sizes.                                          train_util.py:987
+
+  0%|          | 0/3 [00:00<?, ?it/s]
+100%|██████████| 3/3 [00:00<00:00, 41527.76it/s]
+                    INFO     prepare dataset                                              train_util.py:1012
+                    INFO     prepare accelerator                                           sdxl_train.py:211
+                    INFO     loading model for process 0/1                             sdxl_train_util.py:32
+                    INFO     load StableDiffusion checkpoint:                          sdxl_train_util.py:73
+                             /home/eqx/AutoTrainX/models/SDXLModel.safetensors                              
+2025-08-04 00:06:35 INFO     building U-Net                                           sdxl_model_util.py:198
+                    INFO     loading U-Net from checkpoint                            sdxl_model_util.py:202

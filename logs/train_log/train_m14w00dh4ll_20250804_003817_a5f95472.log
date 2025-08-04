@@ -1,0 +1,9 @@
+# AutoTrainX Training Log
+# Dataset: m14w00dh4ll
+# Preset: SX1
+# Job ID: a5f95472
+# Start Time: 2025-08-04T00:38:17.535676
+# Mode: single
+# Command: /home/eqx/AutoTrainX/venv/bin/python /home/eqx/AutoTrainX/sd-scripts/sdxl_train.py --config_file /home/eqx/AutoTrainX/workspace/Presets/m14w00dh4ll_SX1_a5f95472.toml --max_grad_norm=0.0 --no_half_vae --train_text_encoder --learning_rate_te2=0
+================================================================================
+

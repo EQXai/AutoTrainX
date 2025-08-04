@@ -37,6 +37,8 @@ class Operation(Enum):
     SAVE_PROFILE = "save-profile"
     DELETE_PROFILE = "delete-profile"
     SET_PROFILE = "set-profile"
+    # Interactive menu
+    MENU = "menu"
 
 
 class Mode(Enum):
@@ -246,6 +248,15 @@ Examples:
             const=Operation.CLEANUP_STALE,
             dest='operation',
             help='Clean up stale processes that are stuck in active states'
+        )
+        
+        # Interactive menu
+        parser.add_argument(
+            '--menu',
+            action='store_const',
+            const=Operation.MENU,
+            dest='operation',
+            help='Launch interactive menu interface'
         )
         
         # Mode selection (shortcuts for common modes)

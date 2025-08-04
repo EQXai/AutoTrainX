@@ -43,41 +43,26 @@ trap cleanup_ports EXIT INT TERM
 cleanup_ports
 
 # Ensure .env file exists for backend
-if [ ! -f ".env" ]; then
-    echo -e "${YELLOW}Creating .env file with PostgreSQL configuration...${NC}"
-    
-    cat > .env << 'EOF'
-# AutoTrainX Database Configuration
-DATABASE_TYPE=postgresql
-DATABASE_URL=postgresql://autotrainx:1234@localhost:5432/autotrainx
-DATABASE_HOST=localhost
-DATABASE_PORT=5432
-DATABASE_NAME=autotrainx
-DATABASE_USER=autotrainx
-DATABASE_PASSWORD=1234
-DATABASE_POOL_SIZE=10
-DATABASE_ECHO=false
-
-# Legacy support
-AUTOTRAINX_DB_TYPE=postgresql
-AUTOTRAINX_DB_HOST=localhost
-AUTOTRAINX_DB_PORT=5432
-AUTOTRAINX_DB_NAME=autotrainx
-AUTOTRAINX_DB_USER=autotrainx
-AUTOTRAINX_DB_PASSWORD=1234
-EOF
-    echo -e "${GREEN}Created .env file${NC}"
+mkdir -p settings
+if [ ! -f "settings/.env" ]; then
+    echo -e "${RED}Error: settings/.env file not found!${NC}"
+    echo -e "${YELLOW}Please create settings/.env file with database configuration.${NC}"
+    echo -e "${YELLOW}See .env.example for reference.${NC}"
+    exit 1
 fi
 
-# Export environment variables
-export DATABASE_TYPE=postgresql
-export DATABASE_URL=postgresql://autotrainx:1234@localhost:5432/autotrainx
-export AUTOTRAINX_DB_TYPE=postgresql
-export AUTOTRAINX_DB_HOST=localhost
-export AUTOTRAINX_DB_PORT=5432
-export AUTOTRAINX_DB_NAME=autotrainx
-export AUTOTRAINX_DB_USER=autotrainx
-export AUTOTRAINX_DB_PASSWORD=1234
+# Load environment variables from .env file
+if [ -f "settings/.env" ]; then
+    set -a
+    source settings/.env
+    set +a
+fi
+
+# Verify required variables are set
+if [ -z "$DATABASE_PASSWORD" ] && [ -z "$AUTOTRAINX_DB_PASSWORD" ]; then
+    echo -e "${RED}Error: DATABASE_PASSWORD not set in settings/.env${NC}"
+    exit 1
+fi
 
 # Check if PostgreSQL is running
 if ! nc -z localhost $POSTGRES_PORT 2>/dev/null; then

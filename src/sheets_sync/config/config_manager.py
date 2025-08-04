@@ -285,7 +285,7 @@ class ConfigManager:
     
     def _get_default_config_path(self) -> str:
         """Get default configuration file path."""
-        return str(Path(self.base_path) / "config.json")
+        return str(Path(self.base_path) / "settings" / "config.json")
     
     def _deep_update(self, base_dict: Dict[str, Any], update_dict: Dict[str, Any]) -> None:
         """Deep update a dictionary with another dictionary.

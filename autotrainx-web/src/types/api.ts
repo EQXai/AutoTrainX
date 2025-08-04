@@ -67,6 +67,8 @@ export interface SingleTrainingRequest {
   source_path: string
   preset?: string
   dataset_name?: string
+  repeats?: number
+  class_name?: string
   preview_count?: number
   generate_configs?: boolean
   auto_clean?: boolean
@@ -76,6 +78,8 @@ export interface DatasetConfig {
   source_path: string
   preset?: string
   dataset_name?: string
+  repeats?: number
+  class_name?: string
 }
 
 export interface BatchTrainingRequest {
@@ -85,9 +89,11 @@ export interface BatchTrainingRequest {
 }
 
 export interface VariationsTrainingRequest {
-  dataset_name: string
-  base_preset: string
+  source_path: string
+  preset: string
   variations: Record<string, any[]>
+  dataset_name?: string
+  preview_count?: number
   auto_clean?: boolean
 }
 

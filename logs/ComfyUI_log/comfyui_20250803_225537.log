@@ -1,0 +1,460 @@
+Using Python 3.12.3 environment at: venv
+[START] Security scan
+[DONE] Security scan
+## ComfyUI-Manager: installing dependencies done.
+** ComfyUI startup time: 2025-08-03 22:55:38.254
+** Platform: Linux
+** Python version: 3.12.3 (main, Jun 18 2025, 17:59:45) [GCC 13.3.0]
+** Python executable: /home/eqx/ComfyUI/venv/bin/python
+** ComfyUI Path: /home/eqx/ComfyUI
+** ComfyUI Base Folder Path: /home/eqx/ComfyUI
+** User directory: /home/eqx/ComfyUI/user
+** ComfyUI-Manager config path: /home/eqx/ComfyUI/user/default/ComfyUI-Manager/config.ini
+** Log path: /home/eqx/ComfyUI/user/comfyui.log
+Using Python 3.12.3 environment at: venv
+Using Python 3.12.3 environment at: venv
+
+Prestartup times for custom nodes:
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/rgthree-comfy
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Easy-Use
+   0.3 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Manager
+
+Checkpoint files will always be loaded safely.
+Total VRAM 32607 MB, total RAM 88494 MB
+pytorch version: 2.7.1+cu128
+Set vram state to: NORMAL_VRAM
+Device: cuda:0 NVIDIA GeForce RTX 5090 : cudaMallocAsync
+Using pytorch attention
+Python version: 3.12.3 (main, Jun 18 2025, 17:59:45) [GCC 13.3.0]
+ComfyUI version: 0.3.44
+ComfyUI frontend version: 1.23.4
+[Prompt Server] web root: /home/eqx/ComfyUI/venv/lib/python3.12/site-packages/comfyui_frontend_package/static
+[34mWAS Node Suite: [0mOpenCV Python FFMPEG support is enabled[0m
+[34mWAS Node Suite [93mWarning: [0m`ffmpeg_bin_path` is not set in `/home/eqx/ComfyUI/custom_nodes/was-node-suite-comfyui/was_suite_config.json` config file. Will attempt to use system ffmpeg binaries if available.[0m
+[34mWAS Node Suite: [0mFinished.[0m [32mLoaded[0m [0m220[0m [32mnodes successfully.[0m
+
+	[3m[93m"The purpose of art is washing the dust of daily life off our souls."[0m[3m - Pablo Picasso[0m
+
+[34m[ComfyUI-Easy-Use] server: [0mv1.3.2 [92mLoaded[0m
+[34m[ComfyUI-Easy-Use] web root: [0m/home/eqx/ComfyUI/custom_nodes/ComfyUI-Easy-Use/web_version/v2 [92mLoaded[0m
+### Loading: ComfyUI-Inspire-Pack (V1.21)
+------------------------------------------
+[34mComfyroll Studio v1.76 : [92m 175 Nodes Loaded[0m
+------------------------------------------
+** For changes, please see patch notes at https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes/blob/main/Patch_Notes.md
+** For help, please see the wiki at https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes/wiki
+------------------------------------------
+═══════════════════════════════════════
+═══════════════════════════════════════
+═══════════════════════════════════════
+
+███████╗ ██████╗ ██╗  ██╗
+██╔════╝██╔═══██╗╚██╗██╔╝
+█████╗  ██║   ██║ ╚███╔╝ 
+██╔══╝  ██║ ╚╗██║ ██╔██╗ 
+███████╗╚██████╔╝██╔╝ ██╗
+╚══════╝     ╚═╝╚═╝  ╚═╝ 
+
+[ComfyUI_EQX] Loaded 7 nodes (v0.1.0)
+═══════════════════════════════════════
+═══════════════════════════════════════
+═══════════════════════════════════════
+
+[92m[rgthree-comfy] Loaded 47 epic nodes. 🎉[0m
+
+[34mIb Custom Nodes: [92mLoaded[0m
+[93mEfficiency Nodes Warning:[0m Failed to import python package 'simpleeval'; related nodes disabled.
+
+[36;20m[/home/eqx/ComfyUI/custom_nodes/comfy-mtb] | INFO -> loaded [96m103[0m nodes successfuly[0m
+[36;20m[/home/eqx/ComfyUI/custom_nodes/comfy-mtb] | INFO -> Some nodes (5) could not be loaded. This can be ignored, but go to http://127.0.0.1:8188/mtb if you want more information.[0m
+[94mtheUpsiders Logic Nodes: [92mLoaded[0m
+[93mEfficiency Nodes Warning:[0m Failed to import python package 'simpleeval'; related nodes disabled.
+
+Loaded Efficiency nodes from /home/eqx/ComfyUI/custom_nodes/efficiency-nodes-comfyui
+Could not find ControlNetPreprocessors nodes
+Could not find AdvancedControlNet nodes
+Could not find AnimateDiff nodes
+Could not find IPAdapter nodes
+Could not find VideoHelperSuite nodes
+Could not load ImpactPack nodes Could not find ImpactPack nodes
+### Loading: ComfyUI-Impact-Pack (V8.20)
+[Impact Pack] Wildcards loading done.
+torch version---------------------- 2.7.1+cu128
+### Loading: ComfyUI-Manager (V3.34)
+[ComfyUI-Manager] network_mode: public
+### ComfyUI Version: v0.3.44-22-g6b8062f4 | Released on '2025-07-15'
+[92m[tinyterraNodes] [32mLoaded[0m
+[ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/model-list.json
+[ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/alter-list.json
+[ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/github-stats.json
+[ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/custom-node-list.json
+[ComfyUI-Manager] default cache updated: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/extension-node-map.json
+
+Import times for custom nodes:
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/websocket_image_save.py
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/masquerade-nodes-comfyui
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Logic
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI_Ib_CustomNodes
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/cg-use-everywhere
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI_EQX
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Inpaint-CropAndStitch
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI_JPS-Nodes
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-florence2
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Custom-Scripts
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui_essentials
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/efficiency-nodes-comfyui
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI_tinyterraNodes
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-inspire-pack
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-various
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/Comfy_KepListStuff
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-art-venture
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-kjnodes
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/comfy-mtb
+   0.0 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Manager
+   0.1 seconds: /home/eqx/ComfyUI/custom_nodes/rgthree-comfy
+   0.1 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-videohelpersuite
+   0.1 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI_Comfyroll_CustomNodes
+   0.2 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui-impact-pack
+   0.2 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-fastblend
+   0.7 seconds: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Easy-Use
+   0.9 seconds: /home/eqx/ComfyUI/custom_nodes/comfyui_layerstyle
+   1.2 seconds: /home/eqx/ComfyUI/custom_nodes/was-node-suite-comfyui
+
+Context impl SQLiteImpl.
+Will assume non-transactional DDL.
+No target revision found.
+Starting server
+
+To see the GUI go to: http://127.0.0.1:8188
+FETCH ComfyRegistry Data: 5/93
+FETCH ComfyRegistry Data: 10/93
+got prompt
+Using pytorch attention in VAE
+Using pytorch attention in VAE
+VAE load device: cuda:0, offload device: cpu, dtype: torch.bfloat16
+model weight dtype torch.float16, manual cast: None
+model_type EPS
+Using pytorch attention in VAE
+Using pytorch attention in VAE
+VAE load device: cuda:0, offload device: cpu, dtype: torch.bfloat16
+FETCH ComfyRegistry Data: 15/93
+CLIP/text encoder model load device: cuda:0, offload device: cpu, current: cpu, dtype: torch.float16
+Requested to load SDXLClipModel
+loaded completely 29623.8 1560.802734375 True
+Requested to load SDXL
+loaded completely 27934.87202529907 4897.0483474731445 True
+
+  0%|          | 0/60 [00:00<?, ?it/s]
+  2%|▏         | 1/60 [00:00<00:13,  4.49it/s]
+  3%|▎         | 2/60 [00:00<00:09,  6.19it/s]
+  5%|▌         | 3/60 [00:00<00:07,  7.31it/s]
+  7%|▋         | 4/60 [00:00<00:07,  7.87it/s]
+  8%|▊         | 5/60 [00:00<00:06,  8.40it/s]
+ 10%|█         | 6/60 [00:00<00:06,  8.68it/s]
+ 12%|█▏        | 7/60 [00:00<00:05,  9.07it/s]
+ 13%|█▎        | 8/60 [00:00<00:05,  9.32it/s]
+ 15%|█▌        | 9/60 [00:01<00:05,  9.25it/s]
+ 17%|█▋        | 10/60 [00:01<00:05,  9.27it/s]
+ 18%|█▊        | 11/60 [00:01<00:05,  9.33it/s]
+ 20%|██        | 12/60 [00:01<00:05,  9.41it/s]
+ 22%|██▏       | 13/60 [00:01<00:05,  9.35it/s]
+ 25%|██▌       | 15/60 [00:01<00:04,  9.52it/s]FETCH ComfyRegistry Data: 20/93
+
+ 27%|██▋       | 16/60 [00:01<00:04,  9.51it/s]
+ 28%|██▊       | 17/60 [00:01<00:04,  9.40it/s]
+ 30%|███       | 18/60 [00:02<00:04,  9.41it/s]
+ 32%|███▏      | 19/60 [00:02<00:04,  9.56it/s]
+ 33%|███▎      | 20/60 [00:02<00:04,  9.39it/s]
+ 35%|███▌      | 21/60 [00:02<00:04,  9.46it/s]
+ 37%|███▋      | 22/60 [00:02<00:04,  9.46it/s]
+ 40%|████      | 24/60 [00:02<00:03,  9.69it/s]
+ 43%|████▎     | 26/60 [00:02<00:03,  9.97it/s]
+ 45%|████▌     | 27/60 [00:02<00:03,  9.79it/s]
+ 47%|████▋     | 28/60 [00:03<00:03,  9.75it/s]
+ 50%|█████     | 30/60 [00:03<00:03,  9.70it/s]
+ 52%|█████▏    | 31/60 [00:03<00:02,  9.72it/s]
+ 55%|█████▌    | 33/60 [00:03<00:02,  9.98it/s]
+ 57%|█████▋    | 34/60 [00:03<00:02,  9.89it/s]
+ 58%|█████▊    | 35/60 [00:03<00:02,  9.73it/s]
+ 60%|██████    | 36/60 [00:03<00:02,  8.89it/s]
+ 62%|██████▏   | 37/60 [00:04<00:02,  9.14it/s]
+ 63%|██████▎   | 38/60 [00:04<00:02,  9.32it/s]
+ 65%|██████▌   | 39/60 [00:04<00:02,  9.39it/s]
+ 68%|██████▊   | 41/60 [00:04<00:02,  9.28it/s]
+ 70%|███████   | 42/60 [00:04<00:02,  8.85it/s]
+ 72%|███████▏  | 43/60 [00:04<00:01,  9.11it/s]
+ 73%|███████▎  | 44/60 [00:04<00:01,  8.54it/s]
+ 77%|███████▋  | 46/60 [00:05<00:01,  9.11it/s]
+ 78%|███████▊  | 47/60 [00:05<00:01,  9.20it/s]FETCH ComfyRegistry Data: 25/93
+
+ 80%|████████  | 48/60 [00:05<00:01,  8.71it/s]
+ 82%|████████▏ | 49/60 [00:05<00:01,  8.98it/s]
+ 83%|████████▎ | 50/60 [00:05<00:01,  8.84it/s]
+ 85%|████████▌ | 51/60 [00:05<00:00,  9.13it/s]
+ 88%|████████▊ | 53/60 [00:05<00:00,  9.43it/s]
+ 90%|█████████ | 54/60 [00:05<00:00,  9.22it/s]
+ 92%|█████████▏| 55/60 [00:05<00:00,  9.30it/s]
+ 93%|█████████▎| 56/60 [00:06<00:00,  8.77it/s]
+ 95%|█████████▌| 57/60 [00:06<00:00,  8.63it/s]
+ 98%|█████████▊| 59/60 [00:06<00:00,  9.48it/s]
+100%|██████████| 60/60 [00:06<00:00,  9.21it/s]
+Requested to load AutoencoderKL
+loaded completely 20026.460136413574 159.55708122253418 True
+
+  0%|          | 0/30 [00:00<?, ?it/s]
+  3%|▎         | 1/30 [00:00<00:05,  5.04it/s]
+  7%|▋         | 2/30 [00:00<00:05,  5.05it/s]
+ 10%|█         | 3/30 [00:00<00:05,  4.89it/s]
+ 13%|█▎        | 4/30 [00:00<00:05,  4.75it/s]
+ 17%|█▋        | 5/30 [00:01<00:05,  4.73it/s]
+ 20%|██        | 6/30 [00:01<00:05,  4.79it/s]
+ 23%|██▎       | 7/30 [00:01<00:04,  4.75it/s]
+ 27%|██▋       | 8/30 [00:01<00:04,  4.76it/s]
+ 30%|███       | 9/30 [00:01<00:04,  4.82it/s]FETCH ComfyRegistry Data: 30/93
+
+ 33%|███▎      | 10/30 [00:02<00:04,  4.78it/s]
+ 37%|███▋      | 11/30 [00:02<00:04,  4.74it/s]
+ 40%|████      | 12/30 [00:02<00:03,  4.79it/s]
+ 43%|████▎     | 13/30 [00:02<00:03,  4.82it/s]
+ 47%|████▋     | 14/30 [00:02<00:03,  4.76it/s]
+ 50%|█████     | 15/30 [00:03<00:03,  4.79it/s]
+ 53%|█████▎    | 16/30 [00:03<00:02,  4.71it/s]
+ 57%|█████▋    | 17/30 [00:03<00:02,  4.71it/s]
+ 60%|██████    | 18/30 [00:03<00:02,  4.71it/s]
+ 63%|██████▎   | 19/30 [00:03<00:02,  4.67it/s]
+ 67%|██████▋   | 20/30 [00:04<00:02,  4.73it/s]
+ 70%|███████   | 21/30 [00:04<00:01,  4.70it/s]
+ 73%|███████▎  | 22/30 [00:04<00:01,  4.76it/s]
+ 77%|███████▋  | 23/30 [00:04<00:01,  4.84it/s]
+ 80%|████████  | 24/30 [00:05<00:01,  4.81it/s]
+ 83%|████████▎ | 25/30 [00:05<00:01,  4.81it/s]
+ 87%|████████▋ | 26/30 [00:05<00:00,  4.78it/s]FETCH ComfyRegistry Data: 35/93
+
+ 90%|█████████ | 27/30 [00:05<00:00,  4.81it/s]
+ 93%|█████████▎| 28/30 [00:05<00:00,  4.83it/s]
+ 97%|█████████▋| 29/30 [00:06<00:00,  5.00it/s]
+100%|██████████| 30/30 [00:06<00:00,  5.16it/s]
+100%|██████████| 30/30 [00:06<00:00,  4.82it/s]
+libEGL warning: DRI3: Screen seems not DRI3 capable
+libEGL warning: DRI3: Screen seems not DRI3 capable
+MESA: error: ZINK: failed to choose pdev
+libEGL warning: egl: failed to create dri2 screen
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1754254574.722822  947591 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1754254574.741172  947736 gl_context.cc:369] GL version: 3.1 (OpenGL ES 3.1 Mesa 24.2.8-1ubuntu1~24.04.1), renderer: D3D12 (AMD Radeon(TM) Graphics)
+INFO: Created TensorFlow Lite XNNPACK delegate for CPU.
+W0000 00:00:1754254574.774682  947740 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+/home/eqx/ComfyUI/venv/lib/python3.12/site-packages/mediapipe/tasks/python/vision/image_segmenter.py:158: UserWarning: MessageFactory class is deprecated. Please use GetMessageClass() instead of MessageFactory.GetPrototype. MessageFactory class will be removed after 2024.
+  graph_config = self._runner.get_graph_config()
+# 😺dzNodes: LayerStyle -> [1;32mPersonMaskUltra V2 Processed 1 image(s).[m
+FETCH ComfyRegistry Data: 40/93
+[93mKSampler(Efficient) Warning:[0m No vae input detected, proceeding as if vae_decode was false.
+
+
+  0%|          | 0/60 [00:00<?, ?it/s]
+  2%|▏         | 1/60 [00:00<00:09,  6.36it/s]
+  3%|▎         | 2/60 [00:00<00:09,  6.33it/s]
+  5%|▌         | 3/60 [00:00<00:09,  6.23it/s]
+  7%|▋         | 4/60 [00:00<00:09,  6.15it/s]
+  8%|▊         | 5/60 [00:00<00:09,  6.04it/s]
+ 10%|█         | 6/60 [00:00<00:08,  6.06it/s]
+ 12%|█▏        | 7/60 [00:01<00:08,  6.08it/s]
+ 13%|█▎        | 8/60 [00:01<00:08,  6.01it/s]
+ 15%|█▌        | 9/60 [00:01<00:08,  6.06it/s]
+ 17%|█▋        | 10/60 [00:01<00:08,  6.11it/s]
+ 18%|█▊        | 11/60 [00:01<00:07,  6.18it/s]
+ 20%|██        | 12/60 [00:01<00:07,  6.07it/s]
+ 22%|██▏       | 13/60 [00:02<00:07,  6.09it/s]
+ 23%|██▎       | 14/60 [00:02<00:07,  6.09it/s]
+ 25%|██▌       | 15/60 [00:02<00:07,  6.12it/s]
+ 27%|██▋       | 16/60 [00:02<00:07,  6.05it/s]
+ 28%|██▊       | 17/60 [00:02<00:07,  5.96it/s]FETCH ComfyRegistry Data: 45/93
+
+ 30%|███       | 18/60 [00:02<00:06,  6.02it/s]
+ 32%|███▏      | 19/60 [00:03<00:06,  6.06it/s]
+ 33%|███▎      | 20/60 [00:03<00:06,  5.98it/s]
+ 35%|███▌      | 21/60 [00:03<00:06,  5.97it/s]
+ 37%|███▋      | 22/60 [00:03<00:06,  6.00it/s]
+ 38%|███▊      | 23/60 [00:03<00:06,  6.02it/s]
+ 40%|████      | 24/60 [00:03<00:05,  6.03it/s]
+ 42%|████▏     | 25/60 [00:04<00:05,  5.86it/s]
+ 43%|████▎     | 26/60 [00:04<00:05,  5.87it/s]
+ 45%|████▌     | 27/60 [00:04<00:05,  5.91it/s]
+ 47%|████▋     | 28/60 [00:04<00:05,  5.94it/s]
+ 48%|████▊     | 29/60 [00:04<00:05,  5.94it/s]
+ 50%|█████     | 30/60 [00:04<00:04,  6.07it/s]
+ 52%|█████▏    | 31/60 [00:05<00:04,  6.06it/s]
+ 53%|█████▎    | 32/60 [00:05<00:04,  6.12it/s]
+ 55%|█████▌    | 33/60 [00:05<00:04,  6.06it/s]
+ 57%|█████▋    | 34/60 [00:05<00:04,  6.06it/s]
+ 58%|█████▊    | 35/60 [00:05<00:04,  6.01it/s]
+ 60%|██████    | 36/60 [00:05<00:04,  5.92it/s]
+ 62%|██████▏   | 37/60 [00:06<00:03,  5.96it/s]
+ 63%|██████▎   | 38/60 [00:06<00:03,  6.02it/s]
+ 65%|██████▌   | 39/60 [00:06<00:03,  6.03it/s]FETCH ComfyRegistry Data: 50/93
+
+ 67%|██████▋   | 40/60 [00:06<00:03,  5.97it/s]
+ 68%|██████▊   | 41/60 [00:06<00:03,  6.01it/s]
+ 70%|███████   | 42/60 [00:06<00:03,  5.92it/s]
+ 72%|███████▏  | 43/60 [00:07<00:02,  5.97it/s]
+ 73%|███████▎  | 44/60 [00:07<00:02,  6.00it/s]
+ 75%|███████▌  | 45/60 [00:07<00:02,  6.10it/s]
+ 77%|███████▋  | 46/60 [00:07<00:02,  6.19it/s]
+ 78%|███████▊  | 47/60 [00:07<00:02,  6.26it/s]
+ 80%|████████  | 48/60 [00:07<00:01,  6.28it/s]
+ 82%|████████▏ | 49/60 [00:08<00:01,  6.23it/s]
+ 83%|████████▎ | 50/60 [00:08<00:01,  6.18it/s]
+ 85%|████████▌ | 51/60 [00:08<00:01,  6.13it/s]
+ 87%|████████▋ | 52/60 [00:08<00:01,  6.16it/s]
+ 88%|████████▊ | 53/60 [00:08<00:01,  6.21it/s]
+ 90%|█████████ | 54/60 [00:08<00:00,  6.21it/s]
+ 92%|█████████▏| 55/60 [00:09<00:00,  6.23it/s]
+ 93%|█████████▎| 56/60 [00:09<00:00,  6.23it/s]
+ 95%|█████████▌| 57/60 [00:09<00:00,  6.29it/s]
+ 97%|█████████▋| 58/60 [00:09<00:00,  6.24it/s]
+ 98%|█████████▊| 59/60 [00:09<00:00,  6.37it/s]
+100%|██████████| 60/60 [00:09<00:00,  6.53it/s]
+100%|██████████| 60/60 [00:09<00:00,  6.10it/s]
+[34mEQX Node Suite: [0mImage file saved to: /home/eqx/AutoTrainX/workspace/output/m14w00dh4ll/Preview/m14w00dh4ll_SX1_01_0001.png[0m
+Prompt executed in 31.90 seconds
+FETCH ComfyRegistry Data: 55/93
+got prompt
+
+  0%|          | 0/60 [00:00<?, ?it/s]
+  3%|▎         | 2/60 [00:00<00:06,  9.47it/s]
+  7%|▋         | 4/60 [00:00<00:05,  9.61it/s]
+  8%|▊         | 5/60 [00:00<00:05,  9.57it/s]
+ 10%|█         | 6/60 [00:00<00:05,  9.30it/s]
+ 12%|█▏        | 7/60 [00:00<00:05,  9.18it/s]
+ 13%|█▎        | 8/60 [00:00<00:05,  9.07it/s]
+ 15%|█▌        | 9/60 [00:00<00:05,  8.87it/s]
+ 17%|█▋        | 10/60 [00:01<00:05,  8.97it/s]
+ 18%|█▊        | 11/60 [00:01<00:05,  8.91it/s]
+ 20%|██        | 12/60 [00:01<00:05,  8.95it/s]
+ 22%|██▏       | 13/60 [00:01<00:05,  8.52it/s]
+ 23%|██▎       | 14/60 [00:01<00:05,  8.74it/s]
+ 25%|██▌       | 15/60 [00:01<00:05,  8.92it/s]
+ 27%|██▋       | 16/60 [00:01<00:04,  9.19it/s]
+ 28%|██▊       | 17/60 [00:01<00:04,  9.40it/s]
+ 30%|███       | 18/60 [00:01<00:04,  9.33it/s]
+ 32%|███▏      | 19/60 [00:02<00:04,  9.26it/s]
+ 33%|███▎      | 20/60 [00:02<00:04,  9.23it/s]
+ 35%|███▌      | 21/60 [00:02<00:04,  9.27it/s]
+ 37%|███▋      | 22/60 [00:02<00:04,  9.41it/s]
+ 38%|███▊      | 23/60 [00:02<00:03,  9.47it/s]
+ 40%|████      | 24/60 [00:02<00:03,  9.37it/s]
+ 42%|████▏     | 25/60 [00:02<00:03,  9.51it/s]
+ 43%|████▎     | 26/60 [00:02<00:03,  9.44it/s]
+ 45%|████▌     | 27/60 [00:02<00:03,  9.49it/s]
+ 48%|████▊     | 29/60 [00:03<00:03,  9.64it/s]
+ 50%|█████     | 30/60 [00:03<00:03,  9.63it/s]FETCH ComfyRegistry Data: 60/93
+
+ 53%|█████▎    | 32/60 [00:03<00:02,  9.92it/s]
+ 57%|█████▋    | 34/60 [00:03<00:02, 10.01it/s]
+ 60%|██████    | 36/60 [00:03<00:02,  9.86it/s]
+ 63%|██████▎   | 38/60 [00:04<00:02,  9.90it/s]
+ 65%|██████▌   | 39/60 [00:04<00:02,  9.84it/s]
+ 67%|██████▋   | 40/60 [00:04<00:02,  9.85it/s]
+ 70%|███████   | 42/60 [00:04<00:01, 10.00it/s]
+ 73%|███████▎  | 44/60 [00:04<00:01, 10.12it/s]
+ 77%|███████▋  | 46/60 [00:04<00:01, 10.14it/s]
+ 80%|████████  | 48/60 [00:05<00:01, 10.18it/s]
+ 83%|████████▎ | 50/60 [00:05<00:00, 10.04it/s]
+ 87%|████████▋ | 52/60 [00:05<00:00, 10.03it/s]
+ 90%|█████████ | 54/60 [00:05<00:00, 10.06it/s]
+ 93%|█████████▎| 56/60 [00:05<00:00, 10.03it/s]
+ 97%|█████████▋| 58/60 [00:06<00:00,  9.56it/s]
+100%|██████████| 60/60 [00:06<00:00, 10.07it/s]
+100%|██████████| 60/60 [00:06<00:00,  9.64it/s]
+
+  0%|          | 0/30 [00:00<?, ?it/s]
+  3%|▎         | 1/30 [00:00<00:06,  4.74it/s]
+  7%|▋         | 2/30 [00:00<00:05,  4.79it/s]
+ 10%|█         | 3/30 [00:00<00:05,  4.65it/s]
+ 13%|█▎        | 4/30 [00:00<00:05,  4.53it/s]
+ 17%|█▋        | 5/30 [00:01<00:05,  4.49it/s]
+ 20%|██        | 6/30 [00:01<00:05,  4.46it/s]FETCH ComfyRegistry Data: 65/93
+
+ 23%|██▎       | 7/30 [00:01<00:05,  4.50it/s]
+ 27%|██▋       | 8/30 [00:01<00:04,  4.50it/s]
+ 30%|███       | 9/30 [00:01<00:04,  4.56it/s]
+ 33%|███▎      | 10/30 [00:02<00:04,  4.60it/s]
+ 37%|███▋      | 11/30 [00:02<00:04,  4.67it/s]
+ 40%|████      | 12/30 [00:02<00:03,  4.65it/s]
+ 43%|████▎     | 13/30 [00:02<00:03,  4.65it/s]
+ 47%|████▋     | 14/30 [00:03<00:03,  4.64it/s]
+ 50%|█████     | 15/30 [00:03<00:03,  4.59it/s]
+ 53%|█████▎    | 16/30 [00:03<00:03,  4.55it/s]
+ 57%|█████▋    | 17/30 [00:03<00:02,  4.60it/s]
+ 60%|██████    | 18/30 [00:03<00:02,  4.62it/s]
+ 63%|██████▎   | 19/30 [00:04<00:02,  4.60it/s]
+ 67%|██████▋   | 20/30 [00:04<00:02,  4.58it/s]
+ 70%|███████   | 21/30 [00:04<00:01,  4.60it/s]
+ 73%|███████▎  | 22/30 [00:04<00:01,  4.66it/s]
+ 77%|███████▋  | 23/30 [00:04<00:01,  4.70it/s]
+ 80%|████████  | 24/30 [00:05<00:01,  4.75it/s]
+ 83%|████████▎ | 25/30 [00:05<00:01,  4.72it/s]
+ 87%|████████▋ | 26/30 [00:05<00:00,  4.84it/s]FETCH ComfyRegistry Data: 70/93
+
+ 90%|█████████ | 27/30 [00:05<00:00,  4.83it/s]
+ 93%|█████████▎| 28/30 [00:06<00:00,  4.82it/s]
+ 97%|█████████▋| 29/30 [00:06<00:00,  4.99it/s]
+100%|██████████| 30/30 [00:06<00:00,  5.15it/s]
+100%|██████████| 30/30 [00:06<00:00,  4.70it/s]
+I0000 00:00:1754254604.941081  947591 gl_context_egl.cc:85] Successfully initialized EGL. Major : 1 Minor: 5
+I0000 00:00:1754254604.958293  947990 gl_context.cc:369] GL version: 3.1 (OpenGL ES 3.1 Mesa 24.2.8-1ubuntu1~24.04.1), renderer: D3D12 (AMD Radeon(TM) Graphics)
+W0000 00:00:1754254604.989586  947991 inference_feedback_manager.cc:114] Feedback manager requires a model with a single signature inference. Disabling support for feedback tensors.
+# 😺dzNodes: LayerStyle -> [1;32mPersonMaskUltra V2 Processed 1 image(s).[m
+[93mKSampler(Efficient) Warning:[0m No vae input detected, proceeding as if vae_decode was false.
+
+
+  0%|          | 0/60 [00:00<?, ?it/s]
+  2%|▏         | 1/60 [00:00<00:09,  6.45it/s]
+  3%|▎         | 2/60 [00:00<00:08,  6.50it/s]FETCH ComfyRegistry Data: 75/93
+
+  5%|▌         | 3/60 [00:00<00:08,  6.49it/s]
+  7%|▋         | 4/60 [00:00<00:08,  6.25it/s]
+  8%|▊         | 5/60 [00:00<00:08,  6.13it/s]
+ 10%|█         | 6/60 [00:00<00:08,  6.19it/s]
+ 12%|█▏        | 7/60 [00:01<00:08,  6.10it/s]
+ 13%|█▎        | 8/60 [00:01<00:08,  6.11it/s]
+ 15%|█▌        | 9/60 [00:01<00:08,  6.14it/s]
+ 17%|█▋        | 10/60 [00:01<00:08,  6.14it/s]
+ 18%|█▊        | 11/60 [00:01<00:07,  6.15it/s]
+ 20%|██        | 12/60 [00:01<00:07,  6.11it/s]
+ 22%|██▏       | 13/60 [00:02<00:07,  5.97it/s]
+ 23%|██▎       | 14/60 [00:02<00:07,  6.11it/s]
+ 25%|██▌       | 15/60 [00:02<00:07,  6.15it/s]
+ 27%|██▋       | 16/60 [00:02<00:07,  6.07it/s]
+ 28%|██▊       | 17/60 [00:02<00:07,  6.01it/s]
+ 30%|███       | 18/60 [00:02<00:06,  6.01it/s]
+ 32%|███▏      | 19/60 [00:03<00:06,  5.92it/s]
+ 33%|███▎      | 20/60 [00:03<00:06,  5.85it/s]
+ 35%|███▌      | 21/60 [00:03<00:06,  5.93it/s]
+ 37%|███▋      | 22/60 [00:03<00:06,  5.79it/s]
+ 38%|███▊      | 23/60 [00:03<00:06,  5.64it/s]
+ 40%|████      | 24/60 [00:04<00:06,  5.65it/s]
+ 42%|████▏     | 25/60 [00:04<00:06,  5.62it/s]
+ 43%|████▎     | 26/60 [00:04<00:05,  5.77it/s]
+ 45%|████▌     | 27/60 [00:04<00:05,  5.79it/s]
+ 47%|████▋     | 28/60 [00:04<00:05,  5.82it/s]FETCH ComfyRegistry Data: 80/93
+
+ 48%|████▊     | 29/60 [00:04<00:05,  5.78it/s]
+ 50%|█████     | 30/60 [00:05<00:05,  5.70it/s]
+ 52%|█████▏    | 31/60 [00:05<00:05,  5.64it/s]
+ 53%|█████▎    | 32/60 [00:05<00:04,  5.76it/s]
+ 55%|█████▌    | 33/60 [00:05<00:04,  5.76it/s]
+ 57%|█████▋    | 34/60 [00:05<00:04,  5.90it/s]
+ 58%|█████▊    | 35/60 [00:05<00:04,  5.97it/s]
+ 60%|██████    | 36/60 [00:06<00:04,  5.99it/s]
+Stopped server
+
+ 62%|██████▏   | 37/60 [00:06<00:03,  5.83it/s]
+ 63%|██████▎   | 38/60 [00:06<00:03,  5.82it/s]
+ 65%|██████▌   | 39/60 [00:06<00:03,  5.89it/s]Cannot connect to comfyregistry.
+FETCH DATA from: https://raw.githubusercontent.com/ltdrdata/ComfyUI-Manager/main/custom-node-list.json[ComfyUI-Manager] Due to a network error, switching to local mode.
+=> custom-node-list.json
+=> cannot schedule new futures after shutdown
+FETCH DATA from: /home/eqx/ComfyUI/custom_nodes/ComfyUI-Manager/custom-node-list.json [DONE]
+[ComfyUI-Manager] All startup tasks have been completed.
+terminate called without an active exception

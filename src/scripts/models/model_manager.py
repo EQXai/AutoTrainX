@@ -94,7 +94,7 @@ class ModelManager:
             base_path = Config.get_default_base_path()
         self.base_path = Path(base_path)
         self.models_dir = self.base_path / "models"
-        self.source_model_dir = Path("/workspace/Train/models")
+        self.source_model_dir = Path("/workspace/Train/models/trainX")
         
         # Required models with their relative paths
         self.required_model_paths = [

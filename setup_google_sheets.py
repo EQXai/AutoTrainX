@@ -29,8 +29,8 @@ def setup_google_sheets(credentials_path: str, spreadsheet_id: str):
         shutil.copy2(creds_file, dest_path)
         print(f"✅ Credentials copied to: {dest_path}")
         
-        # Update config.json
-        config_path = Path("config.json")
+        # Update settings/config.json
+        config_path = Path("settings/config.json")
         config = {}
         
         if config_path.exists():
@@ -51,7 +51,7 @@ def setup_google_sheets(credentials_path: str, spreadsheet_id: str):
         with open(config_path, 'w') as f:
             json.dump(config, f, indent=2)
         
-        print(f"✅ Configuration updated in config.json")
+        print(f"✅ Configuration updated in settings/config.json")
         print(f"✅ Spreadsheet ID set to: {spreadsheet_id}")
         
         # Display service account email if it's a service account

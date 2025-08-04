@@ -211,6 +211,10 @@ class SinglePipeline(PipelineInterface):
         try:
             # Check if dataset already exists
             if self.dataset_preparator.check_existing_dataset(dataset_name):
+                # Debug logging
+                if self.config.verbose:
+                    print(f"[DEBUG] Dataset '{dataset_name}' exists. auto_clean={auto_clean}")
+                
                 if auto_clean:
                     # Auto-clean enabled, clean without prompting
                     # Only show message if not in quiet mode (batch mode sets quiet mode)

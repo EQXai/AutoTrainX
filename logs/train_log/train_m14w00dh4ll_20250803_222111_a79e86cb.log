@@ -1,0 +1,14 @@
+# AutoTrainX Training Log
+# Dataset: m14w00dh4ll
+# Preset: SX1
+# Job ID: a79e86cb
+# Start Time: 2025-08-03T22:21:11.543853
+# Mode: single
+# Command: /home/eqx/AutoTrainX/venv/bin/python /home/eqx/AutoTrainX/sd-scripts/sdxl_train.py --config_file /home/eqx/AutoTrainX/workspace/Presets/m14w00dh4ll_SX1_a79e86cb.toml --max_grad_norm=0.0 --no_half_vae --train_text_encoder --learning_rate_te2=0
+================================================================================
+
+2025-08-03 22:21:14 INFO     Loading settings from                                        train_util.py:4651
+                             /home/eqx/AutoTrainX/workspace/Presets/m14w00dh4ll_SX1_a79e8                   
+                             6cb.toml...                                                                    
+                    WARNING  clip_skip will be unexpected /                           sdxl_train_util.py:349
+                             SDXL学習ではclip_skipは動作しません                                            

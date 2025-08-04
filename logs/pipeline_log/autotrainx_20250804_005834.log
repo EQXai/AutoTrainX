@@ -1,0 +1,2 @@
+2025-08-04 00:58:35,017 - src.database.utils.singleton_logger - INFO - log_once:33 - Connection monitoring started (interval: 60s)
+2025-08-04 00:58:35,018 - src.database.utils.singleton_logger - INFO - log_once:33 - Enhanced database manager initialized with postgresql

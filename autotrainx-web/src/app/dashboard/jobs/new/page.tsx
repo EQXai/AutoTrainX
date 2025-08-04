@@ -43,7 +43,9 @@ const formSchema = z.object({
   // Training mode
   mode: z.enum(['single', 'batch', 'variations']).default('single'),
   
-  // Dataset configuration (removed repeats and class_name as per CLI bridge requirements)
+  // Dataset configuration
+  repeats: z.number().min(1).max(100).default(30),
+  class_name: z.string().min(1).default("person"),
   
   // Training options
   preview_count: z.number().min(0).max(20).default(0),
@@ -92,6 +94,8 @@ export default function NewJobPage() {
       dataset_name: '',
       preset: preselectedPreset || 'FluxLORA',
       mode: 'single',
+      repeats: 30,
+      class_name: 'person',
       preview_count: 0,
       generate_configs: true,
       auto_clean: true,
@@ -108,6 +112,8 @@ export default function NewJobPage() {
             source_path: data.source_path,
             preset: data.preset,
             dataset_name: data.dataset_name,
+            repeats: data.repeats,
+            class_name: data.class_name,
             preview_count: data.preview_count,
             generate_configs: data.generate_configs,
             auto_clean: data.auto_clean,
@@ -239,8 +245,8 @@ export default function NewJobPage() {
                   <div className="grid grid-cols-3 gap-4">
                     {[
                       { value: 'single', label: 'Single', icon: Package, description: 'Train a single dataset' },
-                      { value: 'batch', label: 'Batch', icon: Users, description: 'Train multiple datasets', disabled: true },
-                      { value: 'variations', label: 'Variations', icon: Zap, description: 'Parameter variations', disabled: true }
+                      { value: 'batch', label: 'Batch', icon: Users, description: 'Train multiple datasets' },
+                      { value: 'variations', label: 'Variations', icon: Zap, description: 'Parameter variations' }
                     ].map((mode) => (
                       <div
                         key={mode.value}
@@ -331,7 +337,39 @@ export default function NewJobPage() {
                   </p>
                 </div>
 
-                {/* Note: Repeats and class_name are configured in the dataset itself, not via CLI parameters */}
+                {/* Repeats */}
+                <div className="space-y-2">
+                  <Label htmlFor="repeats">Repeats</Label>
+                  <Input
+                    id="repeats"
+                    type="number"
+                    min={1}
+                    max={100}
+                    {...form.register('repeats', { valueAsNumber: true })}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Number of times to repeat the dataset (default: 30)
+                  </p>
+                  {form.formState.errors.repeats && (
+                    <p className="text-sm text-red-500">{form.formState.errors.repeats.message}</p>
+                  )}
+                </div>
+
+                {/* Class Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="class_name">Class Name</Label>
+                  <Input
+                    id="class_name"
+                    placeholder="person"
+                    {...form.register('class_name')}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Name of the class being trained (default: person)
+                  </p>
+                  {form.formState.errors.class_name && (
+                    <p className="text-sm text-red-500">{form.formState.errors.class_name.message}</p>
+                  )}
+                </div>
               </TabsContent>
 
               <TabsContent value="advanced" className="mt-6 space-y-6">

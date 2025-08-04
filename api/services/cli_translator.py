@@ -99,26 +99,21 @@ class CLITranslator:
         """
         cmd = ["python", str(self.main_script), "--train", "--batch"]
         
-        # Create datasets file
-        datasets_file = self.base_path / "temp" / "batch_datasets.json"
-        datasets_file.parent.mkdir(exist_ok=True)
-        
-        # Format datasets for CLI
-        cli_datasets = []
-        for ds in datasets:
-            cli_ds = {
-                "path": ds["source_path"],
-                "preset": ds.get("preset", "all")
-            }
-            if "dataset_name" in ds:
-                cli_ds["name"] = ds["dataset_name"]
-            cli_datasets.append(cli_ds)
-        
-        with open(datasets_file, 'w') as f:
-            json.dump(cli_datasets, f, indent=2)
+        # For batch mode, we need a parent directory containing subdirectories
+        # Extract the parent directory from the first dataset path
+        if datasets and "source_path" in datasets[0]:
+            # Get parent directory of first dataset
+            first_path = Path(datasets[0]["source_path"])
+            parent_dir = first_path.parent
+            cmd.extend(["--source", str(parent_dir)])
             
-        cmd.extend(["--datasets-file", str(datasets_file)])
-        cmd.extend(["--strategy", strategy])
+            # Use preset from first dataset
+            preset = datasets[0].get("preset", "all")
+            cmd.extend(["--preset", preset])
+        
+        # Add parallel flag if strategy is parallel
+        if strategy == "parallel":
+            cmd.append("--parallel")
         
         if auto_clean:
             cmd.append("--auto-clean")
@@ -126,35 +121,42 @@ class CLITranslator:
         return cmd
     
     def build_variations_command(self,
-                               dataset_name: str,
-                               base_preset: str,
+                               source_path: str,
+                               preset: str,
                                variations: Dict[str, List[any]],
+                               dataset_name: Optional[str] = None,
+                               preview_count: int = 0,
                                auto_clean: bool = True) -> List[str]:
         """
         Build command for variations mode training.
         
         Args:
-            dataset_name: Dataset name
-            base_preset: Base preset name
+            source_path: Path to dataset
+            preset: Base preset name
             variations: Parameter variations
+            dataset_name: Optional dataset name
+            preview_count: Number of preview images
             auto_clean: Whether to auto-clean
             
         Returns:
             Command as list of arguments
         """
-        cmd = ["python", str(self.main_script), "--train", "--variations"]
+        cmd = ["python", str(self.main_script), "--train", "--mode", "variations"]
         
-        cmd.extend(["--dataset", dataset_name])
-        cmd.extend(["--base-preset", base_preset])
+        cmd.extend(["--source", source_path])
+        cmd.extend(["--preset", preset])
         
-        # Create variations file
-        variations_file = self.base_path / "temp" / "variations.json"
-        variations_file.parent.mkdir(exist_ok=True)
+        # Add dataset name if provided
+        if dataset_name:
+            cmd.extend(["--dataset-name", dataset_name])
         
-        with open(variations_file, 'w') as f:
-            json.dump(variations, f, indent=2)
-            
-        cmd.extend(["--variations-file", str(variations_file)])
+        # Convert variations to CLI format: --variations param=val1,val2,val3
+        for param, values in variations.items():
+            values_str = ','.join(map(str, values))
+            cmd.extend(["--variations", f"{param}={values_str}"])
+        
+        if preview_count > 0:
+            cmd.extend(["--preview", str(preview_count)])
         
         if auto_clean:
             cmd.append("--auto-clean")
@@ -207,6 +209,8 @@ class CLITranslator:
             Execution result with status and output
         """
         cmd = self.build_single_command(**kwargs)
+        logger.info(f"Generated CLI command: {' '.join(cmd)}")
+        logger.info(f"auto_clean parameter: {kwargs.get('auto_clean', 'NOT PROVIDED')}")
         success, stdout, stderr = await self.execute_command(cmd)
         
         # Extract job_id from output if available

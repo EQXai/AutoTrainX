@@ -21,7 +21,7 @@ from .services.cli_translator import CLITranslator
 from .services.stats_reader import StatsReader
 
 # Load environment variables from .env file
-env_path = Path(__file__).parent.parent / ".env"
+env_path = Path(__file__).parent.parent / "settings" / ".env"
 if env_path.exists():
     load_dotenv(env_path)
     logger = logging.getLogger(__name__)

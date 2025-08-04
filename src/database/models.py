@@ -1,20 +1,41 @@
-"""SQLAlchemy models for AutoTrainX execution tracking."""
+"""SQLAlchemy models with multi-database support."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Dict, Any
 import json
 
 from sqlalchemy import (
     Column, String, Integer, Float, Boolean, Text, 
-    DateTime, Index, create_engine
+    DateTime, Index, ForeignKey
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.dialects import postgresql, sqlite
+from sqlalchemy.orm import relationship
 
 from .enums import ExecutionStatus, PipelineMode
-
+from .dialects.sqlite import SQLiteJSONType
 
 Base = declarative_base()
+
+
+# Helper function for conditional types
+def get_json_column():
+    """Get JSON column that works with both SQLite and PostgreSQL."""
+    return Column(
+        postgresql.JSONB().with_variant(
+            SQLiteJSONType(), 'sqlite'
+        )
+    )
+
+
+def get_datetime_column(**kwargs):
+    """Get DateTime column that works with both databases."""
+    return Column(
+        postgresql.TIMESTAMP(timezone=True).with_variant(
+            DateTime(), 'sqlite'
+        ),
+        **kwargs
+    )
 
 
 class Execution(Base):
@@ -27,20 +48,23 @@ class Execution(Base):
     dataset_name = Column(String(255), nullable=False)
     preset = Column(String(100), nullable=False)
     total_steps = Column(Integer)
-    start_time = Column(DateTime)
-    end_time = Column(DateTime)
+    start_time = get_datetime_column()
+    end_time = get_datetime_column()
     duration_seconds = Column(Float)
     success = Column(Boolean, default=False)
     error_message = Column(Text)
     output_path = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = get_datetime_column(default=datetime.utcnow)
+    updated_at = get_datetime_column(default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Create indexes
     __table_args__ = (
         Index('idx_executions_status', 'status'),
         Index('idx_executions_dataset', 'dataset_name'),
         Index('idx_executions_created', 'created_at'),
+        # Composite indexes for performance
+        Index('idx_exec_status_created', 'status', 'created_at'),
+        Index('idx_exec_dataset_status', 'dataset_name', 'status'),
     )
     
     def to_dict(self) -> dict:
@@ -97,23 +121,26 @@ class Variation(Base):
     preset = Column(String(100), nullable=False)
     total_steps = Column(Integer)
     total_combinations = Column(Integer, nullable=False)
-    varied_parameters = Column(Text, nullable=False)  # JSON string
-    parameter_values = Column(Text, nullable=False)   # JSON string
-    start_time = Column(DateTime)
-    end_time = Column(DateTime)
+    varied_parameters = get_json_column()  # Native JSON support
+    parameter_values = get_json_column()   # Native JSON support
+    start_time = get_datetime_column()
+    end_time = get_datetime_column()
     duration_seconds = Column(Float)
     success = Column(Boolean, default=False)
     error_message = Column(Text)
     output_path = Column(Text)
     parent_experiment_id = Column(String(100))
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = get_datetime_column(default=datetime.utcnow)
+    updated_at = get_datetime_column(default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Create indexes
     __table_args__ = (
         Index('idx_variations_status', 'status'),
         Index('idx_variations_experiment', 'experiment_name'),
         Index('idx_variations_parent', 'parent_experiment_id'),
+        # Composite indexes
+        Index('idx_var_status_created', 'status', 'created_at'),
+        Index('idx_var_experiment_status', 'experiment_name', 'status', 'created_at'),
     )
     
     def to_dict(self) -> dict:
@@ -149,8 +176,8 @@ class Variation(Base):
             'preset': self.preset,
             'total_steps': self.total_steps,
             'total_combinations': self.total_combinations,
-            'varied_parameters': json.loads(self.varied_parameters) if self.varied_parameters else {},
-            'parameter_values': json.loads(self.parameter_values) if self.parameter_values else {},
+            'varied_parameters': self.varied_parameters or {},
+            'parameter_values': self.parameter_values or {},
             'start_time': format_timestamp(self.start_time),
             'end_time': format_timestamp(self.end_time),
             'duration_seconds': format_duration(self.duration_seconds),
@@ -162,22 +189,72 @@ class Variation(Base):
             'updated_at': format_timestamp(self.updated_at),
         }
     
+    # Simplified accessors - JSON handled natively
     def get_varied_parameters(self) -> dict:
         """Get varied parameters as dictionary."""
-        if self.varied_parameters:
-            return json.loads(self.varied_parameters)
-        return {}
+        return self.varied_parameters or {}
     
     def set_varied_parameters(self, params: dict):
         """Set varied parameters from dictionary."""
-        self.varied_parameters = json.dumps(params)
+        self.varied_parameters = params
     
     def get_parameter_values(self) -> dict:
         """Get parameter values as dictionary."""
-        if self.parameter_values:
-            return json.loads(self.parameter_values)
-        return {}
+        return self.parameter_values or {}
     
     def set_parameter_values(self, values: dict):
         """Set parameter values from dictionary."""
-        self.parameter_values = json.dumps(values)
+        self.parameter_values = values
+
+
+class JobSummaryCache(Base):
+    """Materialized view for job summaries."""
+    __tablename__ = 'job_summary_cache'
+    
+    job_id = Column(String, primary_key=True)
+    job_type = Column(String, nullable=False)  # 'execution' or 'variation'
+    status = Column(String, nullable=False)
+    dataset_name = Column(String, nullable=False)
+    preset = Column(String, nullable=False)
+    start_time = get_datetime_column()
+    duration_seconds = Column(Float)
+    success = Column(Boolean)
+    last_updated = get_datetime_column(default=datetime.utcnow)
+    
+    __table_args__ = (
+        Index('idx_summary_status_updated', 'status', 'last_updated'),
+    )
+
+
+class ModelPath(Base):
+    """Model directory tracking."""
+    __tablename__ = 'model_paths'
+    
+    id = Column(String, primary_key=True)
+    path = Column(String, unique=True, nullable=False)
+    added_at = get_datetime_column(default=datetime.utcnow)
+    last_scan = get_datetime_column()
+    model_count = Column(Integer, default=0)
+    
+    # Relationship
+    models = relationship("Model", back_populates="model_path", cascade="all, delete-orphan")
+
+
+class Model(Base):
+    """Trained model tracking."""
+    __tablename__ = 'models'
+    
+    id = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    path = Column(String, unique=True, nullable=False)
+    type = Column(String, nullable=False)  # .safetensors, .ckpt, etc.
+    size = Column(Integer, nullable=False)  # in bytes
+    created_at = get_datetime_column()
+    modified_at = get_datetime_column()
+    has_preview = Column(Boolean, default=False)
+    preview_images = get_json_column()  # Array of image paths
+    model_metadata = get_json_column()  # Model metadata (renamed from metadata)
+    
+    # Foreign key
+    path_id = Column(String, ForeignKey('model_paths.id'))
+    model_path = relationship("ModelPath", back_populates="models")

@@ -135,7 +135,7 @@ async def run_service():
     # Check if Google Sheets sync is enabled
     config = Config.load_config()
     if not config.get('google_sheets_sync', {}).get('enabled', False):
-        logger.error("Google Sheets sync is disabled in config.json")
+        logger.error("Google Sheets sync is disabled in settings/config.json")
         return 1
     
     # Create and start service
@@ -188,7 +188,7 @@ def start_daemon():
     # Check if Google Sheets sync is enabled
     config = Config.load_config()
     if not config.get('google_sheets_sync', {}).get('enabled', False):
-        print("Error: Google Sheets sync is disabled in config.json")
+        print("Error: Google Sheets sync is disabled in settings/config.json")
         print("Enable it first by setting google_sheets_sync.enabled to true")
         return 1
     
