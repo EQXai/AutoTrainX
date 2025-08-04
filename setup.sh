@@ -222,7 +222,29 @@ mark_checkpoint() {
 # Check if a checkpoint was already completed
 is_checkpoint_completed() {
     local checkpoint_name="$1"
-    [ -f "$CHECKPOINT_FILE" ] && grep -q "^$checkpoint_name$" "$CHECKPOINT_FILE"
+    
+    # First check if checkpoint file exists and contains the checkpoint
+    if [ -f "$CHECKPOINT_FILE" ] && grep -q "^$checkpoint_name$" "$CHECKPOINT_FILE" ]; then
+        # Additional validation for critical components
+        case "$checkpoint_name" in
+            "python_env")
+                # Verify venv actually exists
+                [ -f "$VENV_PATH/bin/activate" ] || return 1
+                ;;
+            "pytorch")
+                # Verify PyTorch is actually installed
+                [ -f "$VENV_PATH/bin/activate" ] && \
+                source "$VENV_PATH/bin/activate" && \
+                python -c "import torch" 2>/dev/null || return 1
+                ;;
+            "core_deps")
+                # Verify requirements.txt was installed
+                [ -f "$VENV_PATH/bin/activate" ] || return 1
+                ;;
+        esac
+        return 0
+    fi
+    return 1
 }
 
 # List all completed checkpoints
@@ -240,6 +262,81 @@ clean_checkpoints() {
     rm -f "$CHECKPOINT_FILE"
     rm -f "$FAILED_STEPS_FILE"
     print_info "Checkpoint and failed steps files cleaned"
+}
+
+# Validate all checkpoints
+validate_all_checkpoints() {
+    print_header "Validating Checkpoints"
+    
+    if [ ! -f "$CHECKPOINT_FILE" ]; then
+        print_warning "No checkpoints found"
+        return 0
+    fi
+    
+    local invalid_checkpoints=()
+    
+    while IFS= read -r checkpoint; do
+        case "$checkpoint" in
+            "python_env")
+                if [ ! -f "$VENV_PATH/bin/activate" ]; then
+                    print_error "✗ $checkpoint - Virtual environment not found"
+                    invalid_checkpoints+=("$checkpoint")
+                else
+                    print_success "✓ $checkpoint - Virtual environment exists"
+                fi
+                ;;
+            "pytorch")
+                if [ -f "$VENV_PATH/bin/activate" ]; then
+                    source "$VENV_PATH/bin/activate"
+                    if python -c "import torch" 2>/dev/null; then
+                        print_success "✓ $checkpoint - PyTorch is installed"
+                    else
+                        print_error "✗ $checkpoint - PyTorch not found"
+                        invalid_checkpoints+=("$checkpoint")
+                    fi
+                else
+                    print_error "✗ $checkpoint - Cannot check (venv missing)"
+                    invalid_checkpoints+=("$checkpoint")
+                fi
+                ;;
+            "xformers")
+                if [ -f "$VENV_PATH/bin/activate" ]; then
+                    source "$VENV_PATH/bin/activate"
+                    if python -c "import xformers" 2>/dev/null; then
+                        print_success "✓ $checkpoint - XFormers is installed"
+                    else
+                        print_warning "⚠ $checkpoint - XFormers not found (optional)"
+                    fi
+                else
+                    print_warning "⚠ $checkpoint - Cannot check (venv missing)"
+                fi
+                ;;
+            "core_deps")
+                if [ -f "$VENV_PATH/bin/activate" ] && [ -f "requirements.txt" ]; then
+                    print_success "✓ $checkpoint - Core dependencies checkpoint exists"
+                else
+                    print_error "✗ $checkpoint - Missing venv or requirements.txt"
+                    invalid_checkpoints+=("$checkpoint")
+                fi
+                ;;
+            *)
+                print_info "✓ $checkpoint - Checkpoint recorded"
+                ;;
+        esac
+    done < "$CHECKPOINT_FILE"
+    
+    echo ""
+    if [ ${#invalid_checkpoints[@]} -eq 0 ]; then
+        print_success "All checkpoints are valid!"
+    else
+        print_warning "Found ${#invalid_checkpoints[@]} invalid checkpoints:"
+        for checkpoint in "${invalid_checkpoints[@]}"; do
+            echo "  - $checkpoint"
+        done
+        echo ""
+        print_info "Run './setup.sh --clean' to clear all checkpoints and start fresh"
+        print_info "Or run './setup.sh --resume <checkpoint>' to reinstall specific components"
+    fi
 }
 
 # Track failed step
@@ -1198,6 +1295,17 @@ main() {
                 CONTINUE_ON_ERROR=true
                 shift
                 ;;
+            --clean)
+                # Clean all checkpoints and start fresh
+                clean_checkpoints
+                print_success "All checkpoints cleared. Ready for fresh installation."
+                exit 0
+                ;;
+            --validate-checkpoints)
+                # Validate existing checkpoints
+                validate_all_checkpoints
+                exit 0
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -1504,6 +1612,8 @@ show_help() {
     echo "  --retry-failed         Retry all failed steps from previous run"
     echo "  --fix-triton           Quick fix for triton/xformers import errors"
     echo "  --continue-on-error    Continue installation even if non-critical steps fail"
+    echo "  --clean                Clear all checkpoints for fresh installation"
+    echo "  --validate-checkpoints Validate that checkpointed components are actually installed"
     echo "  --help, -h             Show this help message"
     echo ""
     echo "Examples:"
