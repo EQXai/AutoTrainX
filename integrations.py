@@ -998,24 +998,40 @@ class IntegrationsManager:
             END $$;
             """
             
-            create_db_sql = f"""
-            SELECT 'CREATE DATABASE {db_name} OWNER {db_user}' 
-            WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '{db_name}')\\gexec
-            """
+            # First check if database exists
+            check_db_sql = f"SELECT 1 FROM pg_database WHERE datname = '{db_name}';"
+            
+            # Create database command
+            create_db_sql = f"CREATE DATABASE {db_name} OWNER {db_user};"
             
             grant_sql = f"GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {db_user};"
             
-            for sql, desc in [
-                (create_user_sql, "Creating user"),
-                (create_db_sql, "Creating database"),
-                (grant_sql, "Granting privileges")
-            ]:
-                cmd = working_cmd + [sql]
+            # Create user
+            cmd = working_cmd + [create_user_sql]
+            result = subprocess.run(cmd, capture_output=True, text=True, env=working_env)
+            if result.returncode != 0 and "already exists" not in result.stderr:
+                print(f"❌ Failed creating user: {result.stderr}")
+                return False
+            
+            # Check if database exists
+            cmd = working_cmd + [check_db_sql]
+            result = subprocess.run(cmd, capture_output=True, text=True, env=working_env)
+            db_exists = result.returncode == 0 and result.stdout.strip()
+            
+            # Create database if it doesn't exist
+            if not db_exists:
+                cmd = working_cmd + [create_db_sql]
                 result = subprocess.run(cmd, capture_output=True, text=True, env=working_env)
-                
-                if result.returncode != 0 and "already exists" not in result.stderr:
-                    print(f"❌ Failed {desc}: {result.stderr}")
+                if result.returncode != 0:
+                    print(f"❌ Failed creating database: {result.stderr}")
                     return False
+            
+            # Grant privileges
+            cmd = working_cmd + [grant_sql]
+            result = subprocess.run(cmd, capture_output=True, text=True, env=working_env)
+            if result.returncode != 0:
+                print(f"❌ Failed granting privileges: {result.stderr}")
+                # This is not critical, database and user are already created
                     
             print("✅ Database and user created successfully!")
             return True
@@ -1033,7 +1049,13 @@ class IntegrationsManager:
                     line = line.strip()
                     if line and not line.startswith('#') and '=' in line:
                         key, value = line.split('=', 1)
-                        value = value.strip('"\'')
+                        # Handle quoted values properly
+                        if value.startswith('"') and value.endswith('"'):
+                            value = value[1:-1]  # Remove surrounding quotes
+                            # Unescape newlines in quoted strings
+                            value = value.replace('\\n', '\n')
+                        elif value.startswith("'") and value.endswith("'"):
+                            value = value[1:-1]  # Remove surrounding quotes
                         env_vars[key] = value
         return env_vars
         
