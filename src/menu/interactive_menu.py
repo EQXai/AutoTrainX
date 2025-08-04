@@ -1506,19 +1506,27 @@ GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {db_user};
             if self.is_root or self.running_in_docker:
                 # In Docker/root, use psql directly with postgres user
                 import tempfile
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.sql', delete=False) as f:
-                    f.write(sql_commands)
-                    sql_file = f.name
                 
-                # Try to execute as postgres user using su
-                cmd = f"su - postgres -c 'psql -f {sql_file}'"
-                result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
-                
-                # Clean up temp file
+                # Create temp file with proper permissions
+                fd, sql_file = tempfile.mkstemp(suffix='.sql')
                 try:
-                    os.unlink(sql_file)
-                except:
-                    pass
+                    # Write SQL commands
+                    with os.fdopen(fd, 'w') as f:
+                        f.write(sql_commands)
+                    
+                    # Make file readable by postgres user
+                    os.chmod(sql_file, 0o644)
+                    
+                    # Execute using su with stdin redirect instead of file
+                    # This avoids permission issues
+                    cmd = f"su - postgres -c \"psql << 'EOF'\n{sql_commands}\nEOF\""
+                    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+                finally:
+                    # Clean up temp file
+                    try:
+                        os.unlink(sql_file)
+                    except:
+                        pass
             else:
                 # Normal system with sudo
                 sql_file = "/tmp/create_db.sql"
