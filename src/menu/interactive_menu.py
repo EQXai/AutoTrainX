@@ -110,9 +110,36 @@ class AutoTrainXMenu:
     def _run_privileged_command(self, cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
         """Run a command with appropriate privileges."""
         if self.is_root or self.running_in_docker:
-            # Already running as root or in Docker, no need for sudo
+            # Already running as root or in Docker
             if cmd[0] == "sudo":
-                cmd = cmd[1:]  # Remove sudo from command
+                if len(cmd) > 2 and cmd[1] == "-u":
+                    # Handle 'sudo -u user command' -> switch to that user
+                    user = cmd[2]
+                    actual_cmd = cmd[3:]
+                    
+                    # For psql commands with -f flag, we need special handling
+                    if actual_cmd[0] == "psql" and "-f" in actual_cmd:
+                        # Find the -f flag and its argument
+                        f_index = actual_cmd.index("-f")
+                        if f_index + 1 < len(actual_cmd):
+                            sql_file = actual_cmd[f_index + 1]
+                            # Read the SQL file content
+                            try:
+                                with open(sql_file, 'r') as f:
+                                    sql_content = f.read()
+                                # Use su with echo to pipe SQL to psql
+                                new_cmd = ["su", "-", user, "-c", f"psql <<EOF\n{sql_content}\nEOF"]
+                                return subprocess.run(new_cmd, shell=True, **kwargs)
+                            except:
+                                pass
+                    
+                    # For other commands, join them properly
+                    cmd_str = " ".join(f'"{arg}"' if " " in arg else arg for arg in actual_cmd)
+                    new_cmd = ["su", "-", user, "-c", cmd_str]
+                    return subprocess.run(new_cmd, **kwargs)
+                else:
+                    # Simple sudo command, just remove sudo
+                    cmd = cmd[1:]
         else:
             # Not root, need sudo
             if cmd[0] != "sudo":
@@ -1372,14 +1399,31 @@ GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {db_user};
         
         # Execute as postgres user
         try:
-            # Write SQL to temp file
-            sql_file = "/tmp/create_db.sql"
-            with open(sql_file, 'w') as f:
-                f.write(sql_commands)
-            
-            # Execute SQL
-            cmd = ["sudo", "-u", "postgres", "psql", "-f", sql_file]
-            result = self._run_privileged_command(cmd, capture_output=True, text=True)
+            # Different approach for Docker/root vs normal system
+            if self.is_root or self.running_in_docker:
+                # In Docker/root, use psql directly with postgres user
+                import tempfile
+                with tempfile.NamedTemporaryFile(mode='w', suffix='.sql', delete=False) as f:
+                    f.write(sql_commands)
+                    sql_file = f.name
+                
+                # Try to execute as postgres user using su
+                cmd = f"su - postgres -c 'psql -f {sql_file}'"
+                result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+                
+                # Clean up temp file
+                try:
+                    os.unlink(sql_file)
+                except:
+                    pass
+            else:
+                # Normal system with sudo
+                sql_file = "/tmp/create_db.sql"
+                with open(sql_file, 'w') as f:
+                    f.write(sql_commands)
+                
+                cmd = ["sudo", "-u", "postgres", "psql", "-f", sql_file]
+                result = subprocess.run(cmd, capture_output=True, text=True)
             
             if result.returncode == 0:
                 print("\n✅ Database and user created successfully!")
@@ -1453,8 +1497,13 @@ GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {db_user};
         ).ask():
             try:
                 # Find pg_hba.conf
-                cmd = ["sudo", "-u", "postgres", "psql", "-t", "-c", "SHOW hba_file"]
-                result = self._run_privileged_command(cmd, capture_output=True, text=True)
+                if self.is_root or self.running_in_docker:
+                    # In Docker/root, use su to run as postgres
+                    cmd = "su - postgres -c \"psql -t -c 'SHOW hba_file'\""
+                    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+                else:
+                    cmd = ["sudo", "-u", "postgres", "psql", "-t", "-c", "SHOW hba_file"]
+                    result = subprocess.run(cmd, capture_output=True, text=True)
                 
                 if result.returncode == 0:
                     hba_file = result.stdout.strip()
