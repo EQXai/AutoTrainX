@@ -256,21 +256,7 @@ def write_env_file(config: Dict[str, str], path: Path) -> None:
                         f.write(f"{key}={value}\n")
                 f.write("\n")
         
-        # Add legacy support for backward compatibility
-        if "DATABASE_TYPE" in config:
-            f.write("# Legacy support (will be deprecated)\n")
-            legacy_mapping = {
-                "DATABASE_TYPE": "AUTOTRAINX_DB_TYPE",
-                "DATABASE_HOST": "AUTOTRAINX_DB_HOST",
-                "DATABASE_PORT": "AUTOTRAINX_DB_PORT",
-                "DATABASE_NAME": "AUTOTRAINX_DB_NAME",
-                "DATABASE_USER": "AUTOTRAINX_DB_USER",
-                "DATABASE_PASSWORD": "AUTOTRAINX_DB_PASSWORD"
-            }
-            for new_key, legacy_key in legacy_mapping.items():
-                if new_key in config:
-                    f.write(f"{legacy_key}={config[new_key]}\n")
-            f.write("\n")
+        # No legacy support - all applications should use new variables
 
 
 def main():

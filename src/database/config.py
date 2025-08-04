@@ -37,8 +37,8 @@ class DatabaseSettings:
     def __init__(self):
         """Initialize database settings from environment or defaults."""
         # Load from environment or use defaults
-        self.db_type = os.environ.get('AUTOTRAINX_DB_TYPE', 'sqlite').lower()
-        self.config_file = os.environ.get('AUTOTRAINX_DB_CONFIG')
+        self.db_type = os.environ.get('DATABASE_TYPE', 'sqlite').lower()
+        self.config_file = os.environ.get('DATABASE_CONFIG')
         
         # Load base configuration
         self._config = self._load_default_config()
@@ -113,41 +113,7 @@ class DatabaseSettings:
             self._config['echo'] = db_config['echo']
             self._config['pool']['size'] = db_config['pool_size']
         
-        # Map of environment variables to config keys (for legacy support)
-        env_mapping = {
-            'AUTOTRAINX_DB_PATH': 'path',
-            'AUTOTRAINX_DB_HOST': 'host',
-            'AUTOTRAINX_DB_PORT': 'port',
-            'AUTOTRAINX_DB_NAME': 'database',
-            'AUTOTRAINX_DB_USER': 'username',
-            'AUTOTRAINX_DB_PASSWORD': 'password',
-            'AUTOTRAINX_DB_ECHO': 'echo',
-            'AUTOTRAINX_DB_POOL_SIZE': 'pool.size',
-            'AUTOTRAINX_DB_POOL_OVERFLOW': 'pool.max_overflow',
-        }
-        
-        for env_var, config_key in env_mapping.items():
-            value = os.environ.get(env_var)
-            if value is not None:
-                # Handle nested keys
-                if '.' in config_key:
-                    keys = config_key.split('.')
-                    target = self._config
-                    for key in keys[:-1]:
-                        target = target.setdefault(key, {})
-                    # Convert types as needed
-                    if keys[-1] in ['port', 'size', 'max_overflow']:
-                        value = int(value)
-                    elif keys[-1] == 'echo':
-                        value = value.lower() == 'true'
-                    target[keys[-1]] = value
-                else:
-                    # Convert types as needed
-                    if config_key == 'port':
-                        value = int(value)
-                    elif config_key == 'echo':
-                        value = value.lower() == 'true'
-                    self._config[config_key] = value
+        # No legacy support - all variables come from secure_config
     
     def get_connection_url(self) -> str:
         """Get database connection URL."""

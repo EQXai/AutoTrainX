@@ -50,18 +50,18 @@ if not env_loaded:
     print("Warning: No .env file found")
 
 # Set PostgreSQL configuration with defaults (but allow env override)
-if 'AUTOTRAINX_DB_TYPE' not in os.environ:
-    os.environ['AUTOTRAINX_DB_TYPE'] = 'postgresql'
-if 'AUTOTRAINX_DB_HOST' not in os.environ:
-    os.environ['AUTOTRAINX_DB_HOST'] = 'localhost'
-if 'AUTOTRAINX_DB_PORT' not in os.environ:
-    os.environ['AUTOTRAINX_DB_PORT'] = '5432'
-if 'AUTOTRAINX_DB_NAME' not in os.environ:
-    os.environ['AUTOTRAINX_DB_NAME'] = 'autotrainx'
-if 'AUTOTRAINX_DB_USER' not in os.environ:
-    os.environ['AUTOTRAINX_DB_USER'] = 'autotrainx'
-if 'AUTOTRAINX_DB_PASSWORD' not in os.environ:
-    os.environ['AUTOTRAINX_DB_PASSWORD'] = '1234'  # Default only if not set
+if 'DATABASE_TYPE' not in os.environ:
+    os.environ['DATABASE_TYPE'] = 'postgresql'
+if 'DATABASE_HOST' not in os.environ:
+    os.environ['DATABASE_HOST'] = 'localhost'
+if 'DATABASE_PORT' not in os.environ:
+    os.environ['DATABASE_PORT'] = '5432'
+if 'DATABASE_NAME' not in os.environ:
+    os.environ['DATABASE_NAME'] = 'autotrainx'
+if 'DATABASE_USER' not in os.environ:
+    os.environ['DATABASE_USER'] = 'autotrainx'
+if 'DATABASE_PASSWORD' not in os.environ:
+    os.environ['DATABASE_PASSWORD'] = '1234'  # Default only if not set
 
 # Now import other standard library modules
 import json
