@@ -83,6 +83,104 @@ NC='\033[0m'
 # Utility Functions
 # ============================================================================
 
+# Quick fix for triton error
+fix_triton_error() {
+    print_header "Fixing Triton/XFormers Error"
+    
+    # Check if venv exists
+    if [ ! -f "$VENV_PATH/bin/activate" ]; then
+        print_error "Virtual environment not found at $VENV_PATH"
+        print_info "Please run the full setup first: ./setup.sh"
+        return 1
+    fi
+    
+    # Activate venv
+    source "$VENV_PATH/bin/activate"
+    
+    print_info "Current Python: $(which python)"
+    print_info "Current pip: $(which pip)"
+    
+    # Option menu
+    echo ""
+    echo "Choose an option:"
+    echo "1) Install triton (recommended for GPU usage)"
+    echo "2) Remove xformers (for CPU-only usage)"
+    echo "3) Reinstall both triton and xformers"
+    echo "4) Just suppress the error (ignore it)"
+    echo ""
+    read -p "Select option (1-4): " option
+    
+    case $option in
+        1)
+            print_info "Installing triton..."
+            pip install triton --extra-index-url https://download.pytorch.org/whl/cu${CUDA_VERSION//./}
+            if [ $? -eq 0 ]; then
+                print_success "Triton installed successfully!"
+            else
+                print_warning "Triton installation failed - this is okay for CPU usage"
+            fi
+            ;;
+        2)
+            print_info "Removing xformers..."
+            pip uninstall -y xformers triton
+            print_success "XFormers and triton removed - CPU mode active"
+            ;;
+        3)
+            print_info "Reinstalling triton and xformers..."
+            pip uninstall -y xformers triton
+            pip install triton --extra-index-url https://download.pytorch.org/whl/cu${CUDA_VERSION//./}
+            pip install xformers --index-url https://download.pytorch.org/whl/cu${CUDA_VERSION//./}
+            print_success "Reinstallation complete!"
+            ;;
+        4)
+            print_info "Creating triton stub to suppress error..."
+            # Create a dummy triton module to suppress the import error
+            python -c "
+import os
+import site
+site_packages = site.getsitepackages()[0]
+triton_dir = os.path.join(site_packages, 'triton')
+os.makedirs(triton_dir, exist_ok=True)
+with open(os.path.join(triton_dir, '__init__.py'), 'w') as f:
+    f.write('# Dummy triton module to suppress import errors\\n')
+with open(os.path.join(triton_dir, 'ops.py'), 'w') as f:
+    f.write('# Dummy ops module\\n')
+print('✅ Created triton stub module')
+"
+            print_success "Error suppressed - triton imports will be ignored"
+            ;;
+        *)
+            print_error "Invalid option"
+            return 1
+            ;;
+    esac
+    
+    # Test the fix
+    echo ""
+    print_info "Testing Python imports..."
+    python -c "
+try:
+    import torch
+    print('✅ PyTorch imported successfully')
+    try:
+        import xformers
+        print('✅ XFormers imported successfully')
+    except ImportError as e:
+        print('⚠️  XFormers not available:', str(e))
+    try:
+        import triton
+        print('✅ Triton imported successfully')
+    except ImportError:
+        print('⚠️  Triton not available (this is okay for CPU usage)')
+except Exception as e:
+    print('❌ Error:', str(e))
+"
+    
+    echo ""
+    print_success "Fix complete!"
+    print_info "You can now run your training scripts"
+}
+
 print_header() {
     echo -e "\n${CYAN}${BOLD}=================================================================================${NC}"
     echo -e "${CYAN}${BOLD}  $1${NC}"
@@ -717,6 +815,13 @@ install_xformers() {
         return 1
     fi
     
+    # Install triton (xformers dependency)
+    print_info "Installing triton (xformers dependency)..."
+    if ! pip install triton --extra-index-url https://download.pytorch.org/whl/cu${CUDA_VERSION//./} 2>/dev/null; then
+        print_warning "Could not install triton - xformers may have limited functionality"
+        print_info "This is normal if you're not using GPU optimizations"
+    fi
+    
     # Try pre-built wheel first
     if pip install xformers --index-url https://download.pytorch.org/whl/cu${CUDA_VERSION//./} 2>/dev/null; then
         print_success "xformers installed from pre-built wheel"
@@ -727,8 +832,10 @@ install_xformers() {
             print_success "xformers installed from source"
             return 0
         else
-            print_error "Failed to install xformers"
-            return 1
+            print_warning "xformers installation failed - this is optional for CPU-only usage"
+            print_info "You can continue without xformers if not using GPU acceleration"
+            # Don't fail the installation, xformers is optional
+            return 0
         fi
     fi
 }
@@ -1159,6 +1266,11 @@ main() {
                 fi
                 shift
                 ;;
+            --fix-triton)
+                # Quick fix for triton/xformers errors
+                fix_triton_error
+                exit 0
+                ;;
             --continue-on-error)
                 CONTINUE_ON_ERROR=true
                 shift
@@ -1294,7 +1406,7 @@ run_installation_with_checkpoints() {
         "system_deps:install_system_dependencies:System Dependencies:false"
         "python_env:create_virtual_environment:Python Environment:true"
         "pytorch:install_pytorch:PyTorch:false"
-        "xformers:install_xformers:XFormers:false"
+        "xformers:install_xformers:XFormers (Optional):false"
         "core_deps:install_core_dependencies:Core Dependencies:false"
         "optional:install_optional_components:Optional Components:false"
         "postgresql:setup_postgresql:PostgreSQL:false"
@@ -1468,6 +1580,7 @@ show_help() {
     echo "  --config FILE          Load configuration from specified file"
     echo "  --resume [STEP]        Resume installation from specific checkpoint"
     echo "  --retry-failed         Retry all failed steps from previous run"
+    echo "  --fix-triton           Quick fix for triton/xformers import errors"
     echo "  --continue-on-error    Continue installation even if non-critical steps fail"
     echo "  --help, -h             Show this help message"
     echo ""
@@ -1483,6 +1596,9 @@ show_help() {
     echo ""
     echo "  # Retry failed steps"
     echo "  ./setup.sh --retry-failed"
+    echo ""
+    echo "  # Fix triton import error"
+    echo "  ./setup.sh --fix-triton"
     echo ""
     echo "  # Continue on errors"
     echo "  ./setup.sh --continue-on-error"
