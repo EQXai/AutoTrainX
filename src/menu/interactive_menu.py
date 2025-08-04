@@ -104,6 +104,33 @@ class AutoTrainXMenu:
         # Environment detection
         self.is_docker = os.path.exists('/.dockerenv')
         self.is_wsl = 'microsoft' in os.uname().release.lower() if hasattr(os, 'uname') else False
+        self.is_root = os.geteuid() == 0 if hasattr(os, 'geteuid') else False
+        self.running_in_docker = self.is_docker or os.getenv('RUNNING_IN_DOCKER', '').lower() == 'true'
+        
+    def _run_privileged_command(self, cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
+        """Run a command with appropriate privileges."""
+        if self.is_root or self.running_in_docker:
+            # Already running as root or in Docker, no need for sudo
+            if cmd[0] == "sudo":
+                cmd = cmd[1:]  # Remove sudo from command
+        else:
+            # Not root, need sudo
+            if cmd[0] != "sudo":
+                cmd = ["sudo"] + cmd
+        
+        return subprocess.run(cmd, **kwargs)
+    
+    def _get_environment_info(self) -> str:
+        """Get a string describing the current environment."""
+        env_parts = []
+        if self.is_docker:
+            env_parts.append("Docker Container")
+        if self.is_wsl:
+            env_parts.append("WSL")
+        if self.is_root:
+            env_parts.append("Root User")
+        
+        return " / ".join(env_parts) if env_parts else "Standard Linux"
         
     # ============================================================================
     # INITIAL SETUP FUNCTIONS (from setup_secure_config.py)
@@ -536,10 +563,9 @@ class AutoTrainXMenu:
         print("\n" + "="*60)
         print("         AUTOTRAINX CONFIGURATION & MANAGEMENT")
         print("                    Version 2.0")
-        if self.is_docker:
-            print("              Environment: Docker Container")
-        elif self.is_wsl:
-            print("                Environment: WSL")
+        env_info = self._get_environment_info()
+        if env_info:
+            print(f"              Environment: {env_info}")
         print("="*60)
         print("Navigate with arrow keys, select with Enter")
         print("Press Ctrl+C to exit at any time")
@@ -1266,16 +1292,37 @@ class AutoTrainXMenu:
         
         if self.is_docker:
             print("\n⚠️  In Docker container - PostgreSQL should be pre-installed")
-            print("If not, use: apt-get update && apt-get install -y postgresql postgresql-client")
-        else:
-            cmds = [
-                "sudo apt-get update",
-                "sudo apt-get install -y postgresql postgresql-client postgresql-contrib"
-            ]
+            print("If not, run as root: apt-get update && apt-get install -y postgresql postgresql-client")
+        
+        try:
+            print("\nUpdating package list...")
+            result = self._run_privileged_command(["apt-get", "update"], capture_output=True, text=True)
+            if result.returncode != 0:
+                print(f"❌ Error updating packages: {result.stderr}")
+                input("\nPress Enter to continue...")
+                return
             
-            for cmd in cmds:
-                print(f"\nRunning: {cmd}")
-                subprocess.run(cmd.split())
+            print("\nInstalling PostgreSQL...")
+            result = self._run_privileged_command(
+                ["apt-get", "install", "-y", "postgresql", "postgresql-client", "postgresql-contrib"],
+                capture_output=True, text=True
+            )
+            
+            if result.returncode == 0:
+                print("✅ PostgreSQL installed successfully!")
+            else:
+                print(f"❌ Error installing PostgreSQL: {result.stderr}")
+        except FileNotFoundError as e:
+            if "sudo" in str(e):
+                print("❌ Error: sudo command not found.")
+                if self.is_docker:
+                    print("💡 In Docker, run as root user or install sudo: apt-get install sudo")
+                else:
+                    print("💡 Please install sudo or run as root user")
+            else:
+                print(f"❌ Error: {str(e)}")
+        except Exception as e:
+            print(f"❌ Error: {str(e)}")
         
         input("\nPress Enter to continue...")
     
@@ -1332,7 +1379,7 @@ GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {db_user};
             
             # Execute SQL
             cmd = ["sudo", "-u", "postgres", "psql", "-f", sql_file]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = self._run_privileged_command(cmd, capture_output=True, text=True)
             
             if result.returncode == 0:
                 print("\n✅ Database and user created successfully!")
@@ -1406,34 +1453,54 @@ GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {db_user};
         ).ask():
             try:
                 # Find pg_hba.conf
-                result = subprocess.run(
-                    ["sudo", "-u", "postgres", "psql", "-t", "-c", "SHOW hba_file"],
-                    capture_output=True,
-                    text=True
-                )
+                cmd = ["sudo", "-u", "postgres", "psql", "-t", "-c", "SHOW hba_file"]
+                result = self._run_privileged_command(cmd, capture_output=True, text=True)
                 
                 if result.returncode == 0:
                     hba_file = result.stdout.strip()
                     print(f"\nFound pg_hba.conf: {hba_file}")
                     
                     # Backup
-                    subprocess.run(["sudo", "cp", hba_file, f"{hba_file}.backup"])
+                    self._run_privileged_command(["cp", hba_file, f"{hba_file}.backup"])
+                    print(f"✅ Backup created: {hba_file}.backup")
                     
-                    # Update authentication
-                    fix_script = f"""
-sudo sed -i 's/local   all             postgres                                peer/local   all             postgres                                md5/' {hba_file}
-sudo sed -i 's/local   all             all                                     peer/local   all             all                                     md5/' {hba_file}
-"""
+                    # Update authentication using sed commands
+                    sed_commands = [
+                        ["sed", "-i", "s/local   all             postgres                                peer/local   all             postgres                                md5/", hba_file],
+                        ["sed", "-i", "s/local   all             all                                     peer/local   all             all                                     md5/", hba_file]
+                    ]
                     
-                    subprocess.run(fix_script, shell=True)
+                    for sed_cmd in sed_commands:
+                        result = self._run_privileged_command(sed_cmd, capture_output=True, text=True)
+                        if result.returncode != 0:
+                            print(f"⚠️  Warning: sed command failed: {result.stderr}")
                     
                     # Restart PostgreSQL
                     print("\nRestarting PostgreSQL...")
-                    subprocess.run(["sudo", "systemctl", "restart", "postgresql"])
+                    if self.is_docker:
+                        # In Docker, PostgreSQL might not be managed by systemctl
+                        restart_result = self._run_privileged_command(
+                            ["service", "postgresql", "restart"],
+                            capture_output=True, text=True
+                        )
+                        if restart_result.returncode != 0:
+                            print("⚠️  Could not restart PostgreSQL service.")
+                            print("💡 Try: pg_ctl restart or restart the container")
+                    else:
+                        self._run_privileged_command(["systemctl", "restart", "postgresql"])
                     
-                    print("\n✅ Authentication fixed!")
+                    print("\n✅ Authentication configuration updated!")
+                    print("💡 You may need to restart PostgreSQL manually if running in Docker")
                 else:
                     print("\n❌ Could not find pg_hba.conf")
+                    print(f"Error: {result.stderr}")
+            except FileNotFoundError as e:
+                if "sudo" in str(e):
+                    print("❌ Error: sudo command not found.")
+                    if self.is_docker:
+                        print("💡 In Docker, run as root user or install sudo: apt-get install sudo")
+                else:
+                    print(f"❌ Error: {str(e)}")
             except Exception as e:
                 print(f"\n❌ Error: {e}")
         
@@ -2460,7 +2527,10 @@ sudo sed -i 's/local   all             all                                     p
         print("COMMON ISSUES:")
         print("")
         print("1. Database Connection Failed")
-        print("   - Check PostgreSQL is running: sudo systemctl status postgresql")
+        if self.is_docker:
+            print("   - Check PostgreSQL is running: service postgresql status")
+        else:
+            print("   - Check PostgreSQL is running: systemctl status postgresql")
         print("   - Verify credentials in .env file")
         print("   - Run: System Configuration → Database → Fix Authentication")
         print("")
