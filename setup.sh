@@ -134,35 +134,19 @@ fix_triton_error() {
             ;;
         4)
             print_info "Creating triton stub to suppress error..."
-            # Run the fix script
-            if [ -f "$SCRIPT_DIR/fix_triton_diffusers.py" ]; then
-                python "$SCRIPT_DIR/fix_triton_diffusers.py"
-            else
-                # Fallback to inline fix
-                python -c "
+            # Create a dummy triton module to suppress the import error
+            python -c "
 import os
 import site
 site_packages = site.getsitepackages()[0]
 triton_dir = os.path.join(site_packages, 'triton')
 os.makedirs(triton_dir, exist_ok=True)
 with open(os.path.join(triton_dir, '__init__.py'), 'w') as f:
-    f.write('# Triton stub module\\n')
+    f.write('# Dummy triton module to suppress import errors\\n')
 with open(os.path.join(triton_dir, 'ops.py'), 'w') as f:
-    f.write('''# Stub for triton.ops
-class _StubOp:
-    def __getattr__(self, name):
-        return lambda *args, **kwargs: None
-
-matmul = _StubOp()
-elementwise = _StubOp()
-reduction = _StubOp()
-
-def __getattr__(name):
-    return _StubOp()
-''')
-print('✅ Created triton.ops stub module')
+    f.write('# Dummy ops module\\n')
+print('✅ Created triton stub module')
 "
-            fi
             print_success "Error suppressed - triton imports will be ignored"
             ;;
         *)
