@@ -369,15 +369,6 @@ class UnifiedSetup:
             f.write("CORS_ALLOWED_METHODS=GET,POST,PUT,DELETE,OPTIONS\n")
             f.write("CORS_ALLOWED_HEADERS=*\n\n")
             
-            # Legacy support
-            if self.config.get("DATABASE_TYPE") == "postgresql":
-                f.write("# Legacy support (will be deprecated)\n")
-                f.write(f"AUTOTRAINX_DB_TYPE=postgresql\n")
-                f.write(f"AUTOTRAINX_DB_HOST={self.config.get('DATABASE_HOST', 'localhost')}\n")
-                f.write(f"AUTOTRAINX_DB_PORT={self.config.get('DATABASE_PORT', '5432')}\n")
-                f.write(f"AUTOTRAINX_DB_NAME={self.config.get('DATABASE_NAME', 'autotrainx')}\n")
-                f.write(f"AUTOTRAINX_DB_USER={self.config.get('DATABASE_USER', 'autotrainx')}\n")
-                f.write(f"AUTOTRAINX_DB_PASSWORD={self.config.get('DATABASE_PASSWORD', '')}\n")
                 
     def run_privileged_command(self, command: list) -> subprocess.CompletedProcess:
         """Run a command with appropriate privileges"""
@@ -507,18 +498,26 @@ host    all             all             192.168.0.0/16          trust
                 self.print_warning(f"Could not start PostgreSQL service: {e}")
                 self.print_info("Continuing anyway - database operations may fail")
                 
-        # Get database password from .env or environment
-        db_password = os.environ.get('DATABASE_PASSWORD')
+        # Get database password from config (which should be loaded from .env)
+        db_password = self.config.get('DATABASE_PASSWORD')
+        
+        # If not in config, try environment variables
+        if not db_password:
+            db_password = os.environ.get('DATABASE_PASSWORD')
+            
+        # If still not found, try to read directly from .env file
         if not db_password and self.env_path.exists():
-            # Load from .env file
             with open(self.env_path, 'r') as f:
                 for line in f:
+                    line = line.strip()
                     if line.startswith('DATABASE_PASSWORD='):
-                        db_password = line.split('=', 1)[1].strip()
+                        db_password = line.split('=', 1)[1].strip().strip('"').strip("'")
                         break
                         
+        # Final fallback
         if not db_password:
-            db_password = self.config.get('DATABASE_PASSWORD', 'AutoTrainX2024Secure123')
+            db_password = 'AutoTrainX2024Secure123'
+            self.print_warning(f"Using default password: {db_password}")
             
         # Configure PostgreSQL authentication for Docker if needed
         if self.is_docker and not self.check_postgresql_running():
@@ -577,8 +576,23 @@ GRANT ALL PRIVILEGES ON DATABASE autotrainx TO autotrainx;
         # Test connection
         self.print_info("Testing database connection...")
         try:
+            # Ensure we have the correct password
+            test_password = db_password
+            if not test_password:
+                # Try to get from environment or .env file
+                test_password = os.environ.get('DATABASE_PASSWORD')
+                if not test_password and self.env_path.exists():
+                    with open(self.env_path, 'r') as f:
+                        for line in f:
+                            if line.startswith('DATABASE_PASSWORD='):
+                                test_password = line.split('=', 1)[1].strip().strip('"').strip("'")
+                                break
+                
+            if not test_password:
+                test_password = 'AutoTrainX2024Secure123'  # Default fallback
+                
             env = os.environ.copy()
-            env['PGPASSWORD'] = db_password
+            env['PGPASSWORD'] = test_password
             result = subprocess.run(
                 ['psql', '-h', 'localhost', '-U', 'autotrainx', '-d', 'autotrainx', '-c', 'SELECT 1;'],
                 env=env,
@@ -590,11 +604,13 @@ GRANT ALL PRIVILEGES ON DATABASE autotrainx TO autotrainx;
                 self.print_success("Database connection successful!")
                 return True
             else:
-                self.print_warning("Connection test failed - you may need to configure authentication")
+                self.print_warning("Connection test failed - database was created but authentication may need configuration")
+                self.print_info(f"You can test manually with: PGPASSWORD=<your-password> psql -h localhost -U autotrainx -d autotrainx")
                 return True  # Still return True as setup completed
                 
         except Exception as e:
             self.print_warning(f"Could not test connection: {e}")
+            self.print_info("Database was created, you can test the connection manually")
             return True
             
     def setup_google_sheets(self):
