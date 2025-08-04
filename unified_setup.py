@@ -125,10 +125,25 @@ class UnifiedSetup:
             "setup_config_exists": self.setup_config_path.exists(),
             "postgresql_installed": self.check_postgresql_installed(),
             "postgresql_running": self.check_postgresql_running(),
+            "postgresql_connection_ok": False,
             "google_sheets_configured": self.check_google_sheets_configured(),
+            "google_sheets_connection_ok": False,
             "daemon_running": self.check_daemon_running(),
+            "daemon_healthy": False,
             "conflicts": []
         }
+        
+        # Test PostgreSQL connection if it's running
+        if state["postgresql_running"]:
+            state["postgresql_connection_ok"] = self.test_postgresql_connection()
+            
+        # Test Google Sheets connection if configured
+        if state["google_sheets_configured"]:
+            state["google_sheets_connection_ok"] = self.test_google_sheets_connection()
+            
+        # Check daemon health if running
+        if state["daemon_running"]:
+            state["daemon_healthy"] = self.test_daemon_health()
         
         # Check for conflicts with setup.sh
         if self.setup_config_path.exists():
@@ -182,6 +197,38 @@ class UnifiedSetup:
         except:
             return False
             
+    def test_postgresql_connection(self) -> bool:
+        """Test PostgreSQL connection with autotrainx user and database"""
+        try:
+            # Load password from config or .env
+            password = self.config.get('DATABASE_PASSWORD')
+            if not password:
+                password = os.environ.get('DATABASE_PASSWORD')
+            if not password and self.env_path.exists():
+                with open(self.env_path, 'r') as f:
+                    for line in f:
+                        if line.startswith('DATABASE_PASSWORD='):
+                            password = line.split('=', 1)[1].strip().strip('"').strip("'")
+                            break
+            
+            if not password:
+                password = 'AutoTrainX2024Secure123'
+                
+            # Test connection
+            env = os.environ.copy()
+            env['PGPASSWORD'] = password
+            result = subprocess.run(
+                ['psql', '-h', 'localhost', '-U', 'autotrainx', '-d', 'autotrainx', 
+                 '-c', 'SELECT current_database(), current_user, version();'],
+                env=env,
+                capture_output=True,
+                text=True
+            )
+            
+            return result.returncode == 0
+        except:
+            return False
+            
     def check_google_sheets_configured(self) -> bool:
         """Check if Google Sheets is configured"""
         if not self.config_json_path.exists():
@@ -195,6 +242,48 @@ class UnifiedSetup:
         except:
             return False
             
+    def test_google_sheets_connection(self) -> bool:
+        """Test Google Sheets API connection"""
+        if not self.check_google_sheets_configured():
+            return False
+            
+        try:
+            # Try to import Google Sheets client
+            import subprocess
+            result = subprocess.run([
+                sys.executable, '-c',
+                """
+import json
+from pathlib import Path
+try:
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+    
+    # Load config
+    config_path = Path('settings/config.json')
+    with open(config_path, 'r') as f:
+        config = json.load(f)
+    
+    gs_config = config.get('google_sheets_sync', {})
+    creds_path = gs_config.get('credentials_path')
+    sheet_id = gs_config.get('spreadsheet_id')
+    
+    # Test connection
+    credentials = service_account.Credentials.from_service_account_file(creds_path)
+    service = build('sheets', 'v4', credentials=credentials)
+    
+    # Try to get spreadsheet metadata
+    sheet = service.spreadsheets().get(spreadsheetId=sheet_id).execute()
+    print("SUCCESS")
+except Exception as e:
+    print(f"ERROR: {e}")
+"""
+            ], capture_output=True, text=True)
+            
+            return "SUCCESS" in result.stdout
+        except:
+            return False
+            
     def check_daemon_running(self) -> bool:
         """Check if sheets sync daemon is running"""
         if not self.daemon_pid_file.exists():
@@ -203,6 +292,29 @@ class UnifiedSetup:
         try:
             pid = int(self.daemon_pid_file.read_text().strip())
             return psutil.Process(pid).is_running()
+        except:
+            return False
+            
+    def test_daemon_health(self) -> bool:
+        """Test if the daemon is healthy and processing"""
+        if not self.check_daemon_running():
+            return False
+            
+        try:
+            # Check if daemon log exists and has recent activity
+            log_file = self.root_dir / "logs" / "sheets_sync_daemon.log"
+            if log_file.exists():
+                # Check if log was modified in the last 5 minutes
+                import time
+                log_mtime = log_file.stat().st_mtime
+                current_time = time.time()
+                if current_time - log_mtime < 300:  # 5 minutes
+                    return True
+            
+            # Alternative: check if daemon process is responsive
+            pid = int(self.daemon_pid_file.read_text().strip())
+            process = psutil.Process(pid)
+            return process.status() != psutil.STATUS_ZOMBIE
         except:
             return False
             
@@ -733,18 +845,48 @@ GRANT ALL PRIVILEGES ON DATABASE autotrainx TO autotrainx;
         
         state = self.check_current_state()
         
+        # Environment status
         print(f"Environment (.env): {Colors.GREEN + '✓' if state['env_exists'] else Colors.RED + '✗'} "
               f"{'Configured' if state['env_exists'] else 'Not configured'}{Colors.NC}")
               
-        print(f"PostgreSQL: {Colors.GREEN + '✓' if state['postgresql_installed'] else Colors.RED + '✗'} "
-              f"{'Installed' if state['postgresql_installed'] else 'Not installed'}"
-              f"{' (Running)' if state['postgresql_running'] else ' (Not running)' if state['postgresql_installed'] else ''}{Colors.NC}")
+        # PostgreSQL status
+        pg_status = ""
+        if state['postgresql_installed']:
+            if state['postgresql_running']:
+                if state['postgresql_connection_ok']:
+                    pg_status = f"{Colors.GREEN}✓ Running & Connected{Colors.NC}"
+                else:
+                    pg_status = f"{Colors.YELLOW}⚠ Running but connection failed{Colors.NC}"
+            else:
+                pg_status = f"{Colors.RED}✗ Not running{Colors.NC}"
+        else:
+            pg_status = f"{Colors.RED}✗ Not installed{Colors.NC}"
+            
+        print(f"PostgreSQL: {pg_status}")
               
-        print(f"Google Sheets: {Colors.GREEN + '✓' if state['google_sheets_configured'] else Colors.RED + '✗'} "
-              f"{'Configured' if state['google_sheets_configured'] else 'Not configured'}{Colors.NC}")
+        # Google Sheets status
+        gs_status = ""
+        if state['google_sheets_configured']:
+            if state['google_sheets_connection_ok']:
+                gs_status = f"{Colors.GREEN}✓ Configured & Connected{Colors.NC}"
+            else:
+                gs_status = f"{Colors.YELLOW}⚠ Configured but connection failed{Colors.NC}"
+        else:
+            gs_status = f"{Colors.RED}✗ Not configured{Colors.NC}"
+            
+        print(f"Google Sheets: {gs_status}")
               
-        print(f"Sync Daemon: {Colors.GREEN + '✓' if state['daemon_running'] else Colors.RED + '✗'} "
-              f"{'Running' if state['daemon_running'] else 'Not running'}{Colors.NC}")
+        # Daemon status
+        daemon_status = ""
+        if state['daemon_running']:
+            if state['daemon_healthy']:
+                daemon_status = f"{Colors.GREEN}✓ Running & Healthy{Colors.NC}"
+            else:
+                daemon_status = f"{Colors.YELLOW}⚠ Running but not healthy{Colors.NC}"
+        else:
+            daemon_status = f"{Colors.RED}✗ Not running{Colors.NC}"
+            
+        print(f"Sync Daemon: {daemon_status}")
               
         if state['conflicts']:
             print(f"\n{Colors.YELLOW}Conflicts detected:{Colors.NC}")
@@ -837,14 +979,37 @@ GRANT ALL PRIVILEGES ON DATABASE autotrainx TO autotrainx;
                     self.setup_postgresql()
                 else:
                     self.print_info("PostgreSQL already configured")
+                    # Test connection
+                    self.print_info("Testing PostgreSQL connection...")
+                    if self.test_postgresql_connection():
+                        self.print_success("PostgreSQL connection successful!")
+                    else:
+                        self.print_warning("PostgreSQL connection failed - check credentials")
                     
             # Step 3: Google Sheets setup
             if not state['google_sheets_configured']:
                 self.setup_google_sheets()
+            else:
+                self.print_info("Google Sheets already configured")
+                # Test connection
+                self.print_info("Testing Google Sheets API connection...")
+                if self.test_google_sheets_connection():
+                    self.print_success("Google Sheets API connection successful!")
+                else:
+                    self.print_warning("Google Sheets API connection failed - check credentials and permissions")
                 
             # Step 4: Start daemon
-            if self.check_google_sheets_configured() and not state['daemon_running']:
-                self.start_sheets_daemon()
+            if self.check_google_sheets_configured():
+                if not state['daemon_running']:
+                    self.start_sheets_daemon()
+                else:
+                    self.print_info("Sheets sync daemon already running")
+                    # Test health
+                    self.print_info("Testing daemon health...")
+                    if self.test_daemon_health():
+                        self.print_success("Daemon is healthy and processing!")
+                    else:
+                        self.print_warning("Daemon is running but may not be healthy - check logs")
                 
             # Final summary
             self.print_header("Setup Complete!")
