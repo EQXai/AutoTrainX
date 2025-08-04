@@ -49,30 +49,59 @@ check_postgresql() {
 start_postgresql() {
     echo "🔄 Starting PostgreSQL service..."
     
-    # Try systemctl first
-    if command -v systemctl &> /dev/null; then
-        run_privileged systemctl start postgresql
-        run_privileged systemctl enable postgresql
-        sleep 2
-    # Try service command
-    elif command -v service &> /dev/null; then
-        run_privileged service postgresql start
-        sleep 2
-    # Try direct pg_ctl (for manual installations)
-    elif command -v pg_ctl &> /dev/null; then
-        su - postgres -c "pg_ctl -D /var/lib/postgresql/data -l /var/lib/postgresql/logfile start"
-        sleep 2
-    else
-        echo "❌ Cannot start PostgreSQL - no service manager found"
-        return 1
+    # Check if already running
+    if su - postgres -c "pg_isready" &> /dev/null 2>&1; then
+        echo "✅ PostgreSQL is already running"
+        return 0
     fi
     
-    # Check if PostgreSQL is running
-    if su - postgres -c "pg_isready" &> /dev/null; then
+    # Try direct pg_ctl first (works better in containers)
+    if su - postgres -c "pg_ctl status -D /var/lib/postgresql/*/main" &> /dev/null; then
+        DATA_DIR=$(su - postgres -c "find /var/lib/postgresql -name 'main' -type d 2>/dev/null | head -1")
+        if [ -n "$DATA_DIR" ]; then
+            echo "📁 Using data directory: $DATA_DIR"
+            su - postgres -c "pg_ctl -D '$DATA_DIR' -l '$DATA_DIR/postgresql.log' start" &> /dev/null
+            sleep 3
+        fi
+    fi
+    
+    # If that didn't work, try service command
+    if ! su - postgres -c "pg_isready" &> /dev/null 2>&1; then
+        if command -v service &> /dev/null; then
+            echo "🔧 Trying service command..."
+            service postgresql start &> /dev/null
+            sleep 3
+        fi
+    fi
+    
+    # If still not working, try manual start
+    if ! su - postgres -c "pg_isready" &> /dev/null 2>&1; then
+        echo "🔧 Attempting manual PostgreSQL start..."
+        # Create run directory if needed
+        mkdir -p /var/run/postgresql
+        chown postgres:postgres /var/run/postgresql
+        
+        # Find PostgreSQL version and data directory
+        PG_VERSION=$(ls /etc/postgresql/ 2>/dev/null | head -1)
+        if [ -n "$PG_VERSION" ]; then
+            DATA_DIR="/var/lib/postgresql/$PG_VERSION/main"
+            CONFIG_DIR="/etc/postgresql/$PG_VERSION/main"
+            
+            if [ -d "$DATA_DIR" ]; then
+                echo "📁 Using PostgreSQL $PG_VERSION data directory: $DATA_DIR"
+                su - postgres -c "/usr/lib/postgresql/$PG_VERSION/bin/postgres -D '$DATA_DIR' -c 'config_file=$CONFIG_DIR/postgresql.conf'" &
+                sleep 3
+            fi
+        fi
+    fi
+    
+    # Final check
+    if su - postgres -c "pg_isready" &> /dev/null 2>&1; then
         echo "✅ PostgreSQL is running"
         return 0
     else
         echo "❌ PostgreSQL failed to start"
+        echo "💡 You may need to initialize the database first with: su - postgres -c 'initdb -D /var/lib/postgresql/data'"
         return 1
     fi
 }
