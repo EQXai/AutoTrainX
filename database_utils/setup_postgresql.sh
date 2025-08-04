@@ -13,10 +13,20 @@ echo "4. Run initial setup"
 echo ""
 
 # Check if running as root
+RUNNING_AS_ROOT=false
 if [ "$EUID" -eq 0 ]; then 
-   echo "Error: Please don't run this script as root"
-   exit 1
+   echo "⚠️  Warning: Running as root. Proceeding with caution..."
+   RUNNING_AS_ROOT=true
 fi
+
+# Run commands with appropriate privileges
+run_privileged() {
+    if [ "$RUNNING_AS_ROOT" = true ]; then
+        "$@"
+    else
+        sudo "$@"
+    fi
+}
 
 # Function to check if PostgreSQL is installed
 check_postgresql() {
@@ -33,8 +43,8 @@ check_postgresql() {
 install_postgresql() {
     echo ""
     echo "Installing PostgreSQL..."
-    sudo apt-get update
-    sudo apt-get install -y postgresql postgresql-client postgresql-contrib
+    run_privileged apt-get update
+    run_privileged apt-get install -y postgresql postgresql-client postgresql-contrib
     
     if [ $? -eq 0 ]; then
         echo "✅ PostgreSQL installed successfully"
@@ -62,7 +72,7 @@ setup_database() {
     echo "Using password from environment variable or user input..."
     
     # Create SQL commands
-    sudo -u postgres psql <<EOF
+    run_privileged -u postgres psql <<EOF
 -- Create user
 DO \$\$
 BEGIN
@@ -97,19 +107,19 @@ fix_authentication() {
     echo "Configuring authentication..."
     
     # Find pg_hba.conf
-    PG_VERSION=$(sudo -u postgres psql -t -c "SELECT version();" | grep -oP '\d+(?=\.)')
+    PG_VERSION=$(run_privileged -u postgres psql -t -c "SELECT version();" | grep -oP '\d+(?=\.)')
     HBA_FILE="/etc/postgresql/$PG_VERSION/main/pg_hba.conf"
     
     if [ -f "$HBA_FILE" ]; then
         # Backup original
-        sudo cp "$HBA_FILE" "$HBA_FILE.backup"
+        run_privileged cp "$HBA_FILE" "$HBA_FILE.backup"
         
         # Update authentication method
-        sudo sed -i 's/local   all             postgres                                peer/local   all             postgres                                md5/' "$HBA_FILE"
-        sudo sed -i 's/local   all             all                                     peer/local   all             all                                     md5/' "$HBA_FILE"
+        run_privileged sed -i 's/local   all             postgres                                peer/local   all             postgres                                md5/' "$HBA_FILE"
+        run_privileged sed -i 's/local   all             all                                     peer/local   all             all                                     md5/' "$HBA_FILE"
         
         # Restart PostgreSQL
-        sudo systemctl restart postgresql
+        run_privileged systemctl restart postgresql
         
         echo "✅ Authentication configured"
     else
