@@ -121,25 +121,82 @@ install_postgresql() {
     fi
 }
 
+# Fix authentication for containers
+fix_container_auth() {
+    echo "🔧 Fixing PostgreSQL authentication for container environment..."
+    
+    # Find pg_hba.conf
+    PG_VERSION=$(ls /etc/postgresql/ 2>/dev/null | head -1)
+    if [ -z "$PG_VERSION" ]; then
+        PG_VERSION=$(su - postgres -c "psql -t -c 'SHOW server_version;' 2>/dev/null" | grep -oP '^\d+' || echo "14")
+    fi
+    
+    HBA_FILE="/etc/postgresql/$PG_VERSION/main/pg_hba.conf"
+    
+    if [ -f "$HBA_FILE" ]; then
+        # Backup
+        cp "$HBA_FILE" "$HBA_FILE.backup" 2>/dev/null
+        
+        # Set trust authentication for local connections
+        cat > "$HBA_FILE" <<'EOL'
+# PostgreSQL Client Authentication Configuration
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# Allow local connections without password
+local   all             postgres                                trust
+local   all             all                                     trust
+
+# IPv4 local connections:
+host    all             all             127.0.0.1/32            trust
+host    all             all             ::1/128                 trust
+
+# Allow connections from Docker network with password
+host    all             all             172.16.0.0/12           md5
+host    all             all             192.168.0.0/16          md5
+EOL
+        
+        # Restart PostgreSQL
+        if command -v service &> /dev/null; then
+            service postgresql restart &> /dev/null
+        else
+            su - postgres -c "pg_ctl reload -D /var/lib/postgresql/$PG_VERSION/main" &> /dev/null
+        fi
+        
+        sleep 2
+        echo "✅ Authentication configured for container"
+        return 0
+    else
+        echo "⚠️  Could not find pg_hba.conf"
+        return 1
+    fi
+}
+
 # Create database and user
 setup_database() {
     echo ""
     echo "Creating database and user..."
     
+    # In containers, fix authentication first
+    if [ -f /.dockerenv ] || [ "$RUNNING_AS_ROOT" = true ]; then
+        if ! su - postgres -c "psql -c '\\l' 2>/dev/null" &> /dev/null; then
+            fix_container_auth
+        fi
+    fi
+    
     # Get password from environment or prompt
     if [ -z "$DATABASE_PASSWORD" ]; then
-        echo "Enter password for PostgreSQL user 'autotrainx':"
+        echo "Enter password for PostgreSQL user 'autotrainx' (press Enter for default 'AutoTrainX2024Secure123'):"
         read -s DATABASE_PASSWORD
         if [ -z "$DATABASE_PASSWORD" ]; then
-            echo "❌ Password cannot be empty"
-            exit 1
+            DATABASE_PASSWORD="AutoTrainX2024Secure123"
+            echo "Using default password"
         fi
     fi
     
     echo "Using password from environment variable or user input..."
     
-    # Create SQL commands
-    run_privileged -u postgres psql <<EOF
+    # Create SQL commands - use su instead of run_privileged for better control
+    su - postgres -c "psql" <<EOF
 -- Create user
 DO \$\$
 BEGIN
@@ -173,6 +230,12 @@ fix_authentication() {
     echo ""
     echo "Configuring authentication..."
     
+    # Skip if already done in container
+    if [ -f /.dockerenv ] || [ "$RUNNING_AS_ROOT" = true ]; then
+        echo "✅ Authentication already configured for container"
+        return 0
+    fi
+    
     # Find pg_hba.conf
     PG_VERSION=$(run_privileged -u postgres psql -t -c "SELECT version();" | grep -oP '\d+(?=\.)')
     HBA_FILE="/etc/postgresql/$PG_VERSION/main/pg_hba.conf"
@@ -199,7 +262,7 @@ test_connection() {
     echo ""
     echo "Testing connection..."
     
-    PGPASSWORD=1234 psql -h localhost -U autotrainx -d autotrainx -c "SELECT version();" > /dev/null 2>&1
+    PGPASSWORD="$DATABASE_PASSWORD" psql -h localhost -U autotrainx -d autotrainx -c "SELECT version();" > /dev/null 2>&1
     
     if [ $? -eq 0 ]; then
         echo "✅ Connection test successful!"
@@ -248,7 +311,7 @@ if test_connection; then
     echo "  Port: 5432"
     echo "  Database: autotrainx"
     echo "  User: autotrainx"
-    echo "  Password: 1234"
+    echo "  Password: $DATABASE_PASSWORD"
     echo ""
     echo "You can now:"
     echo "1. Run: python postgresql_manager.py"

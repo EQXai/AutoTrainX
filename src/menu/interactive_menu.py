@@ -1332,6 +1332,75 @@ class AutoTrainXMenu:
         except:
             return False
     
+    def _fix_authentication_for_docker(self) -> None:
+        """Fix PostgreSQL authentication specifically for Docker containers."""
+        print("\n🔧 Fixing PostgreSQL authentication for Docker...")
+        
+        try:
+            # Find pg_hba.conf
+            cmd = "su - postgres -c \"psql -t -c 'SHOW hba_file' 2>/dev/null\" || echo '/etc/postgresql/*/main/pg_hba.conf'"
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+            
+            # Try to find pg_hba.conf manually if the above fails
+            if result.returncode != 0 or not result.stdout.strip():
+                find_cmd = "find /etc/postgresql -name pg_hba.conf 2>/dev/null | head -1"
+                result = subprocess.run(find_cmd, shell=True, capture_output=True, text=True)
+            
+            hba_file = result.stdout.strip()
+            
+            if hba_file and os.path.exists(hba_file.replace('*', '14')):  # Handle wildcard
+                hba_file = hba_file.replace('*', '14')  # Assume version 14, adjust as needed
+                
+                print(f"📄 Found pg_hba.conf: {hba_file}")
+                
+                # Backup
+                subprocess.run(f"cp {hba_file} {hba_file}.backup", shell=True)
+                
+                # Create a new pg_hba.conf with trust authentication for local connections
+                new_content = """# PostgreSQL Client Authentication Configuration
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+# Allow local connections without password (for Docker setup)
+local   all             postgres                                trust
+local   all             all                                     trust
+
+# IPv4 local connections:
+host    all             all             127.0.0.1/32            trust
+host    all             all             ::1/128                 trust
+
+# Allow connections from Docker network
+host    all             all             172.16.0.0/12           md5
+host    all             all             192.168.0.0/16          md5
+"""
+                
+                with open(hba_file, 'w') as f:
+                    f.write(new_content)
+                
+                print("✅ Updated pg_hba.conf for Docker")
+                
+                # Restart PostgreSQL
+                restart_cmds = [
+                    "service postgresql restart",
+                    "su - postgres -c 'pg_ctl reload -D /var/lib/postgresql/*/main'",
+                    "pg_ctlcluster 14 main reload"
+                ]
+                
+                for cmd in restart_cmds:
+                    result = subprocess.run(cmd, shell=True, capture_output=True)
+                    if result.returncode == 0:
+                        print("✅ PostgreSQL configuration reloaded")
+                        break
+                
+                print("\n✅ Authentication setup complete for Docker!")
+                print("💡 Local connections now work without password")
+                
+            else:
+                print("❌ Could not find pg_hba.conf")
+                print("💡 Try running: find /etc/postgresql -name pg_hba.conf")
+                
+        except Exception as e:
+            print(f"❌ Error fixing authentication: {str(e)}")
+    
     def _start_postgresql_service(self) -> bool:
         """Start PostgreSQL service."""
         print("\n🔄 Starting PostgreSQL service...")
@@ -1462,6 +1531,14 @@ class AutoTrainXMenu:
                     input("\nPress Enter to continue...")
                     return
         
+        # In Docker, we might need to fix authentication first
+        if self.is_docker and questionary.confirm(
+            "\n🐳 In Docker, PostgreSQL might need authentication setup. Fix it first?",
+            default=True,
+            style=AUTOTRAINX_STYLE
+        ).ask():
+            self._fix_authentication_for_docker()
+        
         # Get configuration
         db_name = questionary.text(
             "Database name:",
@@ -1517,10 +1594,41 @@ GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {db_user};
                     # Make file readable by postgres user
                     os.chmod(sql_file, 0o644)
                     
-                    # Execute using su with stdin redirect instead of file
-                    # This avoids permission issues
-                    cmd = f"su - postgres -c \"psql << 'EOF'\n{sql_commands}\nEOF\""
+                    # Execute using su without password prompt
+                    # First try without password (default in Docker)
+                    cmd = f"su - postgres -c \"psql -U postgres << 'EOF'\n{sql_commands}\nEOF\""
                     result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+                    
+                    # If that fails, try with trust authentication
+                    if result.returncode != 0 and "authentication failed" in result.stderr:
+                        print("\n⚠️  Password authentication failed. Trying with trust authentication...")
+                        
+                        # Update pg_hba.conf temporarily to trust
+                        hba_cmd = "su - postgres -c \"psql -t -c 'SHOW hba_file'\""
+                        hba_result = subprocess.run(hba_cmd, shell=True, capture_output=True, text=True)
+                        
+                        if hba_result.returncode == 0:
+                            hba_file = hba_result.stdout.strip()
+                            
+                            # Backup and modify pg_hba.conf
+                            backup_cmd = f"cp {hba_file} {hba_file}.backup"
+                            subprocess.run(backup_cmd, shell=True)
+                            
+                            # Temporarily set to trust for local connections
+                            trust_cmd = f"sed -i '1i local   all   postgres   trust' {hba_file}"
+                            subprocess.run(trust_cmd, shell=True)
+                            
+                            # Reload PostgreSQL
+                            reload_cmd = "su - postgres -c 'pg_ctl reload -D /var/lib/postgresql/*/main'"
+                            subprocess.run(reload_cmd, shell=True)
+                            
+                            # Try again
+                            result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+                            
+                            # Restore original pg_hba.conf
+                            restore_cmd = f"mv {hba_file}.backup {hba_file}"
+                            subprocess.run(restore_cmd, shell=True)
+                            subprocess.run(reload_cmd, shell=True)
                 finally:
                     # Clean up temp file
                     try:
