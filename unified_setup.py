@@ -27,8 +27,16 @@ import getpass
 import argparse
 import time
 from pathlib import Path
-from typing import Optional, Dict, Any, Tuple
+from typing import Optional, Dict, Any, Tuple, List
 import psutil
+
+# Try to import terminal control modules (Unix-like systems)
+try:
+    import termios
+    import tty
+    HAS_TERMIOS = True
+except ImportError:
+    HAS_TERMIOS = False
 
 
 class Colors:
@@ -893,8 +901,17 @@ GRANT ALL PRIVILEGES ON DATABASE autotrainx TO autotrainx;
             for conflict in state['conflicts']:
                 print(f"  - {conflict}")
                 
-    def run(self, check_only: bool = False, fix_conflicts: bool = False):
+    def run(self, check_only: bool = False, fix_conflicts: bool = False, interactive: bool = True):
         """Run the unified setup process"""
+        # Check current state
+        state = self.check_current_state()
+        
+        # If interactive mode, show the menu
+        if interactive and not check_only and not fix_conflicts:
+            self.show_interactive_menu(state)
+            return
+            
+        # Non-interactive mode (legacy behavior)
         self.print_header("AutoTrainX Unified Setup")
         
         # Show environment info
@@ -902,9 +919,6 @@ GRANT ALL PRIVILEGES ON DATABASE autotrainx TO autotrainx;
             self.print_info("Running in Docker environment")
         if self.is_root:
             self.print_info("Running as root user")
-        
-        # Check current state
-        state = self.check_current_state()
         
         # Show current status
         self.show_status()
@@ -1054,6 +1068,574 @@ GRANT ALL PRIVILEGES ON DATABASE autotrainx TO autotrainx;
                 if line and not line.startswith('#') and '=' in line:
                     key, value = line.split('=', 1)
                     self.config[key.strip()] = value.strip()
+                    
+    def get_key(self):
+        """Get a single key press"""
+        if not HAS_TERMIOS:
+            # Fallback for systems without termios (e.g., Windows)
+            return input()
+            
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            key = sys.stdin.read(1)
+            if key == '\x1b':  # ESC sequence
+                key += sys.stdin.read(2)
+            return key
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            
+    def clear_screen(self):
+        """Clear the terminal screen"""
+        os.system('clear' if os.name != 'nt' else 'cls')
+        
+    def show_interactive_menu(self, state: Dict[str, Any]):
+        """Show interactive menu with arrow navigation"""
+        # Determine available options
+        options = []
+        
+        # Check if repair is needed
+        needs_repair = (
+            (state['postgresql_installed'] and state['postgresql_running'] and not state['postgresql_connection_ok']) or
+            (state['google_sheets_configured'] and not state['google_sheets_connection_ok']) or
+            (state['daemon_running'] and not state['daemon_healthy'])
+        )
+        
+        if needs_repair:
+            options.append(("repair", "🔧 Repair", "Fix connection issues"))
+        else:
+            options.append(("test", "🧪 Test", "Run all connection tests"))
+            
+        options.append(("config", "⚙️  Config", "Modify all settings"))
+        options.append(("status", "📊 Status", "Show detailed status"))
+        options.append(("exit", "🚪 Exit", "Exit setup"))
+        
+        current_index = 0
+        
+        while True:
+            self.clear_screen()
+            self.print_header("AutoTrainX Unified Setup - Interactive Menu")
+            
+            # Show quick status
+            print(f"PostgreSQL: {self._get_status_icon(state, 'postgresql')}")
+            print(f"Google Sheets: {self._get_status_icon(state, 'google_sheets')}")
+            print(f"Sync Daemon: {self._get_status_icon(state, 'daemon')}")
+            print()
+            
+            # Show menu options
+            for i, (key, label, description) in enumerate(options):
+                if i == current_index:
+                    print(f"{Colors.CYAN}▶ {label}{Colors.NC} - {description}")
+                else:
+                    print(f"  {label} - {description}")
+                    
+            print(f"\n{Colors.YELLOW}Use ↑/↓ arrows to navigate, Enter to select, or 'q' to quit{Colors.NC}")
+            
+            # Get key press
+            key = self.get_key()
+            
+            if key == '\x1b[A':  # Up arrow
+                current_index = (current_index - 1) % len(options)
+            elif key == '\x1b[B':  # Down arrow
+                current_index = (current_index + 1) % len(options)
+            elif key == '\r' or key == '\n':  # Enter
+                selected = options[current_index][0]
+                if selected == "repair":
+                    self.show_repair_menu(state)
+                elif selected == "test":
+                    self.run_all_tests()
+                elif selected == "config":
+                    self.show_config_menu()
+                elif selected == "status":
+                    self.show_detailed_status(state)
+                elif selected == "exit":
+                    break
+                # Refresh state after action
+                state = self.check_current_state()
+            elif key.lower() == 'q':
+                break
+                
+    def _get_status_icon(self, state: Dict[str, Any], component: str) -> str:
+        """Get status icon for a component"""
+        if component == 'postgresql':
+            if state['postgresql_installed']:
+                if state['postgresql_running']:
+                    if state['postgresql_connection_ok']:
+                        return f"{Colors.GREEN}✓ Connected{Colors.NC}"
+                    else:
+                        return f"{Colors.YELLOW}⚠ Connection failed{Colors.NC}"
+                else:
+                    return f"{Colors.RED}✗ Not running{Colors.NC}"
+            else:
+                return f"{Colors.RED}✗ Not installed{Colors.NC}"
+        elif component == 'google_sheets':
+            if state['google_sheets_configured']:
+                if state['google_sheets_connection_ok']:
+                    return f"{Colors.GREEN}✓ Connected{Colors.NC}"
+                else:
+                    return f"{Colors.YELLOW}⚠ Connection failed{Colors.NC}"
+            else:
+                return f"{Colors.RED}✗ Not configured{Colors.NC}"
+        elif component == 'daemon':
+            if state['daemon_running']:
+                if state['daemon_healthy']:
+                    return f"{Colors.GREEN}✓ Healthy{Colors.NC}"
+                else:
+                    return f"{Colors.YELLOW}⚠ Not healthy{Colors.NC}"
+            else:
+                return f"{Colors.RED}✗ Not running{Colors.NC}"
+                
+    def show_repair_menu(self, state: Dict[str, Any]):
+        """Show repair options for failed components"""
+        self.clear_screen()
+        self.print_header("Repair Menu")
+        
+        repairs_needed = []
+        
+        if state['postgresql_installed'] and state['postgresql_running'] and not state['postgresql_connection_ok']:
+            repairs_needed.append(("postgresql", "Fix PostgreSQL connection"))
+        
+        if state['google_sheets_configured'] and not state['google_sheets_connection_ok']:
+            repairs_needed.append(("google_sheets", "Fix Google Sheets API connection"))
+            
+        if state['daemon_running'] and not state['daemon_healthy']:
+            repairs_needed.append(("daemon", "Restart sync daemon"))
+            
+        repairs_needed.append(("back", "Back to main menu"))
+        
+        current_index = 0
+        
+        while True:
+            self.clear_screen()
+            self.print_header("Repair Menu")
+            
+            print("Select component to repair:\n")
+            
+            for i, (key, label) in enumerate(repairs_needed):
+                if i == current_index:
+                    print(f"{Colors.CYAN}▶ {label}{Colors.NC}")
+                else:
+                    print(f"  {label}")
+                    
+            key = self.get_key()
+            
+            if key == '\x1b[A':  # Up arrow
+                current_index = (current_index - 1) % len(repairs_needed)
+            elif key == '\x1b[B':  # Down arrow
+                current_index = (current_index + 1) % len(repairs_needed)
+            elif key == '\r' or key == '\n':  # Enter
+                selected = repairs_needed[current_index][0]
+                if selected == "postgresql":
+                    self.repair_postgresql()
+                elif selected == "google_sheets":
+                    self.repair_google_sheets()
+                elif selected == "daemon":
+                    self.repair_daemon()
+                elif selected == "back":
+                    break
+                    
+            input("\nPress Enter to continue...")
+            
+    def run_all_tests(self):
+        """Run all connection tests"""
+        self.clear_screen()
+        self.print_header("Running All Tests")
+        
+        # Load config
+        self.load_env_config()
+        
+        # Test PostgreSQL
+        print("\n1. Testing PostgreSQL...")
+        if self.test_postgresql_connection():
+            self.print_success("PostgreSQL connection successful!")
+        else:
+            self.print_error("PostgreSQL connection failed")
+            
+        # Test Google Sheets
+        print("\n2. Testing Google Sheets API...")
+        if self.test_google_sheets_connection():
+            self.print_success("Google Sheets API connection successful!")
+        else:
+            self.print_error("Google Sheets API connection failed")
+            
+        # Test daemon
+        print("\n3. Testing sync daemon...")
+        if self.test_daemon_health():
+            self.print_success("Daemon is healthy!")
+        else:
+            self.print_error("Daemon health check failed")
+            
+        input("\nPress Enter to continue...")
+        
+    def show_config_menu(self):
+        """Show configuration menu"""
+        options = [
+            ("env", "Environment (.env) settings"),
+            ("postgresql", "PostgreSQL settings"),
+            ("google_sheets", "Google Sheets settings"),
+            ("daemon", "Sync daemon settings"),
+            ("back", "Back to main menu")
+        ]
+        
+        current_index = 0
+        
+        while True:
+            self.clear_screen()
+            self.print_header("Configuration Menu")
+            
+            print("Select configuration to modify:\n")
+            
+            for i, (key, label) in enumerate(options):
+                if i == current_index:
+                    print(f"{Colors.CYAN}▶ {label}{Colors.NC}")
+                else:
+                    print(f"  {label}")
+                    
+            key = self.get_key()
+            
+            if key == '\x1b[A':  # Up arrow
+                current_index = (current_index - 1) % len(options)
+            elif key == '\x1b[B':  # Down arrow
+                current_index = (current_index + 1) % len(options)
+            elif key == '\r' or key == '\n':  # Enter
+                selected = options[current_index][0]
+                if selected == "env":
+                    self.configure_env_interactive()
+                elif selected == "postgresql":
+                    self.configure_postgresql_interactive()
+                elif selected == "google_sheets":
+                    self.configure_google_sheets_interactive()
+                elif selected == "daemon":
+                    self.configure_daemon_interactive()
+                elif selected == "back":
+                    break
+                    
+    def show_detailed_status(self, state: Dict[str, Any]):
+        """Show detailed status information"""
+        self.clear_screen()
+        self.print_header("Detailed Status")
+        
+        # PostgreSQL details
+        print(f"\n{Colors.BOLD}PostgreSQL:{Colors.NC}")
+        print(f"  Installed: {'Yes' if state['postgresql_installed'] else 'No'}")
+        print(f"  Running: {'Yes' if state['postgresql_running'] else 'No'}")
+        print(f"  Connection OK: {'Yes' if state['postgresql_connection_ok'] else 'No'}")
+        if self.config.get('DATABASE_HOST'):
+            print(f"  Host: {self.config.get('DATABASE_HOST', 'localhost')}")
+            print(f"  Port: {self.config.get('DATABASE_PORT', '5432')}")
+            print(f"  Database: {self.config.get('DATABASE_NAME', 'autotrainx')}")
+            print(f"  User: {self.config.get('DATABASE_USER', 'autotrainx')}")
+            
+        # Google Sheets details
+        print(f"\n{Colors.BOLD}Google Sheets:{Colors.NC}")
+        print(f"  Configured: {'Yes' if state['google_sheets_configured'] else 'No'}")
+        print(f"  API Connection OK: {'Yes' if state['google_sheets_connection_ok'] else 'No'}")
+        if state['google_sheets_configured']:
+            try:
+                with open(self.config_json_path, 'r') as f:
+                    config = json.load(f)
+                    gs_config = config.get('google_sheets_sync', {})
+                    print(f"  Spreadsheet ID: {gs_config.get('spreadsheet_id', 'Not set')}")
+                    print(f"  Credentials: {gs_config.get('credentials_path', 'Not set')}")
+            except:
+                pass
+                
+        # Daemon details
+        print(f"\n{Colors.BOLD}Sync Daemon:{Colors.NC}")
+        print(f"  Running: {'Yes' if state['daemon_running'] else 'No'}")
+        print(f"  Healthy: {'Yes' if state['daemon_healthy'] else 'No'}")
+        if state['daemon_running']:
+            try:
+                pid = int(self.daemon_pid_file.read_text().strip())
+                print(f"  PID: {pid}")
+            except:
+                pass
+                
+        input("\nPress Enter to continue...")
+        
+    def repair_postgresql(self):
+        """Repair PostgreSQL connection"""
+        self.clear_screen()
+        self.print_header("Repairing PostgreSQL Connection")
+        
+        # Try to restart PostgreSQL
+        print("1. Restarting PostgreSQL service...")
+        if self.is_docker:
+            subprocess.run(['service', 'postgresql', 'restart'], capture_output=True)
+        else:
+            self.run_privileged_command(['service', 'postgresql', 'restart'])
+        time.sleep(3)
+        
+        # Test connection
+        print("\n2. Testing connection...")
+        if self.test_postgresql_connection():
+            self.print_success("PostgreSQL connection restored!")
+        else:
+            print("\n3. Resetting authentication...")
+            self.configure_postgresql_docker_auth()
+            if self.test_postgresql_connection():
+                self.print_success("PostgreSQL connection restored!")
+            else:
+                self.print_error("Failed to restore connection")
+                print("\nTry running: python unified_setup.py --fix-conflicts")
+                
+    def repair_google_sheets(self):
+        """Repair Google Sheets connection"""
+        self.clear_screen()
+        self.print_header("Repairing Google Sheets Connection")
+        
+        print("Checking Google Sheets configuration...")
+        
+        # Verify credentials file exists
+        try:
+            with open(self.config_json_path, 'r') as f:
+                config = json.load(f)
+                gs_config = config.get('google_sheets_sync', {})
+                creds_path = gs_config.get('credentials_path')
+                
+                if not Path(creds_path).exists():
+                    self.print_error(f"Credentials file not found: {creds_path}")
+                    print("\nPlease reconfigure Google Sheets in the Config menu")
+                else:
+                    # Test API connection
+                    if self.test_google_sheets_connection():
+                        self.print_success("Google Sheets connection restored!")
+                    else:
+                        self.print_error("API connection failed")
+                        print("\nPossible issues:")
+                        print("1. Check that the spreadsheet is shared with the service account")
+                        print("2. Verify the spreadsheet ID is correct")
+                        print("3. Check internet connectivity")
+        except Exception as e:
+            self.print_error(f"Error: {e}")
+            
+    def repair_daemon(self):
+        """Restart sync daemon"""
+        self.clear_screen()
+        self.print_header("Restarting Sync Daemon")
+        
+        # Stop daemon
+        print("1. Stopping daemon...")
+        subprocess.run([sys.executable, str(self.root_dir / "sheets_sync_daemon.py"), "--stop"], 
+                      capture_output=True)
+        time.sleep(2)
+        
+        # Start daemon
+        print("2. Starting daemon...")
+        subprocess.run([sys.executable, str(self.root_dir / "sheets_sync_daemon.py"), "--daemon"], 
+                      capture_output=True)
+        time.sleep(3)
+        
+        # Check health
+        if self.test_daemon_health():
+            self.print_success("Daemon restarted successfully!")
+        else:
+            self.print_error("Daemon restart failed")
+            print("\nCheck logs at: logs/sheets_sync_daemon.log")
+            
+    def configure_env_interactive(self):
+        """Interactive environment configuration"""
+        self.clear_screen()
+        self.print_header("Environment Configuration")
+        
+        # Load current config
+        self.load_env_config()
+        
+        options = [
+            ("db_type", "Database Type", self.config.get('DATABASE_TYPE', 'postgresql')),
+            ("db_host", "Database Host", self.config.get('DATABASE_HOST', 'localhost')),
+            ("db_port", "Database Port", self.config.get('DATABASE_PORT', '5432')),
+            ("db_name", "Database Name", self.config.get('DATABASE_NAME', 'autotrainx')),
+            ("db_user", "Database User", self.config.get('DATABASE_USER', 'autotrainx')),
+            ("db_pass", "Database Password", "********"),
+            ("api_key", "API Secret Key", "********"),
+            ("jwt_key", "JWT Secret Key", "********"),
+            ("save", "Save Changes", ""),
+            ("back", "Back", "")
+        ]
+        
+        current_index = 0
+        
+        while True:
+            self.clear_screen()
+            self.print_header("Environment Configuration")
+            
+            for i, (key, label, value) in enumerate(options):
+                if i == current_index:
+                    print(f"{Colors.CYAN}▶ {label}: {value}{Colors.NC}")
+                else:
+                    print(f"  {label}: {value}")
+                    
+            key = self.get_key()
+            
+            if key == '\x1b[A']:  # Up arrow
+                current_index = (current_index - 1) % len(options)
+            elif key == '\x1b[B']:  # Down arrow
+                current_index = (current_index + 1) % len(options)
+            elif key == '\r' or key == '\n':  # Enter
+                selected = options[current_index][0]
+                if selected == "save":
+                    self.write_env_file()
+                    self.print_success("Configuration saved!")
+                    input("\nPress Enter to continue...")
+                    break
+                elif selected == "back":
+                    break
+                elif selected == "db_pass":
+                    new_value = getpass.getpass("Enter new database password: ")
+                    if new_value:
+                        self.config['DATABASE_PASSWORD'] = new_value
+                elif selected == "api_key":
+                    if self.prompt_for_value("Generate new API key? (y/n)", "n").lower() == 'y':
+                        self.config['API_SECRET_KEY'] = self.generate_secret_key()
+                        self.print_success("New API key generated!")
+                elif selected == "jwt_key":
+                    if self.prompt_for_value("Generate new JWT key? (y/n)", "n").lower() == 'y':
+                        self.config['JWT_SECRET_KEY'] = self.generate_secret_key()
+                        self.print_success("New JWT key generated!")
+                else:
+                    # Edit other fields
+                    print(f"\nEditing {options[current_index][1]}")
+                    new_value = input(f"New value [{options[current_index][2]}]: ")
+                    if new_value:
+                        if selected == "db_type":
+                            self.config['DATABASE_TYPE'] = new_value
+                        elif selected == "db_host":
+                            self.config['DATABASE_HOST'] = new_value
+                        elif selected == "db_port":
+                            self.config['DATABASE_PORT'] = new_value
+                        elif selected == "db_name":
+                            self.config['DATABASE_NAME'] = new_value
+                        elif selected == "db_user":
+                            self.config['DATABASE_USER'] = new_value
+                        # Update display
+                        options[current_index] = (selected, options[current_index][1], new_value)
+                        
+    def configure_postgresql_interactive(self):
+        """Interactive PostgreSQL configuration"""
+        self.clear_screen()
+        self.print_header("PostgreSQL Configuration")
+        
+        print("PostgreSQL configuration options:")
+        print("\n1. Reset database password")
+        print("2. Recreate database and user")
+        print("3. Configure authentication (pg_hba.conf)")
+        print("4. Back to config menu")
+        
+        choice = input("\nSelect option: ")
+        
+        if choice == "1":
+            new_pass = getpass.getpass("Enter new password: ")
+            confirm = getpass.getpass("Confirm password: ")
+            if new_pass == confirm:
+                # Update password in PostgreSQL
+                try:
+                    sql = f"ALTER USER autotrainx WITH PASSWORD '{new_pass}';"
+                    if self.is_root or self.is_docker:
+                        subprocess.run(['su', '-', 'postgres', '-c', f'psql -c "{sql}"'], check=True)
+                    else:
+                        subprocess.run(['sudo', '-u', 'postgres', 'psql', '-c', sql], check=True)
+                    
+                    # Update .env
+                    self.config['DATABASE_PASSWORD'] = new_pass
+                    self.write_env_file()
+                    self.print_success("Password updated successfully!")
+                except Exception as e:
+                    self.print_error(f"Failed to update password: {e}")
+            else:
+                self.print_error("Passwords don't match!")
+                
+        elif choice == "2":
+            if self.prompt_for_value("This will recreate the database. Continue? (y/n)", "n").lower() == 'y':
+                self.setup_postgresql()
+                
+        elif choice == "3":
+            self.configure_postgresql_docker_auth()
+            self.print_success("Authentication reconfigured!")
+            
+        input("\nPress Enter to continue...")
+        
+    def configure_google_sheets_interactive(self):
+        """Interactive Google Sheets configuration"""
+        self.clear_screen()
+        self.print_header("Google Sheets Configuration")
+        
+        print("1. Update spreadsheet ID")
+        print("2. Update credentials file")
+        print("3. Test connection")
+        print("4. Back to config menu")
+        
+        choice = input("\nSelect option: ")
+        
+        if choice == "1":
+            new_id = input("Enter new spreadsheet ID: ")
+            if new_id:
+                try:
+                    # Update config.json
+                    config = {}
+                    if self.config_json_path.exists():
+                        with open(self.config_json_path, 'r') as f:
+                            config = json.load(f)
+                    
+                    if 'google_sheets_sync' not in config:
+                        config['google_sheets_sync'] = {}
+                        
+                    config['google_sheets_sync']['spreadsheet_id'] = new_id
+                    
+                    with open(self.config_json_path, 'w') as f:
+                        json.dump(config, f, indent=2)
+                        
+                    self.print_success("Spreadsheet ID updated!")
+                except Exception as e:
+                    self.print_error(f"Failed to update: {e}")
+                    
+        elif choice == "2":
+            creds_path = input("Enter path to credentials JSON file: ")
+            if creds_path and Path(creds_path).exists():
+                self.setup_google_sheets()
+                
+        elif choice == "3":
+            if self.test_google_sheets_connection():
+                self.print_success("Connection successful!")
+            else:
+                self.print_error("Connection failed!")
+                
+        input("\nPress Enter to continue...")
+        
+    def configure_daemon_interactive(self):
+        """Interactive daemon configuration"""
+        self.clear_screen()
+        self.print_header("Sync Daemon Configuration")
+        
+        print("1. Start daemon")
+        print("2. Stop daemon")
+        print("3. Restart daemon")
+        print("4. View daemon logs")
+        print("5. Back to config menu")
+        
+        choice = input("\nSelect option: ")
+        
+        if choice == "1":
+            subprocess.run([sys.executable, str(self.root_dir / "sheets_sync_daemon.py"), "--daemon"])
+            self.print_success("Daemon started!")
+            
+        elif choice == "2":
+            subprocess.run([sys.executable, str(self.root_dir / "sheets_sync_daemon.py"), "--stop"])
+            self.print_success("Daemon stopped!")
+            
+        elif choice == "3":
+            self.repair_daemon()
+            
+        elif choice == "4":
+            log_file = self.root_dir / "logs" / "sheets_sync_daemon.log"
+            if log_file.exists():
+                # Show last 20 lines
+                subprocess.run(['tail', '-n', '20', str(log_file)])
+            else:
+                self.print_error("Log file not found")
+                
+        input("\nPress Enter to continue...")
 
 
 def main():
@@ -1071,6 +1653,11 @@ def main():
         action="store_true",
         help="Fix conflicts with setup.sh configuration"
     )
+    parser.add_argument(
+        "--no-interactive",
+        action="store_true",
+        help="Run in non-interactive mode (legacy behavior)"
+    )
     
     args = parser.parse_args()
     
@@ -1078,7 +1665,11 @@ def main():
     setup = UnifiedSetup()
     
     try:
-        setup.run(check_only=args.check_only, fix_conflicts=args.fix_conflicts)
+        setup.run(
+            check_only=args.check_only, 
+            fix_conflicts=args.fix_conflicts,
+            interactive=not args.no_interactive
+        )
     except KeyboardInterrupt:
         print("\n\nSetup cancelled by user.")
         sys.exit(1)
