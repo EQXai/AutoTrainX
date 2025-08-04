@@ -29,8 +29,46 @@ import argparse
 import time
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple, List
-import psutil
 from datetime import datetime
+
+# Pre-flight check for required modules
+try:
+    import psutil
+except ImportError:
+    print("\033[91mError: psutil module not found!\033[0m")
+    print("\nThis means the core dependencies were not installed properly.")
+    print("Please run the following commands:")
+    print("\n  1. source venv/bin/activate")
+    print("  2. pip install -r requirements.txt")
+    print("\nOr re-run setup.sh:")
+    print("\n  ./setup.sh --clean")
+    print("  ./setup.sh --profile <your-profile>")
+    print("\nMake sure the 'core_deps' step completes successfully.")
+    sys.exit(1)
+
+# Try to import questionary for better menus
+try:
+    import questionary
+    from questionary import Style
+    HAS_QUESTIONARY = True
+    
+    # Define custom style
+    custom_style = Style([
+        ('qmark', 'fg:#673ab7 bold'),
+        ('question', 'bold'),
+        ('answer', 'fg:#f44336 bold'),
+        ('pointer', 'fg:#673ab7 bold'),
+        ('highlighted', 'fg:#673ab7 bold'),
+        ('selected', 'fg:#cc5454'),
+        ('separator', 'fg:#cc5454'),
+        ('instruction', ''),
+        ('text', ''),
+        ('disabled', 'fg:#858585 italic')
+    ])
+except ImportError:
+    HAS_QUESTIONARY = False
+    print("\033[93mWarning: questionary not found. Using basic input (no arrow key support).\033[0m")
+    print("Install with: pip install questionary\n")
 
 # Try to import psycopg2 for PostgreSQL verification
 try:
@@ -101,17 +139,67 @@ class IntegrationsManager:
         
     def prompt_for_value(self, prompt: str, default: str = None, secret: bool = False) -> str:
         """Prompt user for input with optional default value"""
-        if default:
-            prompt_text = f"{prompt} [{default}]: "
+        if HAS_QUESTIONARY and not secret:
+            return questionary.text(
+                prompt,
+                default=default or "",
+                style=custom_style
+            ).ask() or default
         else:
-            prompt_text = f"{prompt}: "
-            
-        if secret:
-            value = getpass.getpass(prompt_text)
+            # Fallback to basic input
+            if default:
+                prompt_text = f"{prompt} [{default}]: "
+            else:
+                prompt_text = f"{prompt}: "
+                
+            if secret:
+                value = getpass.getpass(prompt_text)
+            else:
+                value = input(prompt_text)
+                
+            return value.strip() or default
+    
+    def prompt_for_choice(self, message: str, choices: list, default: str = None) -> str:
+        """Prompt user to select from choices with arrow key support"""
+        if HAS_QUESTIONARY:
+            return questionary.select(
+                message,
+                choices=choices,
+                default=default,
+                style=custom_style,
+                use_shortcuts=True,
+                use_arrow_keys=True
+            ).ask()
         else:
-            value = input(prompt_text)
+            # Fallback to numbered menu
+            print(f"\n{message}")
+            for i, choice in enumerate(choices, 1):
+                print(f"{i}. {choice}")
             
-        return value.strip() or default
+            while True:
+                try:
+                    choice_num = int(self.prompt_for_value("Select option (number)", default="1"))
+                    if 1 <= choice_num <= len(choices):
+                        return choices[choice_num - 1]
+                    else:
+                        print("Invalid choice. Please try again.")
+                except ValueError:
+                    print("Please enter a number.")
+    
+    def prompt_for_confirm(self, message: str, default: bool = True) -> bool:
+        """Prompt for yes/no confirmation"""
+        if HAS_QUESTIONARY:
+            return questionary.confirm(
+                message,
+                default=default,
+                style=custom_style
+            ).ask()
+        else:
+            default_str = "Y/n" if default else "y/N"
+            response = self.prompt_for_value(f"{message} ({default_str})", default="")
+            if not response:
+                return default
+            return response.lower() in ['y', 'yes']
     
     def load_env_file(self) -> Dict[str, str]:
         """Load existing .env file"""
@@ -286,10 +374,10 @@ class IntegrationsManager:
         # Password handling
         current_password = env_vars.get('DATABASE_PASSWORD', '')
         if current_password:
-            change_password = self.prompt_for_value(
-                "Change database password? (y/n)",
-                default='n'
-            ).lower() == 'y'
+            change_password = self.prompt_for_confirm(
+                "Change database password?",
+                default=False
+            )
         else:
             change_password = True
             
@@ -305,10 +393,10 @@ class IntegrationsManager:
             db_password = current_password
             
         # Advanced options
-        show_advanced = self.prompt_for_value(
-            "Configure advanced options? (y/n)",
-            default='n'
-        ).lower() == 'y'
+        show_advanced = self.prompt_for_confirm(
+            "Configure advanced options?",
+            default=False
+        )
         
         if show_advanced:
             pool_size = self.prompt_for_value(
@@ -341,10 +429,10 @@ class IntegrationsManager:
         self.print_success("PostgreSQL configuration saved")
         
         # Offer to create database and user
-        create_db = self.prompt_for_value(
-            "\nCreate database and user now? (y/n)",
-            default='y'
-        ).lower() == 'y'
+        create_db = self.prompt_for_confirm(
+            "\nCreate database and user now?",
+            default=True
+        )
         
         if create_db:
             return self.create_postgresql_database(db_name, db_user, db_password)
@@ -403,10 +491,18 @@ class IntegrationsManager:
         print("Configure Google Sheets integration:\n")
         
         # Method selection
-        print("1. Use service account JSON file (recommended)")
-        print("2. Enter credentials manually")
+        method_choices = [
+            "Use service account JSON file (recommended)",
+            "Enter credentials manually"
+        ]
         
-        method = self.prompt_for_value("Select method (1-2)", default="1")
+        method_selected = self.prompt_for_choice(
+            "Select authentication method:",
+            choices=method_choices,
+            default=method_choices[0]
+        )
+        
+        method = "1" if "JSON file" in method_selected else "2"
         
         if method == "1":
             # JSON file method
@@ -517,10 +613,10 @@ class IntegrationsManager:
         self.print_success("Sync daemon configuration complete")
         
         # Offer to start daemon
-        start_daemon = self.prompt_for_value(
-            "\nStart sync daemon now? (y/n)",
-            default='n'
-        ).lower() == 'y'
+        start_daemon = self.prompt_for_confirm(
+            "\nStart sync daemon now?",
+            default=False
+        )
         
         if start_daemon:
             return self.start_sync_daemon()
@@ -570,10 +666,10 @@ class IntegrationsManager:
         
         # API Secret Key
         if 'API_SECRET_KEY' not in env_vars or not env_vars.get('API_SECRET_KEY'):
-            generate_api = self.prompt_for_value(
-                "Generate new API secret key? (y/n)",
-                default='y'
-            ).lower() == 'y'
+            generate_api = self.prompt_for_confirm(
+                "Generate new API secret key?",
+                default=True
+            )
             
             if generate_api:
                 api_key = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(64))
@@ -582,10 +678,10 @@ class IntegrationsManager:
                 
         # JWT Secret Key
         if 'JWT_SECRET_KEY' not in env_vars or not env_vars.get('JWT_SECRET_KEY'):
-            generate_jwt = self.prompt_for_value(
-                "Generate new JWT secret key? (y/n)",
-                default='y'
-            ).lower() == 'y'
+            generate_jwt = self.prompt_for_confirm(
+                "Generate new JWT secret key?",
+                default=True
+            )
             
             if generate_jwt:
                 jwt_key = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(64))
@@ -595,10 +691,10 @@ class IntegrationsManager:
                 self.print_success("Generated new JWT secret key")
                 
         # CORS Configuration
-        configure_cors = self.prompt_for_value(
-            "\nConfigure CORS settings? (y/n)",
-            default='n'
-        ).lower() == 'y'
+        configure_cors = self.prompt_for_confirm(
+            "\nConfigure CORS settings?",
+            default=False
+        )
         
         if configure_cors:
             env_vars['CORS_ALLOWED_ORIGINS'] = self.prompt_for_value(
@@ -764,97 +860,113 @@ class IntegrationsManager:
         while True:
             self.print_header("AutoTrainX Integrations Manager")
             
-            print("1. Installation")
-            print("2. Configuration")
-            print("3. Verify System")
-            print("4. Exit")
-            print()
+            menu_choices = [
+                "🔧 Installation",
+                "⚙️  Configuration",
+                "✅ Verify System",
+                "❌ Exit"
+            ]
             
-            choice = self.prompt_for_value("Select option (1-4)", default="3")
+            choice = self.prompt_for_choice(
+                "What would you like to do?",
+                choices=menu_choices,
+                default=menu_choices[2]  # Default to Verify
+            )
             
-            if choice == "1":
+            if "Installation" in choice:
                 self.show_installation_menu()
-            elif choice == "2":
+            elif "Configuration" in choice:
                 self.show_configuration_menu()
-            elif choice == "3":
+            elif "Verify" in choice:
                 self.verify_configuration()
-                input("\nPress Enter to continue...")
-            elif choice == "4":
+                if HAS_QUESTIONARY:
+                    questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
+                else:
+                    input("\nPress Enter to continue...")
+            elif "Exit" in choice:
                 print("\nExiting...")
                 break
-            else:
-                self.print_error("Invalid choice")
                 
     def show_installation_menu(self):
         """Show installation menu"""
         while True:
             self.print_header("Installation Menu")
             
-            print("1. Install PostgreSQL")
-            print("2. Install Google Sheets Dependencies")
-            print("3. Install Sync Daemon Dependencies")
-            print("4. Install All")
-            print("5. Back to Main Menu")
-            print()
+            install_choices = [
+                "🐘 Install PostgreSQL",
+                "📊 Install Google Sheets Dependencies",
+                "🔄 Install Sync Daemon Dependencies",
+                "📦 Install All Components",
+                "⬅️  Back to Main Menu"
+            ]
             
-            choice = self.prompt_for_value("Select option (1-5)", default="5")
+            choice = self.prompt_for_choice(
+                "Select component to install:",
+                choices=install_choices,
+                default=install_choices[4]  # Default to Back
+            )
             
-            if choice == "1":
+            continue_prompt = lambda: questionary.press_any_key_to_continue("\nPress any key to continue...").ask() if HAS_QUESTIONARY else input("\nPress Enter to continue...")
+            
+            if "PostgreSQL" in choice:
                 self.install_postgresql()
-                input("\nPress Enter to continue...")
-            elif choice == "2":
+                continue_prompt()
+            elif "Google Sheets" in choice:
                 self.install_google_sheets_deps()
-                input("\nPress Enter to continue...")
-            elif choice == "3":
+                continue_prompt()
+            elif "Sync Daemon" in choice:
                 self.install_sync_daemon_deps()
-                input("\nPress Enter to continue...")
-            elif choice == "4":
+                continue_prompt()
+            elif "All Components" in choice:
                 self.install_postgresql()
                 self.install_google_sheets_deps()
                 self.install_sync_daemon_deps()
-                input("\nPress Enter to continue...")
-            elif choice == "5":
+                continue_prompt()
+            elif "Back" in choice:
                 break
-            else:
-                self.print_error("Invalid choice")
                 
     def show_configuration_menu(self):
         """Show configuration menu"""
         while True:
             self.print_header("Configuration Menu")
             
-            print("1. Configure PostgreSQL")
-            print("2. Configure Google Sheets")
-            print("3. Configure Sync Daemon")
-            print("4. Configure General Variables")
-            print("5. Configure All")
-            print("6. Back to Main Menu")
-            print()
+            config_choices = [
+                "🐘 Configure PostgreSQL",
+                "📊 Configure Google Sheets",
+                "🔄 Configure Sync Daemon",
+                "🔐 Configure General Variables",
+                "📦 Configure All Components",
+                "⬅️  Back to Main Menu"
+            ]
             
-            choice = self.prompt_for_value("Select option (1-6)", default="6")
+            choice = self.prompt_for_choice(
+                "Select component to configure:",
+                choices=config_choices,
+                default=config_choices[5]  # Default to Back
+            )
             
-            if choice == "1":
+            continue_prompt = lambda: questionary.press_any_key_to_continue("\nPress any key to continue...").ask() if HAS_QUESTIONARY else input("\nPress Enter to continue...")
+            
+            if "PostgreSQL" in choice:
                 self.configure_postgresql()
-                input("\nPress Enter to continue...")
-            elif choice == "2":
+                continue_prompt()
+            elif "Google Sheets" in choice:
                 self.configure_google_sheets()
-                input("\nPress Enter to continue...")
-            elif choice == "3":
+                continue_prompt()
+            elif "Sync Daemon" in choice:
                 self.configure_sync_daemon()
-                input("\nPress Enter to continue...")
-            elif choice == "4":
+                continue_prompt()
+            elif "General Variables" in choice:
                 self.configure_general_variables()
-                input("\nPress Enter to continue...")
-            elif choice == "5":
+                continue_prompt()
+            elif "All Components" in choice:
                 self.configure_postgresql()
                 self.configure_google_sheets()
                 self.configure_sync_daemon()
                 self.configure_general_variables()
-                input("\nPress Enter to continue...")
-            elif choice == "6":
+                continue_prompt()
+            elif "Back" in choice:
                 break
-            else:
-                self.print_error("Invalid choice")
 
 
 def main():

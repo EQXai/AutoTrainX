@@ -929,7 +929,13 @@ install_core_dependencies() {
     # Install main requirements
     if [ -f "requirements.txt" ]; then
         print_info "Installing main dependencies..."
-        pip install -r requirements.txt
+        if ! pip install -r requirements.txt; then
+            print_error "Failed to install main requirements"
+            return 1
+        fi
+    else
+        print_error "requirements.txt not found!"
+        return 1
     fi
     
     # Install API requirements
@@ -938,7 +944,26 @@ install_core_dependencies() {
         pip install -r api/requirements.txt
     fi
     
-    print_success "Core dependencies installed"
+    # Verify critical dependencies were actually installed
+    print_info "Verifying critical dependencies..."
+    local critical_modules=("psutil" "sqlalchemy" "pydantic")
+    local all_good=true
+    
+    for module in "${critical_modules[@]}"; do
+        if python -c "import $module" 2>/dev/null; then
+            print_success "✓ $module installed"
+        else
+            print_error "✗ $module NOT installed - Critical dependency missing!"
+            all_good=false
+        fi
+    done
+    
+    if [ "$all_good" = false ]; then
+        print_error "Critical dependencies missing. Installation cannot continue."
+        return 1
+    fi
+    
+    print_success "Core dependencies installed and verified"
 }
 
 # Step 6: Optional Components
@@ -1206,6 +1231,18 @@ verify_installation() {
         python -c "import torch; print(f'CUDA available: {torch.cuda.is_available()}')" || print_warning "CUDA not available"
     fi
     
+    # Check critical dependencies for integrations
+    print_info "Checking critical dependencies..."
+    local critical_deps=("psutil" "sqlalchemy" "pydantic" "typer" "questionary" "rich")
+    for dep in "${critical_deps[@]}"; do
+        if python -c "import $dep" 2>/dev/null; then
+            print_success "$dep: OK"
+        else
+            print_error "$dep: MISSING - Required for system operation"
+            ((errors++))
+        fi
+    done
+    
     # Check optional components
     if [ "$INSTALL_NODEJS" = true ]; then
         command -v node &> /dev/null && print_success "Node.js installed" || print_warning "Node.js not found"
@@ -1438,13 +1475,13 @@ run_installation_with_checkpoints() {
         "python_env:create_virtual_environment:Python Environment:true"
         "pytorch:install_pytorch:PyTorch:false"
         "xformers:install_xformers:XFormers (Optional):false"
-        "core_deps:install_core_dependencies:Core Dependencies:false"
+        "core_deps:install_core_dependencies:Core Dependencies:true"
         "optional:install_optional_components:Optional Components:false"
         "web:setup_web_interface:Web Interface:false"
         "models:download_models:Models:false"
         "env_config:setup_environment:Environment Configuration:false"
         "optimize:apply_final_optimizations:Final Optimizations:false"
-        "validation:verify_installation:Installation Verification:false"
+        "validation:verify_installation:Installation Verification:true"
     )
     
     local total_steps=${#steps[@]}
