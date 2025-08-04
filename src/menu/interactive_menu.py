@@ -2351,16 +2351,34 @@ GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {db_user};
         """Save spreadsheet ID to config."""
         config = {}
         if self.config_file.exists():
-            with open(self.config_file, 'r') as f:
-                config = json.load(f)
+            try:
+                with open(self.config_file, 'r') as f:
+                    content = f.read().strip()
+                    if content:
+                        config = json.loads(content)
+                    else:
+                        print("\n⚠️  Warning: Config file was empty, creating new configuration")
+            except json.JSONDecodeError as e:
+                print(f"\n⚠️  Warning: Invalid JSON in config file: {e}")
+                print("Creating new configuration...")
+            except Exception as e:
+                print(f"\n❌ Error reading config file: {e}")
+                return
         
         if 'google_sheets_sync' not in config:
             config['google_sheets_sync'] = {}
         config['google_sheets_sync']['spreadsheet_id'] = spreadsheet_id
         config['google_sheets_sync']['enabled'] = True
         
-        with open(self.config_file, 'w') as f:
-            json.dump(config, f, indent=2)
+        try:
+            # Ensure directory exists
+            self.config_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            with open(self.config_file, 'w') as f:
+                json.dump(config, f, indent=2)
+        except Exception as e:
+            print(f"\n❌ Error saving config file: {e}")
+            return
     
     def _start_sheets_daemon(self) -> None:
         """Start the sync daemon."""
@@ -3533,6 +3551,16 @@ def __getattr__(name):
             self._save_spreadsheet_id(spreadsheet_id)
             print(f"\n✅ Spreadsheet ID set to: {spreadsheet_id}")
             print("\nIMPORTANT: Make sure the sheet is shared with your service account email")
+            
+            # Check if Google credentials are configured
+            try:
+                from ..configuration.secure_config import secure_config
+                if not secure_config.google_credentials:
+                    print("\n⚠️  Warning: Google credentials not found in environment")
+                    print("Please configure Google authentication before testing the connection")
+            except Exception as e:
+                print(f"\n⚠️  Warning: Could not verify Google credentials: {e}")
+            
             input("\nPress Enter to continue...")
     
     def _setup_sheets_authentication(self) -> None:

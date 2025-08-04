@@ -325,8 +325,19 @@ async def test_connection(base_path: Optional[str] = None) -> bool:
         
         # Get config
         config_path = Path(base_path or ".") / "settings" / "config.json"
-        with open(config_path, 'r') as f:
-            config = json.load(f)
+        try:
+            with open(config_path, 'r') as f:
+                content = f.read().strip()
+                if not content:
+                    logger.error("Config file is empty")
+                    return False
+                config = json.loads(content)
+        except json.JSONDecodeError as e:
+            logger.error(f"Invalid JSON in config file: {e}")
+            return False
+        except FileNotFoundError:
+            logger.error("Config file not found")
+            return False
         
         sheets_config = config.get('google_sheets_sync', {})
         spreadsheet_id = sheets_config.get('spreadsheet_id')
@@ -353,9 +364,16 @@ async def test_connection(base_path: Optional[str] = None) -> bool:
         service = build('sheets', 'v4', credentials=credentials)
         
         # Try to access spreadsheet
-        spreadsheet = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
-        logger.info(f"Successfully accessed spreadsheet: {spreadsheet.get('properties', {}).get('title', 'Unknown')}")
-        return True
+        try:
+            spreadsheet = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+            if not spreadsheet:
+                logger.error("Empty response from Google Sheets API")
+                return False
+            logger.info(f"Successfully accessed spreadsheet: {spreadsheet.get('properties', {}).get('title', 'Unknown')}")
+            return True
+        except Exception as api_error:
+            logger.error(f"Google Sheets API error: {api_error}")
+            return False
         
     except Exception as e:
         logger.error(f"Connection test failed: {e}")

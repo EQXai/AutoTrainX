@@ -225,7 +225,8 @@ def write_env_file(config: Dict[str, str], path: Path) -> None:
         ],
         "Google Cloud Configuration": [
             "GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_SERVICE_ACCOUNT_EMAIL",
-            "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY", "GOOGLE_PROJECT_ID"
+            "GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY", "GOOGLE_PROJECT_ID",
+            "AUTOTRAINX_SHEETS_ID"
         ],
         "Security Configuration": [
             "API_SECRET_KEY", "JWT_SECRET_KEY", "JWT_ALGORITHM",
@@ -270,11 +271,6 @@ def write_env_file(config: Dict[str, str], path: Path) -> None:
                 if new_key in config:
                     f.write(f"{legacy_key}={config[new_key]}\n")
             f.write("\n")
-        
-        # Add Google Sheets Configuration
-        if "AUTOTRAINX_SHEETS_ID" in config:
-            f.write("# Google Sheets Configuration\n")
-            f.write(f"AUTOTRAINX_SHEETS_ID={config['AUTOTRAINX_SHEETS_ID']}\n")
 
 
 def main():

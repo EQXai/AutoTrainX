@@ -802,11 +802,40 @@ GRANT ALL PRIVILEGES ON DATABASE autotrainx TO autotrainx;
             
         self.print_success("Google Sheets sync configured!")
         
-        # Update .env with sheets ID
+        # Update .env with sheets ID if not already present
         if self.env_path.exists():
-            with open(self.env_path, 'a') as f:
-                f.write(f"\n# Google Sheets Configuration\n")
-                f.write(f"AUTOTRAINX_SHEETS_ID={spreadsheet_id}\n")
+            # Read existing content
+            with open(self.env_path, 'r') as f:
+                content = f.read()
+            
+            # Only add if not already present
+            if f"AUTOTRAINX_SHEETS_ID=" not in content:
+                # Find the Google Cloud Configuration section and add it there
+                lines = content.split('\n')
+                new_lines = []
+                google_section_found = False
+                
+                for i, line in enumerate(lines):
+                    new_lines.append(line)
+                    if "# Google Cloud Configuration" in line and not google_section_found:
+                        google_section_found = True
+                        # Look for the end of this section
+                        j = i + 1
+                        while j < len(lines) and lines[j].strip() and not lines[j].startswith('#'):
+                            j += 1
+                        # Insert before the empty line or next section
+                        if j < len(lines):
+                            new_lines.append(f"AUTOTRAINX_SHEETS_ID={spreadsheet_id}")
+                
+                # If Google Cloud section not found, append at the end
+                if not google_section_found:
+                    new_lines.append("")
+                    new_lines.append("# Google Sheets Configuration")
+                    new_lines.append(f"AUTOTRAINX_SHEETS_ID={spreadsheet_id}")
+                
+                # Write updated content
+                with open(self.env_path, 'w') as f:
+                    f.write('\n'.join(new_lines))
                 
     def start_sheets_daemon(self):
         """Start the Google Sheets sync daemon"""
