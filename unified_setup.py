@@ -1469,9 +1469,9 @@ GRANT ALL PRIVILEGES ON DATABASE autotrainx TO autotrainx;
                     
             key = self.get_key()
             
-            if key == '\x1b[A']:  # Up arrow
+            if key == '\x1b[A':  # Up arrow
                 current_index = (current_index - 1) % len(options)
-            elif key == '\x1b[B']:  # Down arrow
+            elif key == '\x1b[B':  # Down arrow
                 current_index = (current_index + 1) % len(options)
             elif key == '\r' or key == '\n':  # Enter
                 selected = options[current_index][0]
