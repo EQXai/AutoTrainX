@@ -901,6 +901,93 @@ class IntegrationsManager:
         """Create PostgreSQL database and user."""
         print("\n📦 Creating PostgreSQL database and user...")
         
+        # Detect if we're in Docker or need sudo
+        is_docker = os.path.exists('/.dockerenv') or os.environ.get('DOCKER_CONTAINER')
+        
+        # Try different methods to connect to PostgreSQL
+        psql_methods = []
+        
+        # Get current environment variables
+        env_vars = self._load_env_file()
+        db_host = env_vars.get('DATABASE_HOST', 'localhost')
+        db_port = env_vars.get('DATABASE_PORT', '5432')
+        
+        if is_docker:
+            # In Docker, try without sudo first
+            psql_methods.extend([
+                ['psql', '-U', 'postgres', '-h', db_host, '-p', db_port, '-c'],  # Direct with host
+                ['psql', '-U', 'postgres', '-c'],  # Direct as postgres user
+                ['psql', '-c']  # As current user
+            ])
+        else:
+            # Outside Docker, try with sudo first
+            psql_methods.extend([
+                ['sudo', '-u', 'postgres', 'psql', '-c'],  # Standard method
+                ['psql', '-U', 'postgres', '-h', db_host, '-p', db_port, '-c'],  # Direct with host
+                ['psql', '-U', 'postgres', '-c'],  # Direct connection
+                ['psql', '-c']  # As current user
+            ])
+        
+        # Also try with PGPASSWORD if available
+        if 'DATABASE_PASSWORD' in env_vars:
+            # Try connecting as the configured user with password
+            env_with_pgpass = os.environ.copy()
+            env_with_pgpass['PGPASSWORD'] = env_vars['DATABASE_PASSWORD']
+            psql_methods.append({
+                'cmd': ['psql', '-U', env_vars.get('DATABASE_USER', 'autotrainx'), 
+                        '-h', db_host, '-p', db_port, '-d', 'postgres', '-c'],
+                'env': env_with_pgpass
+            })
+        
+        # Find working psql method
+        working_cmd = None
+        working_env = None
+        
+        for method in psql_methods:
+            if isinstance(method, dict):
+                test_cmd = method['cmd'] + ['SELECT 1;']
+                test_env = method['env']
+            else:
+                test_cmd = method + ['SELECT 1;']
+                test_env = None
+                
+            try:
+                result = subprocess.run(test_cmd, capture_output=True, text=True, 
+                                      timeout=5, env=test_env)
+                if result.returncode == 0:
+                    if isinstance(method, dict):
+                        working_cmd = method['cmd']
+                        working_env = method['env']
+                    else:
+                        working_cmd = method
+                    break
+            except (subprocess.TimeoutExpired, FileNotFoundError):
+                continue
+        
+        if not working_cmd:
+            print("\n❌ Could not connect to PostgreSQL. Please ensure:")
+            print("   • PostgreSQL is installed and running")
+            if is_docker:
+                print("   • The database is accessible from this container")
+                print("   • The PostgreSQL host is reachable from this container")
+            else:
+                print("   • You have sudo access or direct PostgreSQL access")
+            
+            print("\n📝 Manual setup instructions:")
+            print("\nConnect to PostgreSQL as superuser and run:")
+            print(f"\n  CREATE USER {db_user} WITH PASSWORD '{db_password}';")
+            print(f"  CREATE DATABASE {db_name} OWNER {db_user};")
+            print(f"  GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {db_user};")
+            
+            if is_docker:
+                print("\nExample for Docker:")
+                print(f"  docker exec -it <postgres-container> psql -U postgres")
+            else:
+                print("\nExample:")
+                print(f"  sudo -u postgres psql")
+            
+            return False
+        
         try:
             create_user_sql = f"""
             DO $$
@@ -923,8 +1010,8 @@ class IntegrationsManager:
                 (create_db_sql, "Creating database"),
                 (grant_sql, "Granting privileges")
             ]:
-                cmd = ['sudo', '-u', 'postgres', 'psql', '-c', sql]
-                result = subprocess.run(cmd, capture_output=True, text=True)
+                cmd = working_cmd + [sql]
+                result = subprocess.run(cmd, capture_output=True, text=True, env=working_env)
                 
                 if result.returncode != 0 and "already exists" not in result.stderr:
                     print(f"❌ Failed {desc}: {result.stderr}")
