@@ -692,6 +692,12 @@ class AutoTrainXMenu:
                 choices.append("📦 Install PostgreSQL")
             else:
                 choices.append("✅ PostgreSQL is installed")
+                
+                # Check if PostgreSQL is running
+                if not self._is_postgresql_running():
+                    choices.append("▶️  Start PostgreSQL")
+                else:
+                    choices.append("✅ PostgreSQL is running")
             
             choices.extend([
                 "🔄 Full Auto Setup",
@@ -710,6 +716,8 @@ class AutoTrainXMenu:
             
             if "Install PostgreSQL" in choice:
                 self._install_postgresql()
+            elif "Start PostgreSQL" in choice:
+                self._start_postgresql_service()
             elif "Full Auto Setup" in choice:
                 self._full_database_setup()
             elif "Create Database & User" in choice:
@@ -1311,6 +1319,84 @@ class AutoTrainXMenu:
         except:
             return False
     
+    def _is_postgresql_running(self) -> bool:
+        """Check if PostgreSQL service is running."""
+        try:
+            # Try to connect to PostgreSQL
+            result = subprocess.run(
+                ["pg_isready", "-h", "localhost", "-p", "5432"],
+                capture_output=True,
+                text=True
+            )
+            return result.returncode == 0
+        except:
+            return False
+    
+    def _start_postgresql_service(self) -> bool:
+        """Start PostgreSQL service."""
+        print("\n🔄 Starting PostgreSQL service...")
+        
+        try:
+            if self.is_docker or self.is_root:
+                # In Docker, try different methods
+                methods = [
+                    ["service", "postgresql", "start"],
+                    ["pg_ctlcluster", "main", "start"],
+                    ["/etc/init.d/postgresql", "start"]
+                ]
+                
+                for method in methods:
+                    result = subprocess.run(method, capture_output=True, text=True)
+                    if result.returncode == 0:
+                        print("✅ PostgreSQL service started successfully")
+                        # Give it a moment to fully start
+                        time.sleep(2)
+                        return True
+                
+                # If none worked, try to find and use pg_ctl directly
+                pg_version_result = subprocess.run(
+                    ["ls", "/usr/lib/postgresql/"],
+                    capture_output=True,
+                    text=True
+                )
+                if pg_version_result.returncode == 0:
+                    versions = pg_version_result.stdout.strip().split()
+                    if versions:
+                        version = versions[0]
+                        data_dir = f"/var/lib/postgresql/{version}/main"
+                        bin_dir = f"/usr/lib/postgresql/{version}/bin"
+                        
+                        # Initialize if needed
+                        if not os.path.exists(f"{data_dir}/PG_VERSION"):
+                            print(f"📦 Initializing PostgreSQL database in {data_dir}...")
+                            init_cmd = f"su - postgres -c '{bin_dir}/initdb -D {data_dir}'"
+                            subprocess.run(init_cmd, shell=True)
+                        
+                        # Start PostgreSQL
+                        start_cmd = f"su - postgres -c '{bin_dir}/pg_ctl -D {data_dir} -l /var/log/postgresql/postgresql.log start'"
+                        result = subprocess.run(start_cmd, shell=True, capture_output=True, text=True)
+                        if result.returncode == 0:
+                            print("✅ PostgreSQL started using pg_ctl")
+                            time.sleep(2)
+                            return True
+            else:
+                # Normal system with systemctl
+                result = self._run_privileged_command(
+                    ["systemctl", "start", "postgresql"],
+                    capture_output=True,
+                    text=True
+                )
+                if result.returncode == 0:
+                    print("✅ PostgreSQL service started")
+                    return True
+            
+            print("❌ Failed to start PostgreSQL service")
+            return False
+            
+        except Exception as e:
+            print(f"❌ Error starting PostgreSQL: {str(e)}")
+            return False
+    
     def _install_postgresql(self) -> None:
         """Install PostgreSQL."""
         print("\n" + "="*50)
@@ -1358,6 +1444,23 @@ class AutoTrainXMenu:
         print("\n" + "="*50)
         print("  CREATING DATABASE & USER")
         print("="*50)
+        
+        # Check if PostgreSQL is running first
+        if not self._is_postgresql_running():
+            print("\n⚠️  PostgreSQL is not running!")
+            if questionary.confirm(
+                "Would you like to start PostgreSQL?",
+                default=True,
+                style=AUTOTRAINX_STYLE
+            ).ask():
+                if not self._start_postgresql_service():
+                    print("\n❌ Could not start PostgreSQL.")
+                    print("\n💡 In Docker, you might need to:")
+                    print("   1. Ensure PostgreSQL is installed: apt-get install postgresql")
+                    print("   2. Initialize the database: su - postgres -c 'initdb -D /var/lib/postgresql/data'")
+                    print("   3. Start manually: su - postgres -c 'pg_ctl -D /var/lib/postgresql/data start'")
+                    input("\nPress Enter to continue...")
+                    return
         
         # Get configuration
         db_name = questionary.text(
@@ -1436,8 +1539,35 @@ GRANT ALL PRIVILEGES ON DATABASE {db_name} TO {db_user};
                 })
             else:
                 print(f"\n❌ Error: {result.stderr}")
+                
+                # More helpful error messages for common issues
+                if "connection to server" in result.stderr and "failed" in result.stderr:
+                    print("\n💡 PostgreSQL connection failed. Possible solutions:")
+                    print("   1. Start PostgreSQL service (select 'Start PostgreSQL' from menu)")
+                    print("   2. Check if PostgreSQL is installed correctly")
+                    print("   3. Verify PostgreSQL is listening on the correct socket/port")
+                    
+                    if self.is_docker:
+                        print("\n🐳 Docker-specific tips:")
+                        print("   - Run: service postgresql status")
+                        print("   - If not running: service postgresql start")
+                        print("   - Check logs: tail -f /var/log/postgresql/*.log")
+                
+                elif "role" in result.stderr and "does not exist" in result.stderr:
+                    print("\n💡 The postgres user might not exist. Try:")
+                    print("   - Creating postgres user: useradd -m postgres")
+                    print("   - Switching to postgres: su - postgres")
+                    print("   - Initializing DB: initdb -D /var/lib/postgresql/data")
+                    
+        except FileNotFoundError as e:
+            print(f"\n❌ Error: Command not found - {str(e)}")
+            print("💡 Make sure PostgreSQL is installed: apt-get install postgresql")
         except Exception as e:
             print(f"\n❌ Error: {e}")
+            print("\n💡 If you're in Docker, make sure:")
+            print("   - PostgreSQL is installed")
+            print("   - You're running as root or postgres user")
+            print("   - The PostgreSQL data directory is initialized")
         
         input("\nPress Enter to continue...")
     
