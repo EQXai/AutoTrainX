@@ -22,7 +22,12 @@ fi
 # Run commands with appropriate privileges
 run_privileged() {
     if [ "$RUNNING_AS_ROOT" = true ]; then
-        "$@"
+        # When running as root, we still need sudo for postgres user operations
+        if [ "$1" = "-u" ] && [ "$2" = "postgres" ]; then
+            sudo "$@"
+        else
+            "$@"
+        fi
     else
         sudo "$@"
     fi
