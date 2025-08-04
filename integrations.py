@@ -223,6 +223,7 @@ class IntegrationsManager:
             
             choices = [
                 "🐘 Configure PostgreSQL",
+                "🔍 PostgreSQL Diagnostics & Cleanup",
                 "📊 Configure Google Sheets",
                 "🔄 Configure Sync Daemon",
                 "🔐 Configure Security (API Keys, CORS)",
@@ -241,8 +242,10 @@ class IntegrationsManager:
             if choice is None or "Back" in choice:
                 break
                 
-            if "PostgreSQL" in choice:
+            if "PostgreSQL" in choice and "Diagnostics" not in choice:
                 self._configure_postgresql()
+            elif "PostgreSQL Diagnostics" in choice:
+                self._postgresql_diagnostics()
             elif "Google Sheets" in choice:
                 self._configure_google_sheets()
             elif "Sync Daemon" in choice:
@@ -577,6 +580,374 @@ class IntegrationsManager:
             style=AUTOTRAINX_STYLE
         ).ask():
             self._create_postgresql_database(db_name, db_user, db_password)
+            
+        questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
+        
+    def _postgresql_diagnostics(self):
+        """PostgreSQL diagnostics and cleanup utilities."""
+        self.show_header()
+        print("\033[1;33m=== POSTGRESQL DIAGNOSTICS & CLEANUP ===\033[0m\n")
+        
+        env_vars = self._load_env_file()
+        
+        # Check if PostgreSQL is configured
+        pg_vars = ['DATABASE_HOST', 'DATABASE_PORT', 'DATABASE_NAME', 'DATABASE_USER', 'DATABASE_PASSWORD']
+        if not all(env_vars.get(var) for var in pg_vars):
+            print("❌ PostgreSQL is not configured. Please configure it first.")
+            questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
+            return
+            
+        while True:
+            choices = [
+                "📊 View Active Connections",
+                "🔍 View Connection Statistics",
+                "⚡ Kill Idle Connections",
+                "💀 Kill All User Connections (Dangerous!)",
+                "📈 Check Database Size",
+                "🔧 Show PostgreSQL Configuration",
+                "⬅️  Back to Configuration Menu"
+            ]
+            
+            choice = questionary.select(
+                "Select diagnostic action:",
+                choices=choices,
+                style=AUTOTRAINX_STYLE,
+                use_shortcuts=True,
+                use_arrow_keys=True
+            ).ask()
+            
+            if choice is None or "Back" in choice:
+                break
+                
+            if "View Active Connections" in choice:
+                self._view_active_connections(env_vars)
+            elif "View Connection Statistics" in choice:
+                self._view_connection_stats(env_vars)
+            elif "Kill Idle Connections" in choice:
+                self._kill_idle_connections(env_vars)
+            elif "Kill All User Connections" in choice:
+                self._kill_all_connections(env_vars)
+            elif "Check Database Size" in choice:
+                self._check_database_size(env_vars)
+            elif "Show PostgreSQL Configuration" in choice:
+                self._show_pg_configuration(env_vars)
+                
+    def _view_active_connections(self, env_vars: Dict[str, str]):
+        """View active PostgreSQL connections."""
+        print("\n📊 Active Connections:\n")
+        
+        sql = """
+        SELECT 
+            pid,
+            usename as username,
+            application_name,
+            client_addr,
+            state,
+            state_change,
+            query_start,
+            CASE 
+                WHEN state = 'active' THEN substring(query, 1, 50) || '...'
+                ELSE 'N/A'
+            END as current_query
+        FROM pg_stat_activity
+        WHERE datname = %s
+        ORDER BY state, query_start DESC;
+        """
+        
+        try:
+            conn = psycopg2.connect(
+                host=env_vars['DATABASE_HOST'],
+                port=env_vars['DATABASE_PORT'],
+                database=env_vars['DATABASE_NAME'],
+                user=env_vars['DATABASE_USER'],
+                password=env_vars['DATABASE_PASSWORD']
+            )
+            
+            with conn.cursor() as cur:
+                cur.execute(sql, (env_vars['DATABASE_NAME'],))
+                rows = cur.fetchall()
+                
+                if not rows:
+                    print("No active connections found.")
+                else:
+                    print(f"Found {len(rows)} connection(s):\n")
+                    for row in rows:
+                        pid, user, app, client, state, state_change, query_start, query = row
+                        print(f"PID: {pid}")
+                        print(f"  User: {user}")
+                        print(f"  Application: {app or 'N/A'}")
+                        print(f"  Client: {client or 'local'}")
+                        print(f"  State: {state}")
+                        if state == 'active' and query:
+                            print(f"  Query: {query}")
+                        print()
+                        
+            conn.close()
+            
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            
+        questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
+        
+    def _view_connection_stats(self, env_vars: Dict[str, str]):
+        """View connection statistics."""
+        print("\n🔍 Connection Statistics:\n")
+        
+        sqls = [
+            ("Current connections by state", """
+                SELECT state, count(*) 
+                FROM pg_stat_activity 
+                WHERE datname = %s 
+                GROUP BY state
+                ORDER BY count(*) DESC;
+            """),
+            ("Connections by user", """
+                SELECT usename, count(*) 
+                FROM pg_stat_activity 
+                WHERE datname = %s 
+                GROUP BY usename
+                ORDER BY count(*) DESC;
+            """),
+            ("Max connections setting", """
+                SHOW max_connections;
+            """),
+            ("Total connections (all databases)", """
+                SELECT count(*) FROM pg_stat_activity;
+            """)
+        ]
+        
+        try:
+            conn = psycopg2.connect(
+                host=env_vars['DATABASE_HOST'],
+                port=env_vars['DATABASE_PORT'],
+                database=env_vars['DATABASE_NAME'],
+                user=env_vars['DATABASE_USER'],
+                password=env_vars['DATABASE_PASSWORD']
+            )
+            
+            with conn.cursor() as cur:
+                for title, sql in sqls:
+                    print(f"\n{title}:")
+                    print("-" * 40)
+                    
+                    if "%s" in sql:
+                        cur.execute(sql, (env_vars['DATABASE_NAME'],))
+                    else:
+                        cur.execute(sql)
+                        
+                    rows = cur.fetchall()
+                    for row in rows:
+                        if len(row) == 2:
+                            print(f"  {row[0]}: {row[1]}")
+                        else:
+                            print(f"  {row[0]}")
+                            
+            conn.close()
+            
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            
+        questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
+        
+    def _kill_idle_connections(self, env_vars: Dict[str, str]):
+        """Kill idle connections."""
+        print("\n⚡ Killing idle connections...\n")
+        
+        confirm = questionary.confirm(
+            "This will terminate all idle connections. Continue?",
+            default=False,
+            style=AUTOTRAINX_STYLE
+        ).ask()
+        
+        if not confirm:
+            return
+            
+        sql = """
+        SELECT pg_terminate_backend(pid)
+        FROM pg_stat_activity
+        WHERE datname = %s
+        AND state = 'idle'
+        AND pid <> pg_backend_pid();
+        """
+        
+        try:
+            conn = psycopg2.connect(
+                host=env_vars['DATABASE_HOST'],
+                port=env_vars['DATABASE_PORT'],
+                database=env_vars['DATABASE_NAME'],
+                user=env_vars['DATABASE_USER'],
+                password=env_vars['DATABASE_PASSWORD']
+            )
+            
+            with conn.cursor() as cur:
+                cur.execute(sql, (env_vars['DATABASE_NAME'],))
+                terminated = cur.rowcount
+                conn.commit()
+                
+                print(f"✅ Terminated {terminated} idle connection(s)")
+                
+            conn.close()
+            
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            
+        questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
+        
+    def _kill_all_connections(self, env_vars: Dict[str, str]):
+        """Kill all user connections (dangerous)."""
+        print("\n💀 Kill all user connections\n")
+        print("⚠️  WARNING: This will disconnect ALL users from the database!")
+        
+        confirm = questionary.confirm(
+            "Are you absolutely sure you want to terminate ALL connections?",
+            default=False,
+            style=AUTOTRAINX_STYLE
+        ).ask()
+        
+        if not confirm:
+            return
+            
+        # Double confirmation for safety
+        db_name = questionary.text(
+            f"Type the database name '{env_vars['DATABASE_NAME']}' to confirm:",
+            style=AUTOTRAINX_STYLE
+        ).ask()
+        
+        if db_name != env_vars['DATABASE_NAME']:
+            print("❌ Database name doesn't match. Aborting.")
+            questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
+            return
+            
+        sql = """
+        SELECT pg_terminate_backend(pid)
+        FROM pg_stat_activity
+        WHERE datname = %s
+        AND pid <> pg_backend_pid();
+        """
+        
+        try:
+            conn = psycopg2.connect(
+                host=env_vars['DATABASE_HOST'],
+                port=env_vars['DATABASE_PORT'],
+                database=env_vars['DATABASE_NAME'],
+                user=env_vars['DATABASE_USER'],
+                password=env_vars['DATABASE_PASSWORD']
+            )
+            
+            with conn.cursor() as cur:
+                cur.execute(sql, (env_vars['DATABASE_NAME'],))
+                terminated = cur.rowcount
+                conn.commit()
+                
+                print(f"✅ Terminated {terminated} connection(s)")
+                
+            conn.close()
+            
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            
+        questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
+        
+    def _check_database_size(self, env_vars: Dict[str, str]):
+        """Check database size and table sizes."""
+        print("\n📈 Database Size Information:\n")
+        
+        sqls = [
+            ("Database size", """
+                SELECT pg_database_size(%s) as size,
+                       pg_size_pretty(pg_database_size(%s)) as pretty_size;
+            """),
+            ("Top 10 largest tables", """
+                SELECT 
+                    schemaname || '.' || tablename AS table_full_name,
+                    pg_size_pretty(pg_total_relation_size(schemaname||'.'||tablename)) AS size
+                FROM pg_tables
+                WHERE schemaname NOT IN ('pg_catalog', 'information_schema')
+                ORDER BY pg_total_relation_size(schemaname||'.'||tablename) DESC
+                LIMIT 10;
+            """)
+        ]
+        
+        try:
+            conn = psycopg2.connect(
+                host=env_vars['DATABASE_HOST'],
+                port=env_vars['DATABASE_PORT'],
+                database=env_vars['DATABASE_NAME'],
+                user=env_vars['DATABASE_USER'],
+                password=env_vars['DATABASE_PASSWORD']
+            )
+            
+            with conn.cursor() as cur:
+                # Database size
+                cur.execute(sqls[0][1], (env_vars['DATABASE_NAME'], env_vars['DATABASE_NAME']))
+                size, pretty_size = cur.fetchone()
+                print(f"Database '{env_vars['DATABASE_NAME']}' size: {pretty_size}")
+                
+                # Table sizes
+                print("\nLargest tables:")
+                print("-" * 50)
+                cur.execute(sqls[1][1])
+                rows = cur.fetchall()
+                for table, size in rows:
+                    print(f"  {table}: {size}")
+                    
+            conn.close()
+            
+        except Exception as e:
+            print(f"❌ Error: {e}")
+            
+        questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
+        
+    def _show_pg_configuration(self, env_vars: Dict[str, str]):
+        """Show PostgreSQL configuration."""
+        print("\n🔧 PostgreSQL Configuration:\n")
+        
+        important_settings = [
+            'max_connections',
+            'shared_buffers',
+            'effective_cache_size',
+            'work_mem',
+            'maintenance_work_mem',
+            'checkpoint_segments',
+            'checkpoint_completion_target',
+            'wal_buffers',
+            'default_statistics_target',
+            'random_page_cost',
+            'effective_io_concurrency',
+            'listen_addresses',
+            'port'
+        ]
+        
+        try:
+            conn = psycopg2.connect(
+                host=env_vars['DATABASE_HOST'],
+                port=env_vars['DATABASE_PORT'],
+                database=env_vars['DATABASE_NAME'],
+                user=env_vars['DATABASE_USER'],
+                password=env_vars['DATABASE_PASSWORD']
+            )
+            
+            with conn.cursor() as cur:
+                print("Key PostgreSQL settings:")
+                print("-" * 50)
+                
+                for setting in important_settings:
+                    try:
+                        cur.execute(f"SHOW {setting};")
+                        value = cur.fetchone()[0]
+                        print(f"  {setting}: {value}")
+                    except:
+                        pass  # Some settings might not exist in all versions
+                        
+                # Also show version
+                cur.execute("SELECT version();")
+                version = cur.fetchone()[0]
+                print(f"\nPostgreSQL Version:\n  {version}")
+                
+            conn.close()
+            
+        except Exception as e:
+            print(f"❌ Error: {e}")
             
         questionary.press_any_key_to_continue("\nPress any key to continue...").ask()
         
