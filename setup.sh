@@ -484,7 +484,7 @@ install_nodejs() {
     print_info "Installing Node.js..."
     
     # Install NodeSource repository
-    curl -fsSL https://deb.nodesource.com/setup_lts.x | run_privileged -E bash -
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | run_privileged bash -
     run_privileged apt-get install -y nodejs
     
     print_success "Node.js $(node --version) installed"
