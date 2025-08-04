@@ -28,10 +28,19 @@ set -e
 # Global Variables and Configuration
 # ============================================================================
 
+# Checkpoint system for resumable installation
+CHECKPOINT_FILE=".setup_checkpoints"
+FAILED_STEPS_FILE=".setup_failed_steps"
+RESUME_FROM=""
+CONTINUE_ON_ERROR=true
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VENV_PATH="$SCRIPT_DIR/venv"
 LOG_FILE="$SCRIPT_DIR/logs/setup_$(date +%Y%m%d_%H%M%S).log"
 CONFIG_FILE="$SCRIPT_DIR/.setup_config.json"
+
+# Array to track failed steps
+declare -a FAILED_STEPS
 
 # Installation profiles
 declare -A PROFILES
@@ -56,6 +65,9 @@ INSTALL_MODELS=false
 INSTALL_DEV_TOOLS=false
 CUDA_VERSION="12.8"
 SKIP_SYSTEM_DEPS=false
+
+# Docker root installation flag
+DOCKER_ROOT_INSTALL=false
 
 # Color codes
 RED='\033[0;31m'
@@ -99,6 +111,94 @@ print_step() {
 
 # Create log directory if it doesn't exist
 mkdir -p "$(dirname "$LOG_FILE")"
+
+# ============================================================================
+# Checkpoint System Functions
+# ============================================================================
+
+# Mark a checkpoint as completed
+mark_checkpoint() {
+    local checkpoint_name="$1"
+    echo "$checkpoint_name" >> "$CHECKPOINT_FILE"
+    print_success "✓ Checkpoint '$checkpoint_name' completed"
+}
+
+# Check if a checkpoint was already completed
+is_checkpoint_completed() {
+    local checkpoint_name="$1"
+    [ -f "$CHECKPOINT_FILE" ] && grep -q "^$checkpoint_name$" "$CHECKPOINT_FILE"
+}
+
+# List all completed checkpoints
+list_checkpoints() {
+    if [ -f "$CHECKPOINT_FILE" ]; then
+        echo "Completed checkpoints:"
+        cat "$CHECKPOINT_FILE" | sed 's/^/  ✓ /'
+    else
+        echo "No checkpoints found."
+    fi
+}
+
+# Clean checkpoint file (start fresh)
+clean_checkpoints() {
+    rm -f "$CHECKPOINT_FILE"
+    rm -f "$FAILED_STEPS_FILE"
+    print_info "Checkpoint and failed steps files cleaned"
+}
+
+# Track failed step
+track_failed_step() {
+    local step_name="$1"
+    local error_msg="$2"
+    FAILED_STEPS+=("$step_name:$error_msg")
+    echo "$step_name:$error_msg" >> "$FAILED_STEPS_FILE"
+}
+
+# Load failed steps from previous run
+load_failed_steps() {
+    if [ -f "$FAILED_STEPS_FILE" ]; then
+        while IFS= read -r line; do
+            FAILED_STEPS+=("$line")
+        done < "$FAILED_STEPS_FILE"
+    fi
+}
+
+# Clear failed steps for a specific checkpoint
+clear_failed_step() {
+    local checkpoint="$1"
+    if [ -f "$FAILED_STEPS_FILE" ]; then
+        grep -v "^$checkpoint:" "$FAILED_STEPS_FILE" > "$FAILED_STEPS_FILE.tmp" || true
+        mv "$FAILED_STEPS_FILE.tmp" "$FAILED_STEPS_FILE"
+    fi
+    # Remove from array
+    local new_failed_steps=()
+    for step in "${FAILED_STEPS[@]}"; do
+        if [[ ! "$step" =~ ^$checkpoint: ]]; then
+            new_failed_steps+=("$step")
+        fi
+    done
+    FAILED_STEPS=("${new_failed_steps[@]}")
+}
+
+# Show resume options
+show_resume_options() {
+    echo ""
+    echo "Available checkpoints to resume from:"
+    echo "  1. system_deps - System dependencies installation"
+    echo "  2. nodejs - Node.js installation"
+    echo "  3. python_env - Python environment setup"
+    echo "  4. core_deps - Core dependencies installation"
+    echo "  5. web_deps - Web dependencies installation"
+    echo "  6. postgresql - PostgreSQL setup"
+    echo "  7. config - Configuration setup"
+    echo "  8. permissions - File permissions setup"
+    echo "  9. git_setup - Git repository setup"
+    echo "  10. validation - Final validation"
+    echo ""
+    echo "  clean - Start fresh (remove all checkpoints)"
+    echo "  list - Show completed checkpoints"
+    echo ""
+}
 
 # ============================================================================
 # Environment Detection
@@ -361,6 +461,12 @@ check_root_permissions() {
     if [ "$EUID" -eq 0 ]; then
         export RUNNING_AS_ROOT=true
         print_warning "Running as root user"
+        
+        # Check if running as root in Docker
+        if [ -f /.dockerenv ]; then
+            export DOCKER_ROOT_INSTALL=true
+            print_info "Installing in Docker container as root"
+        fi
     else
         export RUNNING_AS_ROOT=false
         # Check sudo availability for non-root users
@@ -392,7 +498,10 @@ install_system_dependencies() {
     
     # Update package list
     print_info "Updating package list..."
-    run_privileged apt-get update
+    if ! run_privileged apt-get update; then
+        print_error "Failed to update package list"
+        return 1
+    fi
     
     # Base dependencies for all profiles
     local base_deps="python3 python3-pip python3-venv git curl wget build-essential"
@@ -411,29 +520,48 @@ install_system_dependencies() {
     esac
     
     print_info "Installing base dependencies..."
-    run_privileged apt-get install -y $base_deps
+    if ! run_privileged apt-get install -y $base_deps; then
+        print_error "Failed to install base dependencies"
+        return 1
+    fi
     
     # Install PostgreSQL if selected
     if [ "$INSTALL_POSTGRESQL" = true ]; then
         print_info "Installing PostgreSQL..."
-        run_privileged apt-get install -y postgresql postgresql-contrib
+        if ! run_privileged apt-get install -y postgresql postgresql-contrib; then
+            print_error "Failed to install PostgreSQL"
+            return 1
+        fi
     fi
     
     # Install Docker if selected
     if [ "$INSTALL_DOCKER" = true ]; then
-        install_docker
+        if ! install_docker; then
+            print_error "Failed to install Docker"
+            return 1
+        fi
     fi
     
     # Install Node.js if selected
     if [ "$INSTALL_NODEJS" = true ]; then
-        install_nodejs
+        if ! install_nodejs; then
+            print_error "Failed to install Node.js"
+            return 1
+        fi
     fi
     
     print_success "System dependencies installed"
+    return 0
 }
 
 install_docker() {
     print_info "Installing Docker..."
+    
+    # Check if installing Docker inside Docker
+    if [ "$ENVIRONMENT_TYPE" = "docker" ] && [ "$INSTALL_DOCKER" = true ]; then
+        print_warning "Installing Docker inside Docker container - this requires privileged mode"
+        print_warning "Make sure the container is running with --privileged flag or appropriate capabilities"
+    fi
     
     # Remove old versions
     run_privileged apt-get remove -y docker docker-engine docker.io containerd runc 2>/dev/null || true
@@ -452,6 +580,8 @@ install_docker() {
     if [ "$RUNNING_AS_ROOT" = false ]; then
         run_privileged usermod -aG docker $USER
         print_warning "You'll need to log out and back in for docker group changes to take effect"
+    elif [ "$DOCKER_ROOT_INSTALL" = true ]; then
+        print_info "Running as root in Docker - skipping docker group addition"
     fi
     
     # WSL-specific Docker configuration
@@ -522,6 +652,12 @@ create_virtual_environment() {
 install_pytorch() {
     print_step 3 12 "Installing PyTorch"
     
+    # Ensure venv exists and is activated
+    if [ ! -f "$VENV_PATH/bin/activate" ]; then
+        print_error "Virtual environment not found. Please run step 2 (Python Environment) first."
+        return 1
+    fi
+    
     source "$VENV_PATH/bin/activate"
     
     # Clean previous installations
@@ -530,26 +666,36 @@ install_pytorch() {
     # Install PyTorch based on CUDA version
     case "$CUDA_VERSION" in
         "11.8")
-            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+            if ! pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118; then
+                print_error "Failed to install PyTorch for CUDA 11.8"
+                return 1
+            fi
             ;;
         "12.1")
-            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+            if ! pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121; then
+                print_error "Failed to install PyTorch for CUDA 12.1"
+                return 1
+            fi
             ;;
         "12.8")
-            pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
+            if ! pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128; then
+                print_error "Failed to install PyTorch for CUDA 12.8"
+                return 1
+            fi
             ;;
         *)
             print_error "Unsupported CUDA version: $CUDA_VERSION"
-            exit 1
+            return 1
             ;;
     esac
     
     # Verify installation
     if python -c "import torch; print(f'PyTorch {torch.__version__} installed')" 2>/dev/null; then
         print_success "PyTorch installed successfully"
+        return 0
     else
         print_error "PyTorch installation failed"
-        exit 1
+        return 1
     fi
 }
 
@@ -557,23 +703,45 @@ install_pytorch() {
 install_xformers() {
     print_step 4 12 "Installing xformers"
     
+    # Ensure venv exists and is activated
+    if [ ! -f "$VENV_PATH/bin/activate" ]; then
+        print_error "Virtual environment not found. Please run step 2 (Python Environment) first."
+        return 1
+    fi
+    
     source "$VENV_PATH/bin/activate"
     
     # Install build dependencies
-    pip install wheel ninja
+    if ! pip install wheel ninja; then
+        print_error "Failed to install build dependencies"
+        return 1
+    fi
     
     # Try pre-built wheel first
     if pip install xformers --index-url https://download.pytorch.org/whl/cu${CUDA_VERSION//./} 2>/dev/null; then
         print_success "xformers installed from pre-built wheel"
+        return 0
     else
         print_warning "Installing xformers from source (this may take a while)..."
-        pip install xformers --no-binary xformers
+        if pip install xformers --no-binary xformers; then
+            print_success "xformers installed from source"
+            return 0
+        else
+            print_error "Failed to install xformers"
+            return 1
+        fi
     fi
 }
 
 # Step 5: Core Dependencies
 install_core_dependencies() {
     print_step 5 12 "Installing Core Dependencies"
+    
+    # Ensure venv exists and is activated
+    if [ ! -f "$VENV_PATH/bin/activate" ]; then
+        print_error "Virtual environment not found. Please run step 2 (Python Environment) first."
+        return 1
+    fi
     
     source "$VENV_PATH/bin/activate"
     
@@ -607,6 +775,12 @@ install_core_dependencies() {
 # Step 6: Optional Components
 install_optional_components() {
     print_step 6 12 "Installing Optional Components"
+    
+    # Ensure venv exists and is activated
+    if [ ! -f "$VENV_PATH/bin/activate" ]; then
+        print_error "Virtual environment not found. Please run step 2 (Python Environment) first."
+        return 1
+    fi
     
     source "$VENV_PATH/bin/activate"
     
@@ -689,6 +863,12 @@ download_models() {
     
     print_step 9 12 "Downloading Models"
     
+    # Ensure venv exists and is activated
+    if [ ! -f "$VENV_PATH/bin/activate" ]; then
+        print_error "Virtual environment not found. Please run step 2 (Python Environment) first."
+        return 1
+    fi
+    
     source "$VENV_PATH/bin/activate"
     
     # Install huggingface-cli
@@ -763,6 +943,9 @@ VENV_PATH=$VENV_PATH
 # CUDA Configuration
 CUDA_VERSION=$CUDA_VERSION
 
+# Docker Root Installation
+DOCKER_ROOT_INSTALL=$DOCKER_ROOT_INSTALL
+
 # Component Flags
 POSTGRESQL_ENABLED=$INSTALL_POSTGRESQL
 NODEJS_ENABLED=$INSTALL_NODEJS
@@ -808,6 +991,12 @@ EOF
 # Step 11: Final Optimizations
 apply_final_optimizations() {
     print_step 11 12 "Applying Final Optimizations"
+    
+    # Ensure venv exists and is activated
+    if [ ! -f "$VENV_PATH/bin/activate" ]; then
+        print_error "Virtual environment not found. Please run step 2 (Python Environment) first."
+        return 1
+    fi
     
     source "$VENV_PATH/bin/activate"
     
@@ -863,6 +1052,12 @@ EOF
 # Step 12: Verification
 verify_installation() {
     print_step 12 12 "Verifying Installation"
+    
+    # Ensure venv exists and is activated
+    if [ ! -f "$VENV_PATH/bin/activate" ]; then
+        print_error "Virtual environment not found. Please run step 2 (Python Environment) first."
+        return 1
+    fi
     
     source "$VENV_PATH/bin/activate"
     
@@ -937,6 +1132,37 @@ main() {
                 INSTALL_CONFIG="$2"
                 shift 2
                 ;;
+            --resume)
+                if [ -n "$2" ] && [[ ! "$2" =~ ^-- ]]; then
+                    RESUME_FROM="$2"
+                    shift 2
+                else
+                    # Interactive resume selection
+                    show_resume_options
+                    read -p "Enter checkpoint to resume from (or 'clean'/'list'): " RESUME_FROM
+                    shift
+                fi
+                ;;
+            --retry-failed)
+                # Find first failed step to resume from
+                if [ -f "$FAILED_STEPS_FILE" ]; then
+                    RESUME_FROM=$(head -n1 "$FAILED_STEPS_FILE" | cut -d: -f1)
+                    if [ -n "$RESUME_FROM" ]; then
+                        print_info "Retrying from first failed step: $RESUME_FROM"
+                    else
+                        print_error "No failed steps found"
+                        exit 1
+                    fi
+                else
+                    print_error "No failed steps recorded"
+                    exit 1
+                fi
+                shift
+                ;;
+            --continue-on-error)
+                CONTINUE_ON_ERROR=true
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -947,6 +1173,23 @@ main() {
                 ;;
         esac
     done
+    
+    # Handle resume options
+    if [ -n "$RESUME_FROM" ]; then
+        case "$RESUME_FROM" in
+            "clean")
+                clean_checkpoints
+                exit 0
+                ;;
+            "list")
+                list_checkpoints
+                exit 0
+                ;;
+            *)
+                print_info "Resuming installation from checkpoint: $RESUME_FROM"
+                ;;
+        esac
+    fi
     
     # Initialize log
     print_info "Starting AutoTrainX installation - $(date)"
@@ -997,19 +1240,22 @@ main() {
         show_installation_summary
     fi
     
-    # Execute installation steps
-    install_system_dependencies
-    create_virtual_environment
-    install_pytorch
-    install_xformers
-    install_core_dependencies
-    install_optional_components
-    setup_postgresql
-    setup_web_interface
-    download_models
-    setup_environment
-    apply_final_optimizations
-    verify_installation
+    # Execute installation steps with checkpoint support
+    run_installation_with_checkpoints
+    
+    # Handle file ownership for Docker volumes
+    if [ "$DOCKER_ROOT_INSTALL" = true ]; then
+        print_info "Adjusting file ownership for Docker volumes..."
+        
+        # Check if HOST_UID and HOST_GID are set (typically passed as env vars in Docker)
+        if [ -n "$HOST_UID" ] && [ -n "$HOST_GID" ]; then
+            print_info "Setting ownership to UID:$HOST_UID GID:$HOST_GID"
+            chown -R $HOST_UID:$HOST_GID "$SCRIPT_DIR"
+        else
+            print_warning "HOST_UID and HOST_GID not set - files will remain owned by root"
+            print_info "To fix ownership, run the container with: -e HOST_UID=\$(id -u) -e HOST_GID=\$(id -g)"
+        fi
+    fi
     
     # Show completion message
     print_header "Installation Complete!"
@@ -1038,16 +1284,192 @@ main() {
     print_success "Setup completed successfully!"
 }
 
+# Execute installation with checkpoint support
+run_installation_with_checkpoints() {
+    # Load any previously failed steps
+    load_failed_steps
+    
+    # Define installation steps with checkpoints
+    local steps=(
+        "system_deps:install_system_dependencies:System Dependencies:false"
+        "python_env:create_virtual_environment:Python Environment:true"
+        "pytorch:install_pytorch:PyTorch:false"
+        "xformers:install_xformers:XFormers:false"
+        "core_deps:install_core_dependencies:Core Dependencies:false"
+        "optional:install_optional_components:Optional Components:false"
+        "postgresql:setup_postgresql:PostgreSQL:false"
+        "web:setup_web_interface:Web Interface:false"
+        "models:download_models:Models:false"
+        "env_config:setup_environment:Environment Configuration:false"
+        "optimize:apply_final_optimizations:Final Optimizations:false"
+        "validation:verify_installation:Installation Verification:false"
+    )
+    
+    local total_steps=${#steps[@]}
+    local current_step=1
+    local should_skip=true
+    local installation_success=true
+    
+    # If resuming, determine where to start
+    if [ -n "$RESUME_FROM" ]; then
+        should_skip=true
+        for step_def in "${steps[@]}"; do
+            local checkpoint=$(echo "$step_def" | cut -d: -f1)
+            if [ "$checkpoint" = "$RESUME_FROM" ]; then
+                should_skip=false
+                print_info "Resuming from checkpoint: $RESUME_FROM"
+                break
+            fi
+        done
+        
+        if [ "$should_skip" = true ]; then
+            print_error "Invalid checkpoint: $RESUME_FROM"
+            show_resume_options
+            return 1
+        fi
+    else
+        should_skip=false
+    fi
+    
+    # Execute steps
+    for step_def in "${steps[@]}"; do
+        local checkpoint=$(echo "$step_def" | cut -d: -f1)
+        local function_name=$(echo "$step_def" | cut -d: -f2)
+        local step_name=$(echo "$step_def" | cut -d: -f3)
+        local is_critical=$(echo "$step_def" | cut -d: -f4)
+        
+        # Skip completed checkpoints unless resuming
+        if [ "$should_skip" = true ]; then
+            if [ "$checkpoint" != "$RESUME_FROM" ]; then
+                print_info "⏭️  Skipping completed checkpoint: $checkpoint"
+                ((current_step++))
+                continue
+            else
+                should_skip=false
+            fi
+        fi
+        
+        # Check if step already completed
+        if is_checkpoint_completed "$checkpoint"; then
+            print_info "⏭️  Checkpoint '$checkpoint' already completed, skipping..."
+            # Clear any failed status for this step
+            clear_failed_step "$checkpoint"
+            ((current_step++))
+            continue
+        fi
+        
+        # Execute step
+        print_step "$current_step" "$total_steps" "$step_name"
+        
+        if "$function_name"; then
+            # Step succeeded
+            mark_checkpoint "$checkpoint"
+            clear_failed_step "$checkpoint"
+            print_success "✓ $step_name completed successfully"
+        else
+            # Step failed
+            local error_msg="Step failed at $(date)"
+            track_failed_step "$checkpoint" "$error_msg"
+            print_error "❌ Step failed: $step_name"
+            
+            if [ "$is_critical" = "true" ]; then
+                print_error "Critical step failed. Cannot continue."
+                print_info "💡 You can resume from this point using: bash setup.sh --resume $checkpoint"
+                installation_success=false
+                break
+            else
+                if [ "$CONTINUE_ON_ERROR" = true ]; then
+                    print_warning "⚠️  Non-critical step failed. Continuing with installation..."
+                    installation_success=false
+                else
+                    print_info "💡 You can resume from this point using: bash setup.sh --resume $checkpoint"
+                    installation_success=false
+                    break
+                fi
+            fi
+        fi
+        
+        ((current_step++))
+    done
+    
+    # Show final report
+    show_installation_report
+    
+    return $([ "$installation_success" = true ] && echo 0 || echo 1)
+}
+
+# Show installation report with failed steps
+show_installation_report() {
+    print_header "Installation Report"
+    
+    if [ ${#FAILED_STEPS[@]} -eq 0 ]; then
+        print_success "All installation steps completed successfully! 🎉"
+    else
+        print_warning "Installation completed with some failures:"
+        echo ""
+        echo "Failed steps:"
+        for failed_step in "${FAILED_STEPS[@]}"; do
+            local checkpoint=$(echo "$failed_step" | cut -d: -f1)
+            local error_msg=$(echo "$failed_step" | cut -d: -f2-)
+            echo "  ❌ $checkpoint - $error_msg"
+        done
+        
+        echo ""
+        print_info "To retry failed steps:"
+        echo ""
+        
+        # Generate retry commands
+        for failed_step in "${FAILED_STEPS[@]}"; do
+            local checkpoint=$(echo "$failed_step" | cut -d: -f1)
+            echo "  bash setup.sh --resume $checkpoint"
+        done
+        
+        echo ""
+        print_info "Or retry all failed steps with:"
+        echo "  bash setup.sh --retry-failed"
+        
+        # Special instructions for venv-dependent steps
+        local venv_dependent_steps=("pytorch" "xformers" "core_deps" "optional" "optimize")
+        local has_venv_deps=false
+        
+        for failed_step in "${FAILED_STEPS[@]}"; do
+            local checkpoint=$(echo "$failed_step" | cut -d: -f1)
+            for venv_step in "${venv_dependent_steps[@]}"; do
+                if [ "$checkpoint" = "$venv_step" ]; then
+                    has_venv_deps=true
+                    break
+                fi
+            done
+        done
+        
+        if [ "$has_venv_deps" = true ]; then
+            echo ""
+            print_warning "Note: Some failed steps require the virtual environment."
+            print_info "Make sure the virtual environment is properly created before retrying."
+            
+            if [ ! -f "$VENV_PATH/bin/activate" ]; then
+                print_error "Virtual environment not found! Run this first:"
+                echo "  bash setup.sh --resume python_env"
+            fi
+        fi
+    fi
+    
+    echo ""
+}
+
 show_help() {
     echo "AutoTrainX Unified Setup Script"
     echo ""
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  --profile PROFILE    Set installation profile (docker|wsl|linux|dev|minimal)"
-    echo "  --auto               Run in automatic mode using saved config or defaults"
-    echo "  --config FILE        Load configuration from specified file"
-    echo "  --help, -h           Show this help message"
+    echo "  --profile PROFILE      Set installation profile (docker|wsl|linux|dev|minimal)"
+    echo "  --auto                 Run in automatic mode using saved config or defaults"
+    echo "  --config FILE          Load configuration from specified file"
+    echo "  --resume [STEP]        Resume installation from specific checkpoint"
+    echo "  --retry-failed         Retry all failed steps from previous run"
+    echo "  --continue-on-error    Continue installation even if non-critical steps fail"
+    echo "  --help, -h             Show this help message"
     echo ""
     echo "Examples:"
     echo "  # Interactive installation"
@@ -1055,6 +1477,15 @@ show_help() {
     echo ""
     echo "  # Install with specific profile"
     echo "  ./setup.sh --profile docker"
+    echo ""
+    echo "  # Resume from checkpoint"
+    echo "  ./setup.sh --resume postgresql"
+    echo ""
+    echo "  # Retry failed steps"
+    echo "  ./setup.sh --retry-failed"
+    echo ""
+    echo "  # Continue on errors"
+    echo "  ./setup.sh --continue-on-error"
     echo ""
     echo "  # Automatic installation with saved config"
     echo "  ./setup.sh --auto"
